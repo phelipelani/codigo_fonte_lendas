@@ -1,0 +1,88 @@
+# ============================================================
+# Dependencias instaladas (gerenciadores de pacote)
+# ============================================================
+node_modules/
+**/node_modules/
+apihostinguer/vendor/
+
+# ============================================================
+# Builds (sempre regenerados)
+# ============================================================
+dist/
+build/
+.vite/
+*.tsbuildinfo
+
+# ============================================================
+# Variaveis de ambiente (sensiveis)
+# ============================================================
+.env
+.env.local
+.env.development
+.env.production
+.env.*.local
+apihostinguer/.env
+apihostinguer/.env.production
+apihostinguer/.env.local
+
+# ============================================================
+# Uploads / arquivos de usuario (ficam no servidor / S3)
+# ============================================================
+apihostinguer/uploads/
+
+# ============================================================
+# Binarios pesados — nunca devem entrar no Git
+# ============================================================
+ngrok.exe
+ngrok.yml
+*.exe
+
+# ============================================================
+# Backups e dumps de banco
+# ============================================================
+*.zip
+*.tar.gz
+*.tar
+*.sql.gz
+apihostinguer/futlendas_backup.sql
+apihostinguer/u136937175_futlendas*.sql
+
+# ============================================================
+# Dumps locais de dados (JSONs gerados por scripts ad-hoc)
+# Se algum desses for codigo fonte de verdade, remova daqui.
+# ============================================================
+/mercado*.json
+/historico.json
+/hist*.json
+/ranking*.json
+/meu*.json
+/C:Users*
+*Userslesco*
+
+# ============================================================
+# Logs
+# ============================================================
+*.log
+logs/
+apihostinguer/logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ============================================================
+# IDE / editores
+# ============================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.claude/
+
+# ============================================================
+# Sistema operacional
+# ============================================================
+.DS_Store
+Thumbs.db
+desktop.ini

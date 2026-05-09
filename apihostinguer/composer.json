@@ -1,0 +1,15 @@
+{
+    "name": "futlendas/api-php",
+    "description": "API FutLendas em PHP",
+    "type": "project",
+    "require": {
+        "php": ">=7.4",
+        "aws/aws-sdk-php": "^3.0",
+        "phpmailer/phpmailer": "^7.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "FutLendas\\": "src/"
+        }
+    }
+}
