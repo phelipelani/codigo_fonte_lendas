@@ -1121,6 +1121,12 @@ try {
             require $presencaRoot . '/api/mensagem.php'; exit;
         }
 
+        // POST /presenca/mensagem-massa — comunicado para varios jogadores (admin)
+        if ($path === '/presenca/mensagem-massa' && $method === 'POST') {
+            AuthMiddleware::isAdmin();
+            require $presencaRoot . '/api/mensagem_massa.php'; exit;
+        }
+
         // GET /presenca/setup — cria as tabelas (rodar uma vez, apagar depois)
         if ($path === '/presenca/setup' && $method === 'GET') {
             header('Content-Type: text/html; charset=utf-8');
