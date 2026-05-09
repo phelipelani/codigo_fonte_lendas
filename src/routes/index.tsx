@@ -32,6 +32,7 @@ const AnalyticsPage = lazy(() => import("@/features/Analytics/routes/AnalyticsPa
 const CampeonatoSorteioPage = lazy(() => import("@/features/campeonatos/components/CampeonatoSorteioPage"));
 const CartolendaPage = lazy(() => import("@/features/cartolendas/routes/CartolendaPage").then(m => ({ default: m.CartolendaPage })));
 const PartidaDetalhePage = lazy(() => import("@/features/partidas/routes/PartidaDetalhePage"));
+const RachaPage = lazy(() => import("@/features/presenca/routes/RachaPage").then(m => ({ default: m.RachaPage })));
 
 export const AppRoutes = () => {
   return (
@@ -72,6 +73,9 @@ export const AppRoutes = () => {
 
           {/* Perfil */}
           <Route path="/perfil" element={<PerfilPage />} />
+
+          {/* Racha — gestão de presença / bot WhatsApp */}
+          <Route path="/racha" element={<RachaPage />} />
         </Route>
       </Route>
 
