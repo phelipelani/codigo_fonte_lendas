@@ -13,9 +13,11 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 
-// Não força JSON em rotas OAuth (que fazem redirect)
-$isGoogleRoute = strpos($_SERVER['REQUEST_URI'] ?? '', '/auth/google') !== false;
-if (!$isGoogleRoute) {
+// Não força JSON em rotas OAuth (que fazem redirect: Google e Mercado Pago)
+$requestUri    = $_SERVER['REQUEST_URI'] ?? '';
+$isOAuthRoute  = strpos($requestUri, '/auth/google') !== false
+              || strpos($requestUri, '/mp/callback')  !== false;
+if (!$isOAuthRoute) {
     header('Content-Type: application/json; charset=utf-8');
 }
 
@@ -1024,6 +1026,158 @@ try {
         require_once __DIR__ . '/../src/controllers/CartolendaLigaController.php';
         CartolendaLigaController::route($method, $path);
         exit;
+    }
+
+    // =========================================================
+    // MERCADO PAGO — OAuth + Financeiro
+    // (em desenvolvimento, mantido para evolucao da feature)
+    // =========================================================
+    if (str_starts_with($path, '/mp')) {
+        $mpRoot = __DIR__ . '/../mp';
+
+        // GET /mp/setup — cria tabela mp_contas (rodar 1x, remover depois)
+        if ($path === '/mp/setup' && $method === 'GET') {
+            AuthMiddleware::isAdmin();
+            require $mpRoot . '/setup.php'; exit;
+        }
+
+        // GET /mp/oauth/start — retorna URL de autorizacao MP
+        if ($path === '/mp/oauth/start' && $method === 'GET') {
+            AuthMiddleware::isAdmin();
+            require $mpRoot . '/oauth_start.php'; exit;
+        }
+
+        // GET /mp/callback — callback do OAuth (browser redirect, sem JWT)
+        if ($path === '/mp/callback' && $method === 'GET') {
+            // Nao tem JWT aqui — o state carrega o user_id assinado
+            header('Content-Type: text/html; charset=utf-8');
+            require $mpRoot . '/oauth_callback.php'; exit;
+        }
+
+        // GET /mp/status — verifica se conta MP esta conectada
+        if ($path === '/mp/status' && $method === 'GET') {
+            AuthMiddleware::isAdmin();
+            require $mpRoot . '/status.php'; exit;
+        }
+
+        // POST /mp/disconnect — desconecta conta MP
+        if ($path === '/mp/disconnect' && $method === 'POST') {
+            AuthMiddleware::isAdmin();
+            require $mpRoot . '/disconnect.php'; exit;
+        }
+
+        // GET /mp/balance — saldo da conta MP
+        if ($path === '/mp/balance' && $method === 'GET') {
+            AuthMiddleware::isAdmin();
+            require $mpRoot . '/balance.php'; exit;
+        }
+
+        // GET /mp/transacoes — pagamentos recentes
+        if ($path === '/mp/transacoes' && $method === 'GET') {
+            AuthMiddleware::isAdmin();
+            require $mpRoot . '/transacoes.php'; exit;
+        }
+
+        // POST /mp/pix — cria cobranca PIX
+        if ($path === '/mp/pix' && $method === 'POST') {
+            AuthMiddleware::isAdmin();
+            require $mpRoot . '/criar_pix.php'; exit;
+        }
+    }
+
+    // =========================================================
+    // PRESENCA — Bot de convocacao do racha (WhatsApp via Evolution API)
+    // =========================================================
+    if (str_starts_with($path, '/presenca')) {
+        $presencaRoot = __DIR__ . '/../presenca';
+
+        require_once $presencaRoot . '/bootstrap.php';
+        require_once $presencaRoot . '/db.php';
+        require_once $presencaRoot . '/whatsapp.php';
+        require_once $presencaRoot . '/bot.php';
+
+        // POST /presenca/webhook — recebe mensagens da Evolution API (sem auth)
+        if ($path === '/presenca/webhook' && $method === 'POST') {
+            require $presencaRoot . '/api/webhook.php'; exit;
+        }
+
+        // GET /presenca/dados — estado atual da lista (sem auth para o painel)
+        if ($path === '/presenca/dados' && $method === 'GET') {
+            require $presencaRoot . '/api/dados.php'; exit;
+        }
+
+        // POST /presenca/acao — confirmar/ausente/lembrete manual
+        if ($path === '/presenca/acao' && $method === 'POST') {
+            require $presencaRoot . '/api/acao.php'; exit;
+        }
+
+        // POST /presenca/recarregar — forca reenvio do relatorio
+        if ($path === '/presenca/recarregar' && $method === 'POST') {
+            require $presencaRoot . '/recarregar.php'; exit;
+        }
+
+        // POST /presenca/mensagem — mensagem avulsa para jogador ou grupo
+        if ($path === '/presenca/mensagem' && $method === 'POST') {
+            require $presencaRoot . '/api/mensagem.php'; exit;
+        }
+
+        // POST /presenca/mensagem-massa — comunicado para varios jogadores (admin)
+        if ($path === '/presenca/mensagem-massa' && $method === 'POST') {
+            AuthMiddleware::isAdmin();
+            require $presencaRoot . '/api/mensagem_massa.php'; exit;
+        }
+
+        // GET /presenca/setup — cria as tabelas (rodar uma vez, apagar depois)
+        if ($path === '/presenca/setup' && $method === 'GET') {
+            header('Content-Type: text/html; charset=utf-8');
+            require $presencaRoot . '/setup.php'; exit;
+        }
+
+        // GET|PUT /presenca/configuracoes — configuracoes do bot
+        if ($path === '/presenca/configuracoes') {
+            require $presencaRoot . '/api/configuracoes.php'; exit;
+        }
+
+        // GET /presenca/jogadores — lista jogadores
+        if ($path === '/presenca/jogadores' && ($method === 'GET' || $method === 'POST')) {
+            require $presencaRoot . '/api/jogadores.php'; exit;
+        }
+
+        // PUT|DELETE /presenca/jogadores/{id} — editar ou remover
+        if (preg_match('#^/presenca/jogadores/(\d+)$#', $path, $m)) {
+            $jogadorId = (int)$m[1];
+            require $presencaRoot . '/api/jogadores.php'; exit;
+        }
+
+        // POST /presenca/jogadores/{id}/toggle — ativar/desativar
+        if (preg_match('#^/presenca/jogadores/(\d+)/toggle$#', $path, $m) && $method === 'POST') {
+            $jogadorId = (int)$m[1];
+            require $presencaRoot . '/api/jogadores.php'; exit;
+        }
+
+        // POST /presenca/disparar — disparo manual (admin)
+        if ($path === '/presenca/disparar' && $method === 'POST') {
+            AuthMiddleware::isAdmin();
+            require $presencaRoot . '/api/disparo_manual.php'; exit;
+        }
+
+        // POST /presenca/fechar — fechar/reabrir lista (admin)
+        if ($path === '/presenca/fechar' && $method === 'POST') {
+            AuthMiddleware::isAdmin();
+            require $presencaRoot . '/api/fechar_lista.php'; exit;
+        }
+
+        // POST /presenca/teste-mensagem — mensagem de teste para numero (admin)
+        if ($path === '/presenca/teste-mensagem' && $method === 'POST') {
+            AuthMiddleware::isAdmin();
+            require $presencaRoot . '/api/teste_mensagem.php'; exit;
+        }
+
+        // GET /presenca/logs — ultimas linhas do bot.log (admin)
+        if ($path === '/presenca/logs' && $method === 'GET') {
+            AuthMiddleware::isAdmin();
+            require $presencaRoot . '/api/logs.php'; exit;
+        }
     }
 
     // =========================================================
