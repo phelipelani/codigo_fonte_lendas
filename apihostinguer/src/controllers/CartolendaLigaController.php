@@ -1417,10 +1417,9 @@ class CartolendaLigaController {
         if ($meuJogadorId) {
             $stMeuPreco = $this->pdo->prepare("
                 SELECT p.rodada_id, p.preco, p.variacao, p.pontos_rodada, p.media_pontos,
-                       r.data, j.nome, j.foto_url, j.avatar_url, j.posicao
+                       r.data
                 FROM cartolendas_precos p
                 JOIN rodadas r ON r.id = p.rodada_id AND r.campeonato_id = ?
-                JOIN jogadores j ON j.id = p.jogador_id
                 WHERE p.jogador_id = ?
                 ORDER BY r.data ASC, r.id ASC
             ");
