@@ -33,6 +33,8 @@ const CampeonatoSorteioPage = lazy(() => import("@/features/campeonatos/componen
 const CartolendaPage = lazy(() => import("@/features/cartolendas/routes/CartolendaPage").then(m => ({ default: m.CartolendaPage })));
 const PartidaDetalhePage = lazy(() => import("@/features/partidas/routes/PartidaDetalhePage"));
 const RachaPage = lazy(() => import("@/features/presenca/routes/RachaPage").then(m => ({ default: m.RachaPage })));
+const AlbumPage = lazy(() => import("@/features/album/routes/AlbumPage").then(m => ({ default: m.AlbumPage })));
+const AlbumAdminPage = lazy(() => import("@/features/album/routes/AlbumAdminPage").then(m => ({ default: m.AlbumAdminPage })));
 
 export const AppRoutes = () => {
   return (
@@ -76,12 +78,18 @@ export const AppRoutes = () => {
 
           {/* Racha — gestão de presença / bot WhatsApp */}
           <Route path="/racha" element={<RachaPage />} />
+
+          {/* Álbum de Figurinhas */}
+          <Route path="/album" element={<AlbumPage />} />
         </Route>
       </Route>
 
       {/* Rotas exclusivas de admin */}
       <Route element={<ProtectedRoute isAdminRoute />}>
         <Route element={<AppLayout />}>
+          {/* Álbum — administração */}
+          <Route path="/album/admin" element={<AlbumAdminPage />} />
+
           {/* Ligas — gerenciamento */}
           <Route path="/ligas/:id/rodadas/:rodadaId/gerenciar" element={<GerenciarRodadaPage />} />
 

@@ -1243,7 +1243,11 @@ try {
         (new AlbumController())->setWhatsapp(); exit;
     }
 
-    // --- Admin: distribuir pacotes ---
+    // --- Admin: usuarios + distribuir pacotes ---
+    if ($path === '/album/admin/usuarios' && $method === 'GET') {
+        AuthMiddleware::isAdmin();
+        (new AlbumController())->listarUsuarios(); exit;
+    }
     if ($path === '/album/admin/distribuir' && $method === 'POST') {
         AuthMiddleware::isAdmin();
         (new AlbumController())->distribuirPacotes(); exit;

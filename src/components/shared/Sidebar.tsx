@@ -9,6 +9,8 @@ import {
   Menu,
   X,
   Crown,
+  ClipboardList,
+  Images,
 } from 'lucide-react';
 import logoLendas from '@/assets/Logo.webp';
 import { useAuth } from '@/hooks/useAuth';
@@ -46,6 +48,8 @@ const navLinks = [
   { to: '/times', icon: <NavIcon src={icTimes} alt="Times" />, label: 'Times' },
   { to: '/jogadores', icon: <NavIcon src={icJogadores} alt="Jogadores" />, label: 'Jogadores' },
   { to: '/analytics', icon: <NavIcon src={icEstatisticas} alt="Analytics" />, label: 'Analytics' },
+  { to: '/racha', icon: <ClipboardList size={22} />, label: 'Racha' },
+  { to: '/album', icon: <Images size={22} />, label: 'Álbum', highlight: true },
 ];
 
 export const Sidebar = () => {

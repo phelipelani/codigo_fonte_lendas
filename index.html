@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="./public/Logo.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="FutLendas" />
+    <meta name="theme-color" content="#0a1628" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="manifest" href="./public/manifest.webmanifest" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Oswald:wght@400;700&family=Roboto:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+      default-src 'self';
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.readyplayer.me https://readyplayer.me blob:;
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+      font-src 'self' https://fonts.gstatic.com;
+      img-src 'self' data: blob: https: http:;
+      connect-src 'self' blob: data: https://*.readyplayer.me https://readyplayer.me https://models.readyplayer.me wss://*.readyplayer.me https://*.amazonaws.com;
+      frame-src 'self' https://*.readyplayer.me https://readyplayer.me;
+      worker-src 'self' blob:;
+      child-src 'self' blob: https://*.readyplayer.me https://readyplayer.me;
+      media-src 'self' blob: data:;
+    "
+    />
+    <title>FUTLENDAS</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

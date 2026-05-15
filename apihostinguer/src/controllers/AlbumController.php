@@ -499,6 +499,22 @@ class AlbumController
     }
 
     // =========================================================
+    // ADMIN — listar usuarios (para distribuir pacotes)
+    // =========================================================
+    public function listarUsuarios(): void
+    {
+        $usuarios = $this->db->fetchAll(
+            "SELECT u.id, u.username, u.whatsapp, u.role,
+                    (SELECT COUNT(*) FROM album_pacotes p
+                     WHERE p.usuario_id = u.id AND p.status = 'fechado') AS pacotes_fechados
+             FROM usuarios u
+             WHERE u.ativo = 1
+             ORDER BY u.username ASC"
+        );
+        $this->ok(['usuarios' => $usuarios]);
+    }
+
+    // =========================================================
     // ADMIN — distribuir pacotes
     // =========================================================
     public function distribuirPacotes(): void
