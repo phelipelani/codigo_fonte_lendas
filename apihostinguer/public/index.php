@@ -44,6 +44,7 @@ require_once __DIR__ . '/../src/controllers/AnalyticsController.php';
 require_once __DIR__ . '/../src/controllers/NotificacoesController.php';
 require_once __DIR__ . '/../src/controllers/StatsController.php';
 require_once __DIR__ . '/../src/controllers/LigaController.php';
+require_once __DIR__ . '/../src/controllers/AlbumController.php';
 
 // Tratamento de erros
 function sendApiError(Throwable $e): void
@@ -1178,6 +1179,74 @@ try {
             AuthMiddleware::isAdmin();
             require $presencaRoot . '/api/logs.php'; exit;
         }
+    }
+
+    // =========================================================
+    // ALBUM DE FIGURINHAS
+    // =========================================================
+
+    // --- Catálogo de figurinhas (admin) ---
+    if ($path === '/album/figurinhas' && $method === 'GET') {
+        AuthMiddleware::handle();
+        (new AlbumController())->listarFigurinhas(); exit;
+    }
+    if ($path === '/album/figurinhas' && $method === 'POST') {
+        AuthMiddleware::isAdmin();
+        (new AlbumController())->criarFigurinha(); exit;
+    }
+    if (preg_match('#^/album/figurinhas/(\d+)$#', $path, $m) && $method === 'PUT') {
+        AuthMiddleware::isAdmin();
+        (new AlbumController())->atualizarFigurinha((int)$m[1]); exit;
+    }
+    if (preg_match('#^/album/figurinhas/(\d+)$#', $path, $m) && $method === 'DELETE') {
+        AuthMiddleware::isAdmin();
+        (new AlbumController())->deletarFigurinha((int)$m[1]); exit;
+    }
+
+    // --- Páginas do álbum ---
+    if ($path === '/album/paginas' && $method === 'GET') {
+        AuthMiddleware::handle();
+        (new AlbumController())->listarPaginas(); exit;
+    }
+    if ($path === '/album/paginas' && $method === 'POST') {
+        AuthMiddleware::isAdmin();
+        (new AlbumController())->criarPagina(); exit;
+    }
+    if (preg_match('#^/album/paginas/(\d+)$#', $path, $m) && $method === 'PUT') {
+        AuthMiddleware::isAdmin();
+        (new AlbumController())->atualizarPagina((int)$m[1]); exit;
+    }
+
+    // --- Álbum do usuário ---
+    if ($path === '/album/meu' && $method === 'GET') {
+        AuthMiddleware::handle();
+        (new AlbumController())->meuAlbum(); exit;
+    }
+
+    // --- Pacotes ---
+    if ($path === '/album/pacotes' && $method === 'GET') {
+        AuthMiddleware::handle();
+        (new AlbumController())->meusPacotes(); exit;
+    }
+    if (preg_match('#^/album/pacotes/(\d+)/abrir$#', $path, $m) && $method === 'POST') {
+        AuthMiddleware::handle();
+        (new AlbumController())->abrirPacote((int)$m[1]); exit;
+    }
+
+    // --- WhatsApp (vínculo) ---
+    if ($path === '/album/whatsapp' && $method === 'GET') {
+        AuthMiddleware::handle();
+        (new AlbumController())->getWhatsapp(); exit;
+    }
+    if ($path === '/album/whatsapp' && $method === 'PUT') {
+        AuthMiddleware::handle();
+        (new AlbumController())->setWhatsapp(); exit;
+    }
+
+    // --- Admin: distribuir pacotes ---
+    if ($path === '/album/admin/distribuir' && $method === 'POST') {
+        AuthMiddleware::isAdmin();
+        (new AlbumController())->distribuirPacotes(); exit;
     }
 
     // =========================================================
