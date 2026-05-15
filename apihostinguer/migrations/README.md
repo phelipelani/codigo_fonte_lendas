@@ -12,6 +12,9 @@ Estado conferido em **2026-05-09** contra o banco de produção
 | `cartolendas_patrimonio.sql` | ✅ aplicada | Todas as 3 colunas (`patrimonio`, `patrimonio_apos`, `preco_apos_rodada`) já existem |
 | `presenca.sql` | ✅ aplicada | Tabelas `bot_jogadores`, `bot_config`, `lista_presenca` existem |
 | `presenca_jogadores.sql` | ✅ aplicada | Tabela `jogadores_presenca` existe |
+| `002_add_meta_to_notificacoes.sql` | ✅ aplicada | Confirmado em produção (rodado manualmente) |
+| `003_add_whatsapp_to_usuarios.sql` | ⏳ **PENDENTE** | Adiciona `usuarios.whatsapp` — vínculo app↔bot↔álbum |
+| `004_album_figurinhas.sql` | ⏳ **PENDENTE** | 5 tabelas do Álbum de Figurinhas |
 
 > A pasta `seeds/` contém dados de exemplo para ambiente de desenvolvimento;
 > nunca rodar em produção.
