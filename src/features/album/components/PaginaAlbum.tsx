@@ -297,7 +297,7 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
                 <Figurinha
                   key={fig.id}
                   figurinha={fig}
-                  tamanho="sm"
+                  tamanho="album"
                   onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
                 />
               ))}
@@ -316,7 +316,7 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
                 <Figurinha
                   key={fig.id}
                   figurinha={fig}
-                  tamanho="sm"
+                  tamanho="album"
                   onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
                 />
               ))}
