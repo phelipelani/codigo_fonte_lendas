@@ -20,6 +20,10 @@ type PaginaAlbumProps = {
   onFigurinhaClick?: (fig: FigurinhaType) => void;
 };
 
+// Altura MINIMA de uma pagina (capa preenche o livro). A pagina
+// CRESCE livremente se o conteudo (ex: texto longo) for maior.
+const ALTURA_PAGINA = 'min-h-[560px] sm:min-h-[640px] lg:min-h-[760px]';
+
 // =============================================================
 // Mini-cabecalho da identidade (canto superior das paginas internas)
 // =============================================================
@@ -64,7 +68,7 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
   // ============================================================
   if (pagina.tipo === 'capa') {
     return (
-      <div className="relative flex-1 w-full flex flex-col md:flex-row bg-black overflow-hidden">
+      <div className={cn('relative w-full flex flex-col md:flex-row bg-black overflow-hidden', ALTURA_PAGINA)}>
         {/* Metade esquerda — preta com a identidade */}
         <div className="relative flex-1 flex flex-col items-center justify-center text-center px-6 py-10 md:py-12">
           <motion.div
@@ -147,7 +151,7 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
   // ============================================================
   if (pagina.tipo === 'agradecimento') {
     return (
-      <div className="flex-1 w-full flex flex-col items-center justify-center text-center px-8 py-12">
+      <div className={cn('w-full flex flex-col items-center justify-center text-center px-8 py-12', ALTURA_PAGINA)}>
         <img src={logoLendas} alt="" className="h-20 w-20 object-contain mb-5 opacity-80" />
         <h2 className="font-black leading-tight">
           <span className="block text-4xl sm:text-5xl text-white">{pagina.titulo}</span>
@@ -177,7 +181,7 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
     const temFoto = pagina.numero === 2; // pagina "O comeco de tudo"
 
     return (
-      <div className="relative flex-1 w-full grid grid-cols-1 md:grid-cols-2">
+      <div className={cn('relative w-full grid grid-cols-1 md:grid-cols-2', ALTURA_PAGINA)}>
         {/* lombada central */}
         <div className="hidden md:block absolute left-1/2 top-4 bottom-4 w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-cyan-400/40 to-transparent" />
 
@@ -272,7 +276,7 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
   // (refinamento fiel ao Figma vem nas proximas iteracoes)
   // ============================================================
   return (
-    <div className="relative flex-1 w-full grid grid-cols-1 md:grid-cols-2">
+    <div className={cn('relative w-full grid grid-cols-1 md:grid-cols-2', ALTURA_PAGINA)}>
       <div className="hidden md:block absolute left-1/2 top-4 bottom-4 w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-cyan-400/40 to-transparent" />
 
       {/* Esquerda — cabecalho + texto */}
