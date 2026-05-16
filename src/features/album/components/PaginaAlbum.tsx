@@ -271,6 +271,67 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
   }
 
   // ============================================================
+  // NUMEROS — "Os Numeros da Lenda"
+  // Esquerda: header + texto. Direita: logo + grid 3x3 de stats.
+  // ============================================================
+  if (pagina.tipo === 'numeros') {
+    return (
+      <div className={cn('relative w-full grid grid-cols-1 md:grid-cols-2', ALTURA_PAGINA)}>
+        <div className="hidden md:block absolute left-1/2 top-4 bottom-4 w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-cyan-400/40 to-transparent" />
+
+        {/* Esquerda — header + texto */}
+        <div className="h-full px-6 sm:px-8 py-7 flex flex-col overflow-y-auto">
+          <header>
+            <h2 className="font-black italic leading-[0.85] tracking-tight">
+              <span className="block text-2xl sm:text-4xl lg:text-5xl text-white">
+                {pagina.titulo}
+              </span>
+              {pagina.subtitulo && (
+                <span
+                  className="block text-2xl sm:text-4xl lg:text-5xl"
+                  style={{ color: pagina.subtitulo_cor ?? '#FFC400' }}
+                >
+                  {pagina.subtitulo}
+                </span>
+              )}
+            </h2>
+            {pagina.tag && (
+              <span
+                className="inline-block mt-2 px-2 py-1 rounded text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-black"
+                style={{ background: pagina.subtitulo_cor ?? '#FFC400' }}
+              >
+                {pagina.tag}
+              </span>
+            )}
+          </header>
+          {pagina.texto && (
+            <p className="mt-5 text-xs sm:text-sm lg:text-base text-cyan-100/75 leading-relaxed whitespace-pre-line">
+              {pagina.texto}
+            </p>
+          )}
+        </div>
+
+        {/* Direita — logo + grid 3x3 das estatisticas */}
+        <div className="h-full px-5 sm:px-7 py-6 flex flex-col">
+          <div className="flex justify-end shrink-0">
+            <LogoCanto />
+          </div>
+          <div className="flex-1 min-h-0 mt-3 grid grid-cols-3 grid-rows-3 gap-2 sm:gap-3">
+            {figsOrdenadas.map((fig) => (
+              <Figurinha
+                key={fig.id}
+                figurinha={fig}
+                tamanho="cell"
+                onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================================
   // REDE — "A Rede que Cresceu"
   // Esquerda: imagem do fluxograma + 5 figurinhas embaixo.
   // Direita: logo + grid das demais figurinhas.
