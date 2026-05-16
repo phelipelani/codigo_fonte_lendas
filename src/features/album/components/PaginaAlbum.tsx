@@ -36,8 +36,8 @@ const MiniHeaderIdentidade: React.FC = () => (
       </span>
     </div>
     <div className="font-black italic leading-[0.85] mt-0.5">
-      <span className="block text-2xl text-white">FUT</span>
-      <span className="block text-2xl text-amber-400">LENDAS</span>
+      <span className="block text-lg sm:text-xl lg:text-2xl text-white">FUT</span>
+      <span className="block text-lg sm:text-xl lg:text-2xl text-amber-400">LENDAS</span>
     </div>
     <span className="text-[7px] tracking-[0.3em] text-white/30 font-semibold">
       COLEÇÃO COMPLETA
@@ -154,10 +154,10 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
       <div className={cn('w-full flex flex-col items-center justify-center text-center px-8 py-12', ALTURA_PAGINA)}>
         <img src={logoLendas} alt="" className="h-20 w-20 object-contain mb-5 opacity-80" />
         <h2 className="font-black leading-tight">
-          <span className="block text-4xl sm:text-5xl text-white">{pagina.titulo}</span>
+          <span className="block text-3xl sm:text-5xl lg:text-6xl text-white">{pagina.titulo}</span>
           {pagina.subtitulo && (
             <span
-              className="block text-2xl sm:text-3xl mt-1"
+              className="block text-xl sm:text-3xl lg:text-4xl mt-1"
               style={{ color: pagina.subtitulo_cor ?? '#FFC400' }}
             >
               {pagina.subtitulo}
@@ -165,7 +165,7 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
           )}
         </h2>
         {pagina.texto && (
-          <p className="mt-6 max-w-md text-sm sm:text-base text-cyan-100/70 leading-relaxed">
+          <p className="mt-6 max-w-md text-sm sm:text-base lg:text-lg text-cyan-100/70 leading-relaxed">
             {pagina.texto}
           </p>
         )}
@@ -192,12 +192,12 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
             {/* Titulo da secao */}
             <div className="text-right">
               <h2 className="font-black italic leading-[0.85] tracking-tight">
-                <span className="block text-3xl sm:text-4xl text-white">
+                <span className="block text-2xl sm:text-4xl lg:text-5xl text-white">
                   {pagina.titulo}
                 </span>
                 {pagina.subtitulo && (
                   <span
-                    className="block text-3xl sm:text-4xl"
+                    className="block text-2xl sm:text-4xl lg:text-5xl"
                     style={{ color: pagina.subtitulo_cor ?? '#00C46A' }}
                   >
                     {pagina.subtitulo}
@@ -223,7 +223,7 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
           </div>
 
           {pagina.texto && (
-            <p className="mt-6 text-[13px] sm:text-sm text-cyan-100/75 leading-relaxed whitespace-pre-line">
+            <p className="mt-6 text-xs sm:text-sm lg:text-base text-cyan-100/75 leading-relaxed whitespace-pre-line">
               {pagina.texto}
             </p>
           )}
@@ -294,10 +294,10 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
             </span>
           )}
           <h2 className="font-black italic leading-[0.88] tracking-tight">
-            <span className="block text-3xl sm:text-4xl text-white">{pagina.titulo}</span>
+            <span className="block text-2xl sm:text-4xl lg:text-5xl text-white">{pagina.titulo}</span>
             {pagina.subtitulo && (
               <span
-                className="block text-2xl sm:text-3xl"
+                className="block text-xl sm:text-3xl lg:text-4xl"
                 style={{ color: pagina.subtitulo_cor ?? '#FFFFFF' }}
               >
                 {pagina.subtitulo}
@@ -311,7 +311,7 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
           )}
         </header>
         {pagina.texto && (
-          <p className="mt-4 text-[13px] sm:text-sm text-cyan-100/70 leading-relaxed whitespace-pre-line">
+          <p className="mt-4 text-xs sm:text-sm lg:text-base text-cyan-100/70 leading-relaxed whitespace-pre-line">
             {pagina.texto}
           </p>
         )}
