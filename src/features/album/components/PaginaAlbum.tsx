@@ -174,6 +174,55 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
   }
 
   // ============================================================
+  // CAMPEONATOS-INTRO — pagina 5 "Por que comecamos os campeonatos?"
+  // 2 colunas de texto + figurinha larga (2 slots) na direita.
+  // ============================================================
+  if (pagina.tipo === 'narrativa' && pagina.numero === 5) {
+    const partes = (pagina.texto ?? '').split('[[DIR]]');
+    const textoEsq = partes[0]?.trim() ?? '';
+    const textoDir = partes[1]?.trim() ?? '';
+
+    return (
+      <div className={cn('relative w-full grid grid-cols-1 md:grid-cols-2', ALTURA_PAGINA)}>
+        <div className="hidden md:block absolute left-1/2 top-4 bottom-4 w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-cyan-400/40 to-transparent" />
+
+        {/* Esquerda — titulo + texto */}
+        <div className="h-full px-6 sm:px-8 py-7 flex flex-col overflow-y-auto">
+          <h2 className="font-black text-2xl sm:text-3xl lg:text-4xl text-white leading-tight">
+            {pagina.titulo}
+          </h2>
+          <p className="mt-4 text-xs sm:text-sm lg:text-base text-cyan-100/75 leading-relaxed whitespace-pre-line">
+            {textoEsq}
+          </p>
+        </div>
+
+        {/* Direita — logo + texto + figurinha larga (2 slots) */}
+        <div className="h-full px-6 sm:px-8 py-7 flex flex-col overflow-y-auto">
+          <div className="flex justify-end shrink-0">
+            <LogoCanto />
+          </div>
+          <p className="mt-2 text-xs sm:text-sm lg:text-base text-cyan-100/75 leading-relaxed whitespace-pre-line">
+            {textoDir}
+          </p>
+          {figsOrdenadas.length > 0 && (
+            <div className="mt-4 shrink-0 grid grid-cols-2 gap-1.5">
+              {figsOrdenadas.slice(0, 2).map((fig) => (
+                <div key={fig.id} className="h-[150px] sm:h-[190px]">
+                  <Figurinha
+                    figurinha={fig}
+                    tamanho="cell"
+                    onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================================
   // NARRATIVA — pagina dupla (texto a esquerda, foto a direita)
   // Fiel ao Figma da pagina "O Comeco de Tudo".
   // ============================================================
