@@ -78,13 +78,13 @@ INSERT INTO album_figurinhas (numero, nome, `time`, categoria, raridade, pagina_
 (32, 'Caio',          'FutLendas', 'jogador', 'comum',    3, 32),
 (33, 'Bigode',        'FutLendas', 'jogador', 'comum',    3, 33),
 (34, 'Luis',          'FutLendas', 'jogador', 'comum',    3, 34),
--- Pagina 4 "Os Numeros da Lenda" — 9 figurinhas de estatistica
-(35, 'Total de Gols',         NULL, 'estatistica', 'comum', 4, 1),
-(36, 'Total de Assistências', NULL, 'estatistica', 'comum', 4, 2),
-(37, 'Total de Jogos',        NULL, 'estatistica', 'comum', 4, 3),
-(38, 'Maior Artilheiro',      NULL, 'estatistica', 'comum', 4, 4),
-(39, 'Maior Assistente',      NULL, 'estatistica', 'comum', 4, 5),
-(40, 'Maior MVP',             NULL, 'estatistica', 'comum', 4, 6),
-(41, 'Maior Pé de Rato',      NULL, 'estatistica', 'comum', 4, 7),
-(42, 'Maior Vencedor',        NULL, 'estatistica', 'comum', 4, 8),
-(43, 'Maior Perdedor',        NULL, 'estatistica', 'comum', 4, 9);
+-- Pagina 4 "Os Numeros da Lenda" — 9 figurinhas de estatistica (lendarias)
+(35, 'Total de Gols',         NULL, 'estatistica', 'lendaria', 4, 1),
+(36, 'Total de Assistências', NULL, 'estatistica', 'lendaria', 4, 2),
+(37, 'Total de Jogos',        NULL, 'estatistica', 'lendaria', 4, 3),
+(38, 'Maior Artilheiro',      NULL, 'estatistica', 'lendaria', 4, 4),
+(39, 'Maior Assistente',      NULL, 'estatistica', 'lendaria', 4, 5),
+(40, 'Maior MVP',             NULL, 'estatistica', 'lendaria', 4, 6),
+(41, 'Maior Pé de Rato',      NULL, 'estatistica', 'lendaria', 4, 7),
+(42, 'Maior Vencedor',        NULL, 'estatistica', 'lendaria', 4, 8),
+(43, 'Maior Perdedor',        NULL, 'estatistica', 'lendaria', 4, 9);
