@@ -13,6 +13,7 @@ import capaHero from '../assets/capa-hero.png';
 import logoLendas from '@/assets/Logo.webp';
 import fotoAmigos1 from '../assets/image_1.png';
 import fotoAmigos2 from '../assets/image_2.png';
+import paginaRede from '../assets/pagina-03-rede.png';
 
 type PaginaAlbumProps = {
   pagina: Pagina;
@@ -271,7 +272,69 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
   }
 
   // ============================================================
-  // DEMAIS (rede, numeros, copa, campeonato, escudos)
+  // REDE — "A Rede que Cresceu"
+  // Esquerda: imagem do fluxograma + 5 figurinhas embaixo.
+  // Direita: logo + grid das demais figurinhas.
+  // ============================================================
+  if (pagina.tipo === 'rede') {
+    const primeiros5 = figsOrdenadas.slice(0, 5);
+    const restante = figsOrdenadas.slice(5);
+
+    return (
+      <div className={cn('relative w-full grid grid-cols-1 md:grid-cols-2', ALTURA_PAGINA)}>
+        <div className="hidden md:block absolute left-1/2 top-4 bottom-4 w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-cyan-400/40 to-transparent" />
+
+        {/* Esquerda — imagem do fluxograma + 5 figurinhas */}
+        <div className="px-4 sm:px-6 py-5 flex flex-col">
+          <img
+            src={paginaRede}
+            alt={pagina.titulo ?? 'A Rede que Cresceu'}
+            className="w-full rounded-lg border border-cyan-400/20"
+          />
+          {primeiros5.length > 0 && (
+            <div className="mt-3 grid grid-cols-5 gap-1.5 sm:gap-2 justify-items-center">
+              {primeiros5.map((fig) => (
+                <Figurinha
+                  key={fig.id}
+                  figurinha={fig}
+                  tamanho="sm"
+                  onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Direita — logo + grid das demais figurinhas */}
+        <div className="px-4 sm:px-6 py-5 flex flex-col">
+          <div className="flex justify-end mb-3">
+            <LogoCanto />
+          </div>
+          {restante.length > 0 ? (
+            <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5 sm:gap-2 justify-items-center content-start">
+              {restante.map((fig) => (
+                <Figurinha
+                  key={fig.id}
+                  figurinha={fig}
+                  tamanho="sm"
+                  onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <p className="text-cyan-100/30 text-sm italic">
+                Figurinhas desta página em breve
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================================
+  // DEMAIS (numeros, copa, campeonato, escudos)
   // Layout generico: cabecalho + texto a esquerda, grid a direita.
   // (refinamento fiel ao Figma vem nas proximas iteracoes)
   // ============================================================
