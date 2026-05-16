@@ -1,24 +1,54 @@
 // Arquivo: src/features/album/components/PaginaAlbum.tsx
 //
-// Renderiza UMA pagina do album conforme o tipo.
-// v1: layouts essenciais (capa, narrativa, grid de figurinhas,
-// agradecimento). Layouts ricos (bracket de copa, arvore da rede)
-// ficam para v2 — por ora cada pagina mostra cabecalho + texto +
-// grid das figurinhas associadas.
+// Renderiza UMA pagina do album (tela cheia / spread) conforme o tipo.
+// Cada pagina tem layout interno de 2 colunas com a "lombada" no meio,
+// fiel ao design do Figma.
 
 import * as React from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Figurinha } from './Figurinha';
+import type { Pagina, Figurinha as FigurinhaType } from '../api/albumApi';
 import capaHero from '../assets/capa-hero.png';
 import logoLendas from '@/assets/Logo.webp';
-import type { Pagina, Figurinha as FigurinhaType } from '../api/albumApi';
+import fotoAmigos1 from '../assets/image_1.png';
+import fotoAmigos2 from '../assets/image_2.png';
 
 type PaginaAlbumProps = {
   pagina: Pagina;
-  figurinhas: FigurinhaType[]; // figurinhas DESTA pagina
+  figurinhas: FigurinhaType[];
   onFigurinhaClick?: (fig: FigurinhaType) => void;
 };
+
+// =============================================================
+// Mini-cabecalho da identidade (canto superior das paginas internas)
+// =============================================================
+const MiniHeaderIdentidade: React.FC = () => (
+  <div className="select-none">
+    <div className="flex items-center gap-1.5">
+      <span className="h-px w-3 bg-amber-400/50" />
+      <span className="text-[7px] tracking-[0.35em] text-white/45 font-semibold">
+        ÁLBUM OFICIAL
+      </span>
+    </div>
+    <div className="font-black italic leading-[0.85] mt-0.5">
+      <span className="block text-2xl text-white">FUT</span>
+      <span className="block text-2xl text-amber-400">LENDAS</span>
+    </div>
+    <span className="text-[7px] tracking-[0.3em] text-white/30 font-semibold">
+      COLEÇÃO COMPLETA
+    </span>
+  </div>
+);
+
+// Logo no canto da pagina
+const LogoCanto: React.FC = () => (
+  <img
+    src={logoLendas}
+    alt="FutLendas"
+    className="h-14 w-14 sm:h-16 sm:w-16 object-contain drop-shadow-[0_0_10px_rgba(251,191,36,0.4)]"
+  />
+);
 
 export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
   pagina,
@@ -29,13 +59,14 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
     (a, b) => (a.slot ?? 999) - (b.slot ?? 999)
   );
 
-  // ---------------- CAPA ----------------
+  // ============================================================
+  // CAPA
+  // ============================================================
   if (pagina.tipo === 'capa') {
     return (
       <div className="relative h-full w-full flex flex-col md:flex-row bg-black overflow-hidden">
-        {/* ===== Metade esquerda — preta com a identidade ===== */}
+        {/* Metade esquerda — preta com a identidade */}
         <div className="relative flex-1 flex flex-col items-center justify-center text-center px-6 py-10 md:py-12">
-          {/* ALBUM OFICIAL com tracinhos */}
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -48,7 +79,6 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
             <span className="h-px w-6 bg-amber-400/60" />
           </motion.div>
 
-          {/* FUT / LENDAS */}
           <motion.h1
             initial={{ opacity: 0, scale: 0.92 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -63,7 +93,6 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
             </span>
           </motion.h1>
 
-          {/* COLECAO COMPLETA */}
           <motion.span
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -73,7 +102,6 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
             COLEÇÃO COMPLETA
           </motion.span>
 
-          {/* Logo redondo animado (pulse + glow) */}
           <motion.img
             src={logoLendas}
             alt="FutLendas"
@@ -96,14 +124,13 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
           />
         </div>
 
-        {/* ===== Metade direita — arte hero ===== */}
+        {/* Metade direita — arte hero */}
         <div className="relative flex-1 min-h-[300px] md:min-h-0 bg-black">
           <img
             src={capaHero}
             alt="FutLendas — Coleção"
             className="absolute inset-0 h-full w-full object-contain"
           />
-          {/* brilho pulsante sobre o raio da arte */}
           <motion.div
             aria-hidden
             animate={{ opacity: [0.0, 0.35, 0.0] }}
@@ -115,10 +142,13 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
     );
   }
 
-  // ---------------- AGRADECIMENTO ----------------
+  // ============================================================
+  // AGRADECIMENTO
+  // ============================================================
   if (pagina.tipo === 'agradecimento') {
     return (
-      <div className="h-full w-full flex flex-col items-center justify-center text-center px-8 py-10">
+      <div className="h-full w-full flex flex-col items-center justify-center text-center px-8 py-12">
+        <img src={logoLendas} alt="" className="h-20 w-20 object-contain mb-5 opacity-80" />
         <h2 className="font-black leading-tight">
           <span className="block text-4xl sm:text-5xl text-white">{pagina.titulo}</span>
           {pagina.subtitulo && (
@@ -139,61 +169,174 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
     );
   }
 
-  // ---------------- DEMAIS (narrativa, rede, numeros, copa, campeonato, escudos) ----------------
+  // ============================================================
+  // NARRATIVA — pagina dupla (texto a esquerda, foto a direita)
+  // Fiel ao Figma da pagina "O Comeco de Tudo".
+  // ============================================================
+  if (pagina.tipo === 'narrativa') {
+    const temFoto = pagina.numero === 2; // pagina "O comeco de tudo"
+
+    return (
+      <div className="relative h-full w-full grid grid-cols-1 md:grid-cols-2">
+        {/* lombada central */}
+        <div className="hidden md:block absolute left-1/2 top-4 bottom-4 w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-cyan-400/40 to-transparent" />
+
+        {/* ---- Pagina esquerda: cabecalho + narrativa ---- */}
+        <div className="px-6 sm:px-8 py-7 flex flex-col">
+          <div className="flex items-start justify-between gap-4">
+            <MiniHeaderIdentidade />
+            {/* Titulo da secao */}
+            <div className="text-right">
+              <h2 className="font-black italic leading-[0.85] tracking-tight">
+                <span className="block text-3xl sm:text-4xl text-white">
+                  {pagina.titulo}
+                </span>
+                {pagina.subtitulo && (
+                  <span
+                    className="block text-3xl sm:text-4xl"
+                    style={{ color: pagina.subtitulo_cor ?? '#00C46A' }}
+                  >
+                    {pagina.subtitulo}
+                  </span>
+                )}
+              </h2>
+              <div className="mt-1.5 flex items-center justify-end gap-2">
+                {pagina.data_referencia && (
+                  <span className="text-[9px] tracking-widest text-white/40 uppercase">
+                    {pagina.data_referencia}
+                  </span>
+                )}
+                {pagina.tag && (
+                  <span
+                    className="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider text-black"
+                    style={{ background: pagina.subtitulo_cor ?? '#00C46A' }}
+                  >
+                    {pagina.tag}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {pagina.texto && (
+            <p className="mt-6 text-[13px] sm:text-sm text-cyan-100/75 leading-relaxed whitespace-pre-line">
+              {pagina.texto}
+            </p>
+          )}
+        </div>
+
+        {/* ---- Pagina direita: logo + foto historica ---- */}
+        <div className="relative px-6 sm:px-8 py-7 flex flex-col">
+          <div className="flex justify-end">
+            <LogoCanto />
+          </div>
+
+          {temFoto && (
+            <div className="flex-1 flex items-center justify-center">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.15 }}
+                className="rounded-lg border-2 border-amber-400/50 overflow-hidden shadow-[0_0_30px_-8px_rgba(251,191,36,0.4)] max-w-md"
+              >
+                {/* a foto = duas metades lado a lado (viram 2 figurinhas) */}
+                <div className="flex">
+                  <img src={fotoAmigos1} alt="Os amigos — começo" className="w-1/2 object-cover" />
+                  <img src={fotoAmigos2} alt="Os amigos — começo" className="w-1/2 object-cover" />
+                </div>
+              </motion.div>
+            </div>
+          )}
+
+          {/* figurinhas extras desta pagina, se houver */}
+          {!temFoto && figsOrdenadas.length > 0 && (
+            <div className="flex-1 mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3 justify-items-center content-start">
+              {figsOrdenadas.map((fig) => (
+                <Figurinha
+                  key={fig.id}
+                  figurinha={fig}
+                  tamanho="md"
+                  onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================================
+  // DEMAIS (rede, numeros, copa, campeonato, escudos)
+  // Layout generico: cabecalho + texto a esquerda, grid a direita.
+  // (refinamento fiel ao Figma vem nas proximas iteracoes)
+  // ============================================================
   return (
-    <div className="h-full w-full flex flex-col px-5 sm:px-7 py-6 overflow-y-auto">
-      {/* Cabecalho */}
-      <header className="mb-4">
-        {pagina.tag && (
-          <span className="inline-block mb-2 px-2 py-0.5 rounded text-[10px] font-bold tracking-widest uppercase bg-cyan-500/20 text-cyan-200 border border-cyan-400/30">
-            {pagina.tag}
-          </span>
-        )}
-        <h2 className="font-black leading-[0.9] tracking-tight">
-          <span className="block text-2xl sm:text-3xl md:text-4xl text-white">
-            {pagina.titulo}
-          </span>
-          {pagina.subtitulo && (
+    <div className="relative h-full w-full grid grid-cols-1 md:grid-cols-2">
+      <div className="hidden md:block absolute left-1/2 top-4 bottom-4 w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-cyan-400/40 to-transparent" />
+
+      {/* Esquerda — cabecalho + texto */}
+      <div className="px-6 sm:px-8 py-7 flex flex-col">
+        <div className="flex items-start justify-between gap-3">
+          <MiniHeaderIdentidade />
+        </div>
+        <header className="mt-5">
+          {pagina.tag && (
             <span
-              className="block text-xl sm:text-2xl md:text-3xl"
-              style={{ color: pagina.subtitulo_cor ?? '#FFFFFF' }}
+              className="inline-block mb-2 px-2 py-0.5 rounded text-[10px] font-bold tracking-widest uppercase text-black"
+              style={{ background: pagina.subtitulo_cor ?? '#22d3ee' }}
             >
-              {pagina.subtitulo}
+              {pagina.tag}
             </span>
           )}
-        </h2>
-        {pagina.data_referencia && (
-          <p className="mt-1 text-[11px] tracking-widest text-cyan-100/40 uppercase">
-            {pagina.data_referencia}
+          <h2 className="font-black italic leading-[0.88] tracking-tight">
+            <span className="block text-3xl sm:text-4xl text-white">{pagina.titulo}</span>
+            {pagina.subtitulo && (
+              <span
+                className="block text-2xl sm:text-3xl"
+                style={{ color: pagina.subtitulo_cor ?? '#FFFFFF' }}
+              >
+                {pagina.subtitulo}
+              </span>
+            )}
+          </h2>
+          {pagina.data_referencia && (
+            <p className="mt-1 text-[10px] tracking-widest text-cyan-100/40 uppercase">
+              {pagina.data_referencia}
+            </p>
+          )}
+        </header>
+        {pagina.texto && (
+          <p className="mt-4 text-[13px] sm:text-sm text-cyan-100/70 leading-relaxed whitespace-pre-line">
+            {pagina.texto}
           </p>
         )}
-      </header>
+      </div>
 
-      {/* Texto narrativo */}
-      {pagina.texto && (
-        <p className="text-xs sm:text-sm text-cyan-100/70 leading-relaxed whitespace-pre-line mb-5">
-          {pagina.texto}
-        </p>
-      )}
-
-      {/* Grid de figurinhas desta pagina */}
-      {figsOrdenadas.length > 0 && (
-        <div
-          className={cn(
-            'mt-auto grid gap-2.5 sm:gap-3 justify-items-center',
-            'grid-cols-3 sm:grid-cols-4'
-          )}
-        >
-          {figsOrdenadas.map((fig) => (
-            <Figurinha
-              key={fig.id}
-              figurinha={fig}
-              tamanho="md"
-              onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
-            />
-          ))}
+      {/* Direita — logo + grid de figurinhas */}
+      <div className="px-6 sm:px-8 py-7 flex flex-col">
+        <div className="flex justify-end mb-3">
+          <LogoCanto />
         </div>
-      )}
+        {figsOrdenadas.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 justify-items-center content-start">
+            {figsOrdenadas.map((fig) => (
+              <Figurinha
+                key={fig.id}
+                figurinha={fig}
+                tamanho="md"
+                onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="flex-1 flex items-center justify-center">
+            <p className="text-cyan-100/30 text-sm italic">
+              Figurinhas desta página em breve
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

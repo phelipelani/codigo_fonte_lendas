@@ -1,48 +1,29 @@
 // Arquivo: src/features/album/routes/AlbumPage.tsx
 //
-// Pagina principal do Album de Figurinhas — formato livro.
-// Desktop: 2 paginas lado a lado (spread). Mobile: 1 pagina.
+// Pagina principal do Album de Figurinhas.
+// Cada "pagina" e uma tela cheia (spread) — igual ao design do Figma.
+// Navegacao: uma pagina por vez.
 
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  ChevronLeft,
-  ChevronRight,
-  Package,
-  Loader2,
-  Trophy,
-} from 'lucide-react';
+import { ChevronLeft, ChevronRight, Package, Loader2, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   useMeuAlbum,
   useMeuWhatsapp,
+  useMeusPacotes,
   type Figurinha as FigurinhaType,
 } from '../api/albumApi';
 import { PaginaAlbum } from '../components/PaginaAlbum';
 import { AbrirPacoteModal } from '../components/AbrirPacoteModal';
 import { VincularWhatsappModal } from '../components/VincularWhatsappModal';
-import { useMeusPacotes } from '../api/albumApi';
-
-// Hook simples de media query
-function useIsDesktop(): boolean {
-  const [isDesktop, setIsDesktop] = React.useState(
-    typeof window !== 'undefined' ? window.innerWidth >= 1024 : true
-  );
-  React.useEffect(() => {
-    const onResize = () => setIsDesktop(window.innerWidth >= 1024);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
-  return isDesktop;
-}
 
 export const AlbumPage: React.FC = () => {
-  const isDesktop = useIsDesktop();
   const { data: album, isLoading } = useMeuAlbum();
   const { data: whatsappData, isLoading: loadingWhats } = useMeuWhatsapp();
   const { data: pacotesData } = useMeusPacotes();
 
-  const [indice, setIndice] = React.useState(0); // indice da pagina (0-based)
+  const [indice, setIndice] = React.useState(0);
   const [pacoteAberto, setPacoteAberto] = React.useState<number | null>(null);
   const [whatsappOk, setWhatsappOk] = React.useState(false);
 
@@ -63,35 +44,13 @@ export const AlbumPage: React.FC = () => {
 
   const paginas = album?.paginas ?? [];
   const totalPaginas = paginas.length;
+  const paginaAtual = paginas[indice] ?? null;
+
   const pacotesFechados =
     (pacotesData?.pacotes ?? []).filter((p) => p.status === 'fechado').length;
 
-  // A capa (indice 0) ocupa a tela inteira sozinha. As paginas internas
-  // sao mostradas em pares no desktop (1-2, 3-4...) ou uma a uma no mobile.
-  const naCapa = indice === 0;
-
-  const avancar = () =>
-    setIndice((i) => {
-      if (i === 0) return 1;
-      const passo = isDesktop ? 2 : 1;
-      return Math.min(i + passo, totalPaginas - 1);
-    });
-  const voltar = () =>
-    setIndice((i) => {
-      if (i <= 1) return 0;
-      const passo = isDesktop ? 2 : 1;
-      return Math.max(i - passo, 1);
-    });
-
-  // Paginas visiveis
-  const paginasVisiveis = naCapa
-    ? paginas.slice(0, 1)
-    : isDesktop
-      ? paginas.slice(indice, indice + 2)
-      : paginas.slice(indice, indice + 1);
-
-  const podeAvancar = indice < totalPaginas - 1;
-  const podeVoltar = indice > 0;
+  const avancar = () => setIndice((i) => Math.min(i + 1, totalPaginas - 1));
+  const voltar = () => setIndice((i) => Math.max(i - 1, 0));
 
   if (isLoading) {
     return (
@@ -103,12 +62,10 @@ export const AlbumPage: React.FC = () => {
 
   return (
     <div className="p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto">
-      {/* Modal de vinculo WhatsApp (bloqueante na 1a visita) */}
       {precisaWhatsapp && (
         <VincularWhatsappModal onVinculado={() => setWhatsappOk(true)} />
       )}
 
-      {/* Modal de abrir pacote */}
       <AbrirPacoteModal
         pacoteId={pacoteAberto}
         onClose={() => setPacoteAberto(null)}
@@ -130,7 +87,6 @@ export const AlbumPage: React.FC = () => {
           )}
         </div>
 
-        {/* Botao de pacotes */}
         <button
           type="button"
           onClick={() => {
@@ -171,47 +127,33 @@ export const AlbumPage: React.FC = () => {
         </div>
       )}
 
-      {/* ===== O LIVRO ===== */}
+      {/* ===== O LIVRO — uma pagina (spread) por vez ===== */}
       <div className="relative">
         <div
           className={cn(
             'relative rounded-2xl border-2 border-cyan-400/40 overflow-hidden',
-            // Fundo "Estadio a noite" — holofote radial: centro iluminado,
-            // bordas escuras. Tom medio para figurinhas (claras ou escuras)
-            // ganharem contraste sem destoar do dark do app.
+            // Fundo "Estadio a noite" — holofote radial
             'bg-[radial-gradient(ellipse_75%_55%_at_50%_40%,#243650_0%,#1b2942_48%,#0e1830_100%)]',
             'shadow-[0_0_40px_-12px_rgba(34,211,238,0.3)]'
           )}
         >
-          <div
-            className={cn(
-              'grid',
-              naCapa || !isDesktop ? 'grid-cols-1' : 'grid-cols-2'
+          <AnimatePresence mode="wait">
+            {paginaAtual && (
+              <motion.div
+                key={paginaAtual.id}
+                initial={{ opacity: 0, x: 24 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -24 }}
+                transition={{ duration: 0.28 }}
+                className="min-h-[560px] sm:min-h-[640px] lg:min-h-[700px]"
+              >
+                <PaginaAlbum
+                  pagina={paginaAtual}
+                  figurinhas={figsPorPagina.get(paginaAtual.id) ?? []}
+                />
+              </motion.div>
             )}
-          >
-            <AnimatePresence mode="wait">
-              {paginasVisiveis.map((pg) => (
-                <motion.div
-                  key={pg.id}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.25 }}
-                  className={cn(
-                    'min-h-[520px] sm:min-h-[600px] relative',
-                    // lombada entre as duas paginas (desktop, exceto capa)
-                    !naCapa && isDesktop &&
-                      'first:border-r first:border-cyan-400/20'
-                  )}
-                >
-                  <PaginaAlbum
-                    pagina={pg}
-                    figurinhas={figsPorPagina.get(pg.id) ?? []}
-                  />
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
+          </AnimatePresence>
         </div>
 
         {/* Navegacao */}
@@ -219,7 +161,7 @@ export const AlbumPage: React.FC = () => {
           <button
             type="button"
             onClick={voltar}
-            disabled={!podeVoltar}
+            disabled={indice === 0}
             className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-500/30 bg-[#0d1f35] px-4 py-2.5 text-sm font-semibold text-cyan-200 hover:bg-cyan-500/10 disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -227,19 +169,13 @@ export const AlbumPage: React.FC = () => {
           </button>
 
           <span className="text-xs text-cyan-100/50 tabular-nums">
-            {totalPaginas > 0
-              ? `${indice + 1}${
-                  isDesktop && paginasVisiveis.length > 1
-                    ? `-${indice + paginasVisiveis.length}`
-                    : ''
-                } / ${totalPaginas}`
-              : '—'}
+            {totalPaginas > 0 ? `${indice + 1} / ${totalPaginas}` : '—'}
           </span>
 
           <button
             type="button"
             onClick={avancar}
-            disabled={!podeAvancar}
+            disabled={indice >= totalPaginas - 1}
             className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-500/30 bg-[#0d1f35] px-4 py-2.5 text-sm font-semibold text-cyan-200 hover:bg-cyan-500/10 disabled:opacity-30 disabled:cursor-not-allowed"
           >
             Próxima
