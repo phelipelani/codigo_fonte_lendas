@@ -21,9 +21,8 @@ type PaginaAlbumProps = {
   onFigurinhaClick?: (fig: FigurinhaType) => void;
 };
 
-// Altura MINIMA de uma pagina (capa preenche o livro). A pagina
-// CRESCE livremente se o conteudo (ex: texto longo) for maior.
-const ALTURA_PAGINA = 'min-h-[560px] sm:min-h-[640px] lg:min-h-[760px]';
+// Toda pagina preenche a altura fixa do livro (definida no AlbumPage).
+const ALTURA_PAGINA = 'h-full';
 
 // =============================================================
 // Mini-cabecalho da identidade (canto superior das paginas internas)
@@ -187,7 +186,7 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
         <div className="hidden md:block absolute left-1/2 top-4 bottom-4 w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-cyan-400/40 to-transparent" />
 
         {/* ---- Pagina esquerda: cabecalho + narrativa ---- */}
-        <div className="px-6 sm:px-8 py-7 flex flex-col">
+        <div className="h-full px-6 sm:px-8 py-7 flex flex-col overflow-y-auto">
           <div className="flex items-start justify-between gap-4">
             <MiniHeaderIdentidade />
             {/* Titulo da secao */}
@@ -284,20 +283,20 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
       <div className={cn('relative w-full grid grid-cols-1 md:grid-cols-2', ALTURA_PAGINA)}>
         <div className="hidden md:block absolute left-1/2 top-4 bottom-4 w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-cyan-400/40 to-transparent" />
 
-        {/* Esquerda — imagem do fluxograma + 5 figurinhas embaixo */}
-        <div className="px-4 sm:px-6 py-5 flex flex-col">
+        {/* Esquerda — imagem do fluxograma (encolhe) + 5 figurinhas embaixo */}
+        <div className="h-full px-4 sm:px-6 py-5 flex flex-col">
           <img
             src={paginaRede}
             alt={pagina.titulo ?? 'A Rede que Cresceu'}
-            className="w-full rounded-lg border border-cyan-400/20"
+            className="flex-1 min-h-0 w-full object-contain rounded-lg"
           />
           {primeiros5.length > 0 && (
-            <div className="mt-2 grid grid-cols-5 gap-1.5">
+            <div className="shrink-0 mt-2 grid grid-cols-5 gap-1.5 h-[92px] sm:h-[116px] lg:h-[140px]">
               {primeiros5.map((fig) => (
                 <Figurinha
                   key={fig.id}
                   figurinha={fig}
-                  tamanho="fluid"
+                  tamanho="cell"
                   onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
                 />
               ))}
@@ -305,30 +304,30 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
           )}
         </div>
 
-        {/* Direita — grid 5 colunas; logo ocupa o canto sup. direito */}
-        <div className="px-4 sm:px-6 py-5">
-          <div className="grid grid-cols-5 gap-1.5">
+        {/* Direita — grid 5 colunas x 6 linhas preenchendo a altura */}
+        <div className="h-full px-4 sm:px-6 py-5">
+          <div className="h-full grid grid-cols-5 grid-rows-6 gap-1.5">
             {restante.slice(0, 4).map((fig) => (
               <Figurinha
                 key={fig.id}
                 figurinha={fig}
-                tamanho="fluid"
+                tamanho="cell"
                 onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
               />
             ))}
             {/* logo no lugar da 5a figurinha da 1a linha */}
-            <div className="aspect-[114/155] flex items-center justify-center">
+            <div className="flex items-center justify-center">
               <img
                 src={logoLendas}
                 alt="FutLendas"
-                className="w-4/5 object-contain drop-shadow-[0_0_10px_rgba(251,191,36,0.4)]"
+                className="max-h-full w-auto object-contain drop-shadow-[0_0_10px_rgba(251,191,36,0.4)]"
               />
             </div>
             {restante.slice(4).map((fig) => (
               <Figurinha
                 key={fig.id}
                 figurinha={fig}
-                tamanho="fluid"
+                tamanho="cell"
                 onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
               />
             ))}

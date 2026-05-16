@@ -132,6 +132,8 @@ export const AlbumPage: React.FC = () => {
         <div
           className={cn(
             'relative rounded-2xl border-2 border-cyan-400/40 overflow-hidden',
+            // Altura FIXA — todas as paginas tem o mesmo tamanho de livro
+            'h-[600px] sm:h-[680px] lg:h-[780px]',
             // Fundo "Estadio a noite" — holofote radial
             'bg-[radial-gradient(ellipse_75%_55%_at_50%_40%,#243650_0%,#1b2942_48%,#0e1830_100%)]',
             'shadow-[0_0_40px_-12px_rgba(34,211,238,0.3)]'
@@ -145,6 +147,7 @@ export const AlbumPage: React.FC = () => {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -24 }}
                 transition={{ duration: 0.28 }}
+                className="h-full"
               >
                 <PaginaAlbum
                   pagina={paginaAtual}
