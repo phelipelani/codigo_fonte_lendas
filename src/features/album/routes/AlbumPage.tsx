@@ -145,7 +145,7 @@ export const AlbumPage: React.FC = () => {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -24 }}
                 transition={{ duration: 0.28 }}
-                className="min-h-[560px] sm:min-h-[640px] lg:min-h-[700px]"
+                className="flex flex-col min-h-[560px] sm:min-h-[640px] lg:min-h-[760px]"
               >
                 <PaginaAlbum
                   pagina={paginaAtual}

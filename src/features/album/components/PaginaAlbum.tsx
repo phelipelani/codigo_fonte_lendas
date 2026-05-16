@@ -64,7 +64,7 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
   // ============================================================
   if (pagina.tipo === 'capa') {
     return (
-      <div className="relative h-full w-full flex flex-col md:flex-row bg-black overflow-hidden">
+      <div className="relative flex-1 w-full flex flex-col md:flex-row bg-black overflow-hidden">
         {/* Metade esquerda — preta com a identidade */}
         <div className="relative flex-1 flex flex-col items-center justify-center text-center px-6 py-10 md:py-12">
           <motion.div
@@ -147,7 +147,7 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
   // ============================================================
   if (pagina.tipo === 'agradecimento') {
     return (
-      <div className="h-full w-full flex flex-col items-center justify-center text-center px-8 py-12">
+      <div className="flex-1 w-full flex flex-col items-center justify-center text-center px-8 py-12">
         <img src={logoLendas} alt="" className="h-20 w-20 object-contain mb-5 opacity-80" />
         <h2 className="font-black leading-tight">
           <span className="block text-4xl sm:text-5xl text-white">{pagina.titulo}</span>
@@ -177,7 +177,7 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
     const temFoto = pagina.numero === 2; // pagina "O comeco de tudo"
 
     return (
-      <div className="relative h-full w-full grid grid-cols-1 md:grid-cols-2">
+      <div className="relative flex-1 w-full grid grid-cols-1 md:grid-cols-2">
         {/* lombada central */}
         <div className="hidden md:block absolute left-1/2 top-4 bottom-4 w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-cyan-400/40 to-transparent" />
 
@@ -232,12 +232,12 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
           </div>
 
           {temFoto && (
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex-1 flex items-center justify-center py-4">
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.15 }}
-                className="rounded-lg border-2 border-amber-400/50 overflow-hidden shadow-[0_0_30px_-8px_rgba(251,191,36,0.4)] max-w-md"
+                className="rounded-lg border-2 border-amber-400/50 overflow-hidden shadow-[0_0_36px_-6px_rgba(251,191,36,0.45)] w-full max-w-2xl"
               >
                 {/* a foto = duas metades lado a lado (viram 2 figurinhas) */}
                 <div className="flex">
@@ -272,7 +272,7 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
   // (refinamento fiel ao Figma vem nas proximas iteracoes)
   // ============================================================
   return (
-    <div className="relative h-full w-full grid grid-cols-1 md:grid-cols-2">
+    <div className="relative flex-1 w-full grid grid-cols-1 md:grid-cols-2">
       <div className="hidden md:block absolute left-1/2 top-4 bottom-4 w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-cyan-400/40 to-transparent" />
 
       {/* Esquerda — cabecalho + texto */}

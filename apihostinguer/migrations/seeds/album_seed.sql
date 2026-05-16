@@ -15,7 +15,7 @@
 INSERT INTO album_paginas (numero, tipo, titulo, subtitulo, subtitulo_cor, tag, data_referencia, texto) VALUES
 (1,  'capa',          'FUT LENDAS', 'COLECAO COMPLETA', '#FFC400', NULL, NULL, NULL),
 (2,  'narrativa',     'O COMECO', 'DE TUDO', '#00C46A', 'A ORIGEM', '09 de agosto de 2022',
- 'Em 09 de agosto de 2022, um grupo de amigos teve uma ideia simples: juntar a galera e jogar bola. Parece facil, nao foi. Para fechar um racha decente voce precisa de pelo menos 15 pessoas.'),
+ 'Em 09 de agosto de 2022, um grupo de amigos teve uma ideia simples: juntar a galera e jogar bola. Parece fácil — não foi. Para fechar um racha decente você precisa de pelo menos 15 pessoas.\n\nEngraçado, porque dava para contar nos dedos quem jogava bola: Higor, Dieguinho, Xan, Lani, Ronay, Alan, Tiago, Digo, Wagner. Sabíamos que dava nove pessoas. No desespero, começa a ventilar nomes. Afranio, que com uma mensagem já informou que levaria talvez o cara mais resenha, mais ruim e mais amado do racha, nosso querido Apolo. O Gabriel Ferreira era nossa dúvida, mas fazia parte dos planos.\n\nDe nove passamos para onze. Ainda faltava quatro. Digo então falou: vou chamar o João, que trouxe seus funcionários todos rsrs.\n\nO pontapé foi dado. Arena Caiçara ia ser o palco.'),
 (3,  'rede',          'A REDE QUE CRESCEU', '2022-2024', '#FFFFFF', NULL, NULL,
  'Precisamos crescer, precisavamos de mais gente foi quando comecou os convites. Entao comeca a rede.'),
 (4,  'numeros',       'OS NUMEROS', 'DA LENDA', '#FFC400', 'ESTATISTICAS - RECORDES - FOLCLORE', NULL,
