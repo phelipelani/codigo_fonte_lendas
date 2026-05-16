@@ -41,7 +41,7 @@ INSERT INTO album_paginas (numero, tipo, titulo, subtitulo, subtitulo_cor, tag, 
 
 -- ---------- FIGURINHAS (mockadas, sem imagem real) ----------
 -- Jogadores comuns (pagina 3 - A rede que cresceu)
-INSERT INTO album_figurinhas (numero, nome, time, categoria, raridade, pagina_id, slot) VALUES
+INSERT INTO album_figurinhas (numero, nome, `time`, categoria, raridade, pagina_id, slot) VALUES
 (1,  'Lani',        'FutLendas', 'jogador', 'comum',    3, 1),
 (2,  'Andrei',      'FutLendas', 'jogador', 'comum',    3, 2),
 (3,  'Alex',        'FutLendas', 'jogador', 'comum',    3, 3),

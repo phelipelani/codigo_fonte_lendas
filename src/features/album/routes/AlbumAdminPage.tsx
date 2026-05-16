@@ -99,6 +99,7 @@ const FigurinhasTab: React.FC = () => {
   const [form, setForm] = React.useState({
     numero: '',
     nome: '',
+    time: '',
     categoria: 'jogador' as CategoriaFigurinha,
     raridade: 'comum' as Raridade,
     pagina_id: '',
@@ -123,6 +124,7 @@ const FigurinhasTab: React.FC = () => {
       {
         numero: parseInt(form.numero, 10),
         nome: form.nome.trim(),
+        time: form.time.trim() || null,
         categoria: form.categoria,
         raridade: form.raridade,
         imagem_url: imagemUrl,
@@ -134,6 +136,7 @@ const FigurinhasTab: React.FC = () => {
           setForm({
             numero: '',
             nome: '',
+            time: form.time, // mantem time pra cadastro em lote
             categoria: 'jogador',
             raridade: 'comum',
             pagina_id: form.pagina_id, // mantem pagina pra cadastro em lote
@@ -221,6 +224,17 @@ const FigurinhasTab: React.FC = () => {
             value={form.nome}
             onChange={(e) => setForm({ ...form, nome: e.target.value })}
             required
+          />
+        </div>
+
+        <div>
+          <label className="block text-[10px] font-semibold uppercase tracking-widest text-cyan-200/70 mb-1">
+            Time
+          </label>
+          <Input
+            value={form.time}
+            onChange={(e) => setForm({ ...form, time: e.target.value })}
+            placeholder="Ex: FutLendas"
           />
         </div>
 

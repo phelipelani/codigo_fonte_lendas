@@ -26,6 +26,7 @@ export type Figurinha = {
   id: number;
   numero: number;
   nome: string;
+  time: string | null;
   descricao: string | null;
   categoria: CategoriaFigurinha;
   raridade: Raridade;
@@ -155,6 +156,7 @@ export const usePaginas = () =>
 export type NovaFigurinha = {
   numero: number;
   nome: string;
+  time?: string | null;
   descricao?: string;
   categoria: CategoriaFigurinha;
   raridade: Raridade;

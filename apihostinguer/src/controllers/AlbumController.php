@@ -156,11 +156,12 @@ class AlbumController
         try {
             $this->db->execute(
                 'INSERT INTO album_figurinhas
-                    (numero, nome, descricao, categoria, raridade, imagem_url, pagina_id, slot)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                    (numero, nome, `time`, descricao, categoria, raridade, imagem_url, pagina_id, slot)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 [
                     (int)$in['numero'],
                     trim($in['nome']),
+                    $in['time']       ?? null,
                     $in['descricao']  ?? null,
                     $categoria,
                     $raridade,
@@ -184,6 +185,8 @@ class AlbumController
         foreach ($campos as $c) {
             if (array_key_exists($c, $in)) { $sets[] = "$c = ?"; $vals[] = $in[$c]; }
         }
+        // `time` e palavra reservada — precisa de backticks
+        if (array_key_exists('time', $in)) { $sets[] = '`time` = ?'; $vals[] = $in['time']; }
         foreach (['numero','pagina_id','slot'] as $c) {
             if (array_key_exists($c, $in)) {
                 $sets[] = "$c = ?";
