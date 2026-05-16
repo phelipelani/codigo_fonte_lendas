@@ -10,6 +10,8 @@ import * as React from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Figurinha } from './Figurinha';
+import capaHero from '../assets/capa-hero.png';
+import logoLendas from '@/assets/Logo.webp';
 import type { Pagina, Figurinha as FigurinhaType } from '../api/albumApi';
 
 type PaginaAlbumProps = {
@@ -30,61 +32,85 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
   // ---------------- CAPA ----------------
   if (pagina.tipo === 'capa') {
     return (
-      <div className="relative h-full w-full flex flex-col items-center justify-center text-center px-6 py-10">
-        <motion.span
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-[10px] sm:text-xs tracking-[0.4em] text-cyan-300/60 font-semibold mb-3"
-        >
-          ÁLBUM OFICIAL
-        </motion.span>
+      <div className="relative h-full w-full flex flex-col md:flex-row bg-black overflow-hidden">
+        {/* ===== Metade esquerda — preta com a identidade ===== */}
+        <div className="relative flex-1 flex flex-col items-center justify-center text-center px-6 py-10 md:py-12">
+          {/* ALBUM OFICIAL com tracinhos */}
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-2 mb-4"
+          >
+            <span className="h-px w-6 bg-amber-400/60" />
+            <span className="text-[9px] sm:text-[10px] tracking-[0.45em] text-white/70 font-semibold">
+              ÁLBUM OFICIAL
+            </span>
+            <span className="h-px w-6 bg-amber-400/60" />
+          </motion.div>
 
-        <motion.h1
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.1 }}
-          className="font-black leading-[0.85] tracking-tight"
-        >
-          <span className="block text-5xl sm:text-6xl md:text-7xl text-white">FUT</span>
-          <span className="block text-5xl sm:text-6xl md:text-7xl text-amber-400">
-            LENDAS
-          </span>
-        </motion.h1>
+          {/* FUT / LENDAS */}
+          <motion.h1
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.1 }}
+            className="font-black italic leading-[0.82] tracking-tight"
+          >
+            <span className="block text-6xl sm:text-7xl md:text-8xl text-white drop-shadow-lg">
+              FUT
+            </span>
+            <span className="block text-6xl sm:text-7xl md:text-8xl text-amber-400 drop-shadow-[0_0_18px_rgba(251,191,36,0.35)]">
+              LENDAS
+            </span>
+          </motion.h1>
 
-        <motion.span
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="mt-3 text-xs sm:text-sm tracking-[0.3em] text-amber-200/70 font-semibold"
-        >
-          {pagina.subtitulo ?? 'COLEÇÃO COMPLETA'}
-        </motion.span>
+          {/* COLECAO COMPLETA */}
+          <motion.span
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="mt-3 text-[11px] sm:text-sm tracking-[0.42em] text-white/45 font-semibold"
+          >
+            COLEÇÃO COMPLETA
+          </motion.span>
 
-        {/* Logo redondo animado (pulse + glow) */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.7 }}
-          animate={{
-            opacity: 1,
-            scale: [1, 1.06, 1],
-            filter: [
-              'drop-shadow(0 0 8px rgba(251,191,36,0.4))',
-              'drop-shadow(0 0 22px rgba(251,191,36,0.7))',
-              'drop-shadow(0 0 8px rgba(251,191,36,0.4))',
-            ],
-          }}
-          transition={{
-            opacity: { delay: 0.4 },
-            scale: { duration: 2.6, repeat: Infinity, ease: 'easeInOut' },
-            filter: { duration: 2.6, repeat: Infinity, ease: 'easeInOut' },
-          }}
-          className="mt-8 h-24 w-24 sm:h-28 sm:w-28 rounded-full border-4 border-amber-400 bg-[#0a1628] flex items-center justify-center"
-        >
-          <span className="font-black text-amber-400 text-lg leading-none text-center">
-            FUT
-            <br />
-            LENDAS
-          </span>
-        </motion.div>
+          {/* Logo redondo animado (pulse + glow) */}
+          <motion.img
+            src={logoLendas}
+            alt="FutLendas"
+            initial={{ opacity: 0, scale: 0.7 }}
+            animate={{
+              opacity: 1,
+              scale: [1, 1.05, 1],
+              filter: [
+                'drop-shadow(0 0 6px rgba(251,191,36,0.35))',
+                'drop-shadow(0 0 20px rgba(251,191,36,0.65))',
+                'drop-shadow(0 0 6px rgba(251,191,36,0.35))',
+              ],
+            }}
+            transition={{
+              opacity: { delay: 0.45 },
+              scale: { duration: 2.8, repeat: Infinity, ease: 'easeInOut' },
+              filter: { duration: 2.8, repeat: Infinity, ease: 'easeInOut' },
+            }}
+            className="mt-8 h-24 w-24 sm:h-28 sm:w-28 object-contain"
+          />
+        </div>
+
+        {/* ===== Metade direita — arte hero ===== */}
+        <div className="relative flex-1 min-h-[260px] md:min-h-0">
+          <img
+            src={capaHero}
+            alt="FutLendas — Coleção"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+          {/* brilho pulsante sobre o raio da arte */}
+          <motion.div
+            aria-hidden
+            animate={{ opacity: [0.0, 0.35, 0.0] }}
+            transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
+            className="absolute inset-0 bg-gradient-to-t from-cyan-400/30 via-transparent to-transparent mix-blend-screen pointer-events-none"
+          />
+        </div>
       </div>
     );
   }

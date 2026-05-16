@@ -63,18 +63,35 @@ export const AlbumPage: React.FC = () => {
 
   const paginas = album?.paginas ?? [];
   const totalPaginas = paginas.length;
-  const passo = isDesktop ? 2 : 1;
   const pacotesFechados =
     (pacotesData?.pacotes ?? []).filter((p) => p.status === 'fechado').length;
 
+  // A capa (indice 0) ocupa a tela inteira sozinha. As paginas internas
+  // sao mostradas em pares no desktop (1-2, 3-4...) ou uma a uma no mobile.
+  const naCapa = indice === 0;
+
   const avancar = () =>
-    setIndice((i) => Math.min(i + passo, Math.max(0, totalPaginas - 1)));
-  const voltar = () => setIndice((i) => Math.max(i - passo, 0));
+    setIndice((i) => {
+      if (i === 0) return 1;
+      const passo = isDesktop ? 2 : 1;
+      return Math.min(i + passo, totalPaginas - 1);
+    });
+  const voltar = () =>
+    setIndice((i) => {
+      if (i <= 1) return 0;
+      const passo = isDesktop ? 2 : 1;
+      return Math.max(i - passo, 1);
+    });
 
   // Paginas visiveis
-  const paginasVisiveis = isDesktop
-    ? paginas.slice(indice, indice + 2)
-    : paginas.slice(indice, indice + 1);
+  const paginasVisiveis = naCapa
+    ? paginas.slice(0, 1)
+    : isDesktop
+      ? paginas.slice(indice, indice + 2)
+      : paginas.slice(indice, indice + 1);
+
+  const podeAvancar = indice < totalPaginas - 1;
+  const podeVoltar = indice > 0;
 
   if (isLoading) {
     return (
@@ -165,7 +182,7 @@ export const AlbumPage: React.FC = () => {
           <div
             className={cn(
               'grid',
-              isDesktop ? 'grid-cols-2' : 'grid-cols-1'
+              naCapa || !isDesktop ? 'grid-cols-1' : 'grid-cols-2'
             )}
           >
             <AnimatePresence mode="wait">
@@ -178,8 +195,8 @@ export const AlbumPage: React.FC = () => {
                   transition={{ duration: 0.25 }}
                   className={cn(
                     'min-h-[520px] sm:min-h-[600px] relative',
-                    // lombada entre as duas paginas (desktop)
-                    isDesktop &&
+                    // lombada entre as duas paginas (desktop, exceto capa)
+                    !naCapa && isDesktop &&
                       'first:border-r first:border-cyan-400/20'
                   )}
                 >
@@ -198,7 +215,7 @@ export const AlbumPage: React.FC = () => {
           <button
             type="button"
             onClick={voltar}
-            disabled={indice === 0}
+            disabled={!podeVoltar}
             className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-500/30 bg-[#0d1f35] px-4 py-2.5 text-sm font-semibold text-cyan-200 hover:bg-cyan-500/10 disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -218,7 +235,7 @@ export const AlbumPage: React.FC = () => {
           <button
             type="button"
             onClick={avancar}
-            disabled={indice + passo >= totalPaginas}
+            disabled={!podeAvancar}
             className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-500/30 bg-[#0d1f35] px-4 py-2.5 text-sm font-semibold text-cyan-200 hover:bg-cyan-500/10 disabled:opacity-30 disabled:cursor-not-allowed"
           >
             Próxima
