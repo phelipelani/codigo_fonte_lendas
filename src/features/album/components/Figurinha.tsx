@@ -23,7 +23,7 @@ type FigurinhaProps = {
   vazio?: boolean;
   /** Força exibir como obtida mesmo sem dados de inventário (ex: abrir pacote) */
   forcarObtida?: boolean;
-  tamanho?: 'sm' | 'md' | 'lg' | 'album';
+  tamanho?: 'sm' | 'md' | 'lg' | 'album' | 'fluid';
   onClick?: () => void;
   className?: string;
 };
@@ -35,6 +35,8 @@ const TAMANHO_CLASSES = {
   // Padrao do album: 114x155 no desktop, escala proporcional em telas menores
   album:
     'w-[78px] h-[106px] sm:w-[96px] sm:h-[130px] lg:w-[114px] lg:h-[155px] text-[9px] sm:text-[10px]',
+  // Fluido: preenche a celula do grid mantendo a proporcao 114:155
+  fluid: 'w-full aspect-[114/155] text-[8px] sm:text-[9px] lg:text-[10px]',
 };
 
 export const Figurinha: React.FC<FigurinhaProps> = ({

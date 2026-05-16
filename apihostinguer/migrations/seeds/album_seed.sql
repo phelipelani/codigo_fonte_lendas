@@ -65,9 +65,9 @@ INSERT INTO album_figurinhas (numero, nome, `time`, categoria, raridade, pagina_
 (21, 'Afranio',    'FutLendas', 'jogador', 'comum',    3, 21),
 (22, 'Rafael',      'FutLendas', 'jogador', 'comum',    3, 22),
 -- Lendarias
-(23, 'Higor',       'FutLendas', 'jogador', 'lendaria', 3, 23),
-(24, 'Dieguinho',   'FutLendas', 'jogador', 'lendaria', 3, 24),
-(25, 'Ze',          'FutLendas', 'jogador', 'lendaria', 3, 25),
+(23, 'Higor',       'FutLendas', 'jogador', 'comum',    3, 23),
+(24, 'Dieguinho',   'FutLendas', 'jogador', 'comum',    3, 24),
+(25, 'Ze',          'FutLendas', 'jogador', 'comum',    3, 25),
 (26, 'Apolo',       'FutLendas', 'jogador', 'lendaria', 3, 26),
 -- Estatisticas (pagina 4)
 (27, 'Maior Artilheiro Fut 5',  NULL, 'estatistica', 'lendaria', 4, 1),

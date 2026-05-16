@@ -284,7 +284,7 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
       <div className={cn('relative w-full grid grid-cols-1 md:grid-cols-2', ALTURA_PAGINA)}>
         <div className="hidden md:block absolute left-1/2 top-4 bottom-4 w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-cyan-400/40 to-transparent" />
 
-        {/* Esquerda — imagem do fluxograma + 5 figurinhas */}
+        {/* Esquerda — imagem do fluxograma + 5 figurinhas embaixo */}
         <div className="px-4 sm:px-6 py-5 flex flex-col">
           <img
             src={paginaRede}
@@ -292,12 +292,12 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
             className="w-full rounded-lg border border-cyan-400/20"
           />
           {primeiros5.length > 0 && (
-            <div className="mt-3 grid grid-cols-5 gap-1.5 sm:gap-2 justify-items-center">
+            <div className="mt-2 grid grid-cols-5 gap-1.5">
               {primeiros5.map((fig) => (
                 <Figurinha
                   key={fig.id}
                   figurinha={fig}
-                  tamanho="album"
+                  tamanho="fluid"
                   onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
                 />
               ))}
@@ -305,29 +305,34 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
           )}
         </div>
 
-        {/* Direita — logo + grid das demais figurinhas */}
-        <div className="px-4 sm:px-6 py-5 flex flex-col">
-          <div className="flex justify-end mb-3">
-            <LogoCanto />
+        {/* Direita — grid 5 colunas; logo ocupa o canto sup. direito */}
+        <div className="px-4 sm:px-6 py-5">
+          <div className="grid grid-cols-5 gap-1.5">
+            {restante.slice(0, 4).map((fig) => (
+              <Figurinha
+                key={fig.id}
+                figurinha={fig}
+                tamanho="fluid"
+                onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
+              />
+            ))}
+            {/* logo no lugar da 5a figurinha da 1a linha */}
+            <div className="aspect-[114/155] flex items-center justify-center">
+              <img
+                src={logoLendas}
+                alt="FutLendas"
+                className="w-4/5 object-contain drop-shadow-[0_0_10px_rgba(251,191,36,0.4)]"
+              />
+            </div>
+            {restante.slice(4).map((fig) => (
+              <Figurinha
+                key={fig.id}
+                figurinha={fig}
+                tamanho="fluid"
+                onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
+              />
+            ))}
           </div>
-          {restante.length > 0 ? (
-            <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5 sm:gap-2 justify-items-center content-start">
-              {restante.map((fig) => (
-                <Figurinha
-                  key={fig.id}
-                  figurinha={fig}
-                  tamanho="album"
-                  onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <p className="text-cyan-100/30 text-sm italic">
-                Figurinhas desta página em breve
-              </p>
-            </div>
-          )}
         </div>
       </div>
     );
