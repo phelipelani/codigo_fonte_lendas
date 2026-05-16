@@ -175,7 +175,11 @@ export const AlbumPage: React.FC = () => {
       <div className="relative">
         <div
           className={cn(
-            'relative rounded-2xl border-2 border-cyan-400/40 bg-[#060d1a] overflow-hidden',
+            'relative rounded-2xl border-2 border-cyan-400/40 overflow-hidden',
+            // Fundo "Estadio a noite" — holofote radial: centro iluminado,
+            // bordas escuras. Tom medio para figurinhas (claras ou escuras)
+            // ganharem contraste sem destoar do dark do app.
+            'bg-[radial-gradient(ellipse_75%_55%_at_50%_40%,#243650_0%,#1b2942_48%,#0e1830_100%)]',
             'shadow-[0_0_40px_-12px_rgba(34,211,238,0.3)]'
           )}
         >

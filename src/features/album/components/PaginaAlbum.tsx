@@ -92,16 +92,16 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
               scale: { duration: 2.8, repeat: Infinity, ease: 'easeInOut' },
               filter: { duration: 2.8, repeat: Infinity, ease: 'easeInOut' },
             }}
-            className="mt-8 h-24 w-24 sm:h-28 sm:w-28 object-contain"
+            className="mt-8 h-36 w-36 sm:h-44 sm:w-44 object-contain"
           />
         </div>
 
         {/* ===== Metade direita — arte hero ===== */}
-        <div className="relative flex-1 min-h-[260px] md:min-h-0">
+        <div className="relative flex-1 min-h-[300px] md:min-h-0 bg-black">
           <img
             src={capaHero}
             alt="FutLendas — Coleção"
-            className="absolute inset-0 h-full w-full object-cover"
+            className="absolute inset-0 h-full w-full object-contain"
           />
           {/* brilho pulsante sobre o raio da arte */}
           <motion.div
