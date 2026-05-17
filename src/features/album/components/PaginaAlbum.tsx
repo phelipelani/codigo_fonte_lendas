@@ -179,28 +179,123 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
   }
 
   // ============================================================
-  // AGRADECIMENTO
+  // AGRADECIMENTO — ultima pagina, encerramento epico (sem figurinhas)
   // ============================================================
   if (pagina.tipo === 'agradecimento') {
     return (
-      <div className={cn('w-full flex flex-col items-center justify-center text-center px-8 py-12', ALTURA_PAGINA)}>
-        <img src={logoLendas} alt="" className="h-20 w-20 object-contain mb-5 opacity-80" />
-        <h2 className="font-black leading-tight">
-          <span className="block text-3xl sm:text-5xl lg:text-6xl text-white">{pagina.titulo}</span>
-          {pagina.subtitulo && (
-            <span
-              className="block text-xl sm:text-3xl lg:text-4xl mt-1"
-              style={{ color: pagina.subtitulo_cor ?? '#FFC400' }}
-            >
-              {pagina.subtitulo}
-            </span>
-          )}
-        </h2>
-        {pagina.texto && (
-          <p className="mt-6 max-w-md text-sm sm:text-base lg:text-lg text-cyan-100/70 leading-relaxed">
-            {pagina.texto}
-          </p>
+      <div
+        className={cn(
+          'relative w-full flex flex-col items-center justify-center text-center px-8 py-12 overflow-hidden',
+          ALTURA_PAGINA
         )}
+      >
+        {/* Camada 1 — arte da capa, bem sutil ao fundo */}
+        <img
+          src={capaHero}
+          aria-hidden
+          className="absolute inset-0 h-full w-full object-cover opacity-[0.12] blur-sm scale-110"
+        />
+        {/* Camada 2 — brilho dourado central */}
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-[radial-gradient(ellipse_55%_45%_at_50%_40%,rgba(251,191,36,0.16)_0%,transparent_70%)]"
+        />
+        {/* Camada 3 — vinheta escura nas bordas */}
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_55%,rgba(0,0,0,0.65)_100%)]"
+        />
+
+        {/* ===== Conteudo ===== */}
+        <div className="relative z-10 flex flex-col items-center max-w-lg">
+          {/* Logo com glow pulsante */}
+          <motion.img
+            src={logoLendas}
+            alt="FutLendas"
+            initial={{ opacity: 0, scale: 0.7 }}
+            animate={{
+              opacity: 1,
+              scale: [1, 1.05, 1],
+              filter: [
+                'drop-shadow(0 0 10px rgba(251,191,36,0.4))',
+                'drop-shadow(0 0 26px rgba(251,191,36,0.75))',
+                'drop-shadow(0 0 10px rgba(251,191,36,0.4))',
+              ],
+            }}
+            transition={{
+              opacity: { duration: 0.6 },
+              scale: { duration: 3, repeat: Infinity, ease: 'easeInOut' },
+              filter: { duration: 3, repeat: Infinity, ease: 'easeInOut' },
+            }}
+            className="h-28 w-28 sm:h-36 sm:w-36 object-contain"
+          />
+
+          {/* Estrelas decorativas */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="mt-4 flex items-center gap-2 text-amber-400/80"
+          >
+            <span className="h-px w-8 bg-amber-400/40" />
+            <span className="text-sm">★ ★ ★</span>
+            <span className="h-px w-8 bg-amber-400/40" />
+          </motion.div>
+
+          {/* OBRIGADO / POR FAZER PARTE */}
+          <motion.h2
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mt-5 font-black leading-[0.9] tracking-tight"
+          >
+            <span className="block text-4xl sm:text-6xl lg:text-7xl text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.6)]">
+              {pagina.titulo}
+            </span>
+            {pagina.subtitulo && (
+              <span
+                className="block text-2xl sm:text-4xl lg:text-5xl mt-1 drop-shadow-[0_0_20px_rgba(251,191,36,0.4)]"
+                style={{ color: pagina.subtitulo_cor ?? '#FFC400' }}
+              >
+                {pagina.subtitulo}
+              </span>
+            )}
+          </motion.h2>
+
+          {/* Divisoria com losango */}
+          <motion.div
+            initial={{ opacity: 0, scaleX: 0 }}
+            animate={{ opacity: 1, scaleX: 1 }}
+            transition={{ delay: 0.5 }}
+            className="mt-6 flex items-center gap-2"
+          >
+            <span className="h-px w-16 sm:w-24 bg-gradient-to-r from-transparent to-amber-400/60" />
+            <span className="h-2 w-2 rotate-45 bg-amber-400" />
+            <span className="h-px w-16 sm:w-24 bg-gradient-to-l from-transparent to-amber-400/60" />
+          </motion.div>
+
+          {/* Texto de agradecimento */}
+          {pagina.texto && (
+            <motion.p
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+              className="mt-6 text-sm sm:text-base lg:text-lg text-cyan-100/80 leading-relaxed"
+            >
+              {pagina.texto}
+            </motion.p>
+          )}
+
+          {/* Rodape */}
+          <motion.span
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.9 }}
+            className="mt-8 text-[10px] sm:text-xs tracking-[0.35em] text-amber-200/40 font-semibold uppercase"
+          >
+            Álbum Oficial · Coleção Completa
+          </motion.span>
+        </div>
       </div>
     );
   }

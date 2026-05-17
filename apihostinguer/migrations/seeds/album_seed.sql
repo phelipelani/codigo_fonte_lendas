@@ -37,7 +37,7 @@ INSERT INTO album_paginas (numero, tipo, titulo, subtitulo, subtitulo_cor, tag, 
 (12, 'escudos',       'ESCUDOS DOS TIMES', NULL, '#FFFFFF', NULL, NULL,
  'FutLendas também fez sua primeira partida no fut onze.[[DIR]]Onde o projeto Lendas virou o berço do maior time do mundo — e há quem diga que é o Mário de Caraguatatuba. ooooooowwwwww 1, 2, 3 Caraguás!'),
 (13, 'agradecimento', 'OBRIGADO', 'POR FAZER PARTE', '#FFC400', NULL, NULL,
- 'Cada figurinha desse album e uma memoria. Obrigado por construir essa historia com a gente.');
+ 'Cada figurinha deste álbum é uma memória. Obrigado por construir essa história com a gente.');
 
 -- ---------- FIGURINHAS — Pagina 3 "A Rede que Cresceu" (34) ----------
 -- Slots 1-5 vao embaixo da imagem (esquerda); 6-34 no grid da direita.
