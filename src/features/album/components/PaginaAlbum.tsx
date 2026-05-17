@@ -625,7 +625,115 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
   }
 
   // ============================================================
-  // DEMAIS (campeonato, escudos)
+  // CAMPEONATO — "1o/2o/3o Campeonato Pontos Corridos"
+  // Esquerda: header + texto corrido + 3 figurinhas de destaque.
+  // Direita: logo + Time Campeao grande + grid 3x2 (6 jogadores).
+  // ============================================================
+  if (pagina.tipo === 'campeonato') {
+    const campeao = figsOrdenadas.find((f) => (f.slot ?? 0) === 1);
+    const jogadores = figsOrdenadas.filter(
+      (f) => (f.slot ?? 0) >= 2 && (f.slot ?? 0) <= 7
+    );
+    const destaques = figsOrdenadas.filter((f) => (f.slot ?? 0) >= 8);
+    const cor = pagina.subtitulo_cor ?? '#A855F7';
+
+    return (
+      <div className={cn('relative w-full grid grid-cols-1 md:grid-cols-2', ALTURA_PAGINA)}>
+        <div className="hidden md:block absolute left-1/2 top-4 bottom-4 w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-cyan-400/40 to-transparent" />
+
+        {/* Esquerda — header + texto (scroll) + 3 figurinhas de destaque */}
+        <div className="h-full px-6 sm:px-8 py-6 flex flex-col overflow-y-auto">
+          <span className="text-[8px] tracking-[0.3em] text-cyan-100/40 font-semibold uppercase">
+            Fut Lendas · Pontos Corridos
+          </span>
+          <h2 className="mt-1 font-black italic leading-[0.82] tracking-tight">
+            <span className="block text-2xl sm:text-4xl lg:text-5xl text-white">
+              {pagina.titulo}
+            </span>
+            {pagina.subtitulo && (
+              <span
+                className="block text-2xl sm:text-4xl lg:text-5xl"
+                style={{ color: cor }}
+              >
+                {pagina.subtitulo}
+              </span>
+            )}
+          </h2>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            {pagina.data_referencia && (
+              <span className="text-[9px] text-white/40 uppercase tracking-widest">
+                {pagina.data_referencia}
+              </span>
+            )}
+            {pagina.tag && (
+              <span
+                className="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider text-white"
+                style={{ background: cor }}
+              >
+                {pagina.tag}
+              </span>
+            )}
+          </div>
+
+          {pagina.texto && (
+            <p className="mt-4 text-[11px] sm:text-xs lg:text-sm text-cyan-100/75 leading-relaxed whitespace-pre-line">
+              {pagina.texto}
+            </p>
+          )}
+
+          {destaques.length > 0 && (
+            <div className="mt-4 shrink-0">
+              <span className="text-[9px] tracking-widest text-cyan-100/40 uppercase">
+                Destaques do campeonato
+              </span>
+              <div className="mt-1.5 grid grid-cols-3 gap-2">
+                {destaques.map((fig) => (
+                  <div key={fig.id} className="h-[120px] sm:h-[150px]">
+                    <Figurinha
+                      figurinha={fig}
+                      tamanho="cell"
+                      onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Direita — logo + campeao grande + 6 jogadores */}
+        <div className="h-full px-5 sm:px-7 py-6 flex flex-col">
+          <div className="flex justify-end shrink-0">
+            <LogoCanto />
+          </div>
+          {campeao && (
+            <div className="mt-2 shrink-0 h-[200px] sm:h-[244px]">
+              <Figurinha
+                figurinha={campeao}
+                tamanho="cell"
+                onClick={onFigurinhaClick ? () => onFigurinhaClick(campeao) : undefined}
+              />
+            </div>
+          )}
+          {jogadores.length > 0 && (
+            <div className="mt-2 flex-1 min-h-0 grid grid-cols-3 grid-rows-2 gap-2">
+              {jogadores.map((fig) => (
+                <Figurinha
+                  key={fig.id}
+                  figurinha={fig}
+                  tamanho="cell"
+                  onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================================
+  // DEMAIS (escudos)
   // Layout generico: cabecalho + texto a esquerda, grid a direita.
   // (refinamento fiel ao Figma vem nas proximas iteracoes)
   // ============================================================
