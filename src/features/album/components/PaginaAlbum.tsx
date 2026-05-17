@@ -29,7 +29,7 @@ const ALTURA_PAGINA = 'h-full';
 type SecaoNarrativa = {
   titulo: string;
   texto: string;
-  pill: string | null;
+  pills: string[];
   destaque: string | null;
 };
 
@@ -41,17 +41,18 @@ function parseSecoes(texto: string): SecaoNarrativa[] {
     .map((bloco) => {
       const linhas = bloco.split('\n');
       const titulo = (linhas[0] ?? '').trim();
-      let pill: string | null = null;
+      const pills: string[] = [];
       let destaque: string | null = null;
       const corpo: string[] = [];
       for (const l of linhas.slice(1)) {
         const lt = l.trim();
-        if (lt.startsWith('[[PILL]]')) pill = lt.replace('[[PILL]]', '').trim();
+        if (lt.startsWith('[[PILL]]'))
+          pills.push(lt.replace('[[PILL]]', '').trim());
         else if (lt.startsWith('[[DESTAQUE]]'))
           destaque = lt.replace('[[DESTAQUE]]', '').trim();
         else corpo.push(l);
       }
-      return { titulo, texto: corpo.join('\n').trim(), pill, destaque };
+      return { titulo, texto: corpo.join('\n').trim(), pills, destaque };
     });
 }
 
@@ -548,10 +549,17 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
                     {sec.texto}
                   </p>
                 )}
-                {sec.pill && (
-                  <span className="mt-1.5 inline-block px-2.5 py-1 rounded-full border border-amber-400/40 bg-amber-500/10 text-[10px] text-amber-200">
-                    {sec.pill}
-                  </span>
+                {sec.pills.length > 0 && (
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {sec.pills.map((p, j) => (
+                      <span
+                        key={j}
+                        className="inline-block px-2.5 py-1 rounded-full border border-amber-400/40 bg-amber-500/10 text-[10px] text-amber-200"
+                      >
+                        {p}
+                      </span>
+                    ))}
+                  </div>
                 )}
                 {sec.destaque && (
                   <p
