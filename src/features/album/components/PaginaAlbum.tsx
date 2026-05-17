@@ -24,6 +24,37 @@ type PaginaAlbumProps = {
 // Toda pagina preenche a altura fixa do livro (definida no AlbumPage).
 const ALTURA_PAGINA = 'h-full';
 
+// Interpreta o texto de copa/campeonato em secoes.
+// Formato: "## Titulo" inicia secao; [[PILL]] vira badge; [[DESTAQUE]] frase.
+type SecaoNarrativa = {
+  titulo: string;
+  texto: string;
+  pill: string | null;
+  destaque: string | null;
+};
+
+function parseSecoes(texto: string): SecaoNarrativa[] {
+  return texto
+    .split(/^## /m)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((bloco) => {
+      const linhas = bloco.split('\n');
+      const titulo = (linhas[0] ?? '').trim();
+      let pill: string | null = null;
+      let destaque: string | null = null;
+      const corpo: string[] = [];
+      for (const l of linhas.slice(1)) {
+        const lt = l.trim();
+        if (lt.startsWith('[[PILL]]')) pill = lt.replace('[[PILL]]', '').trim();
+        else if (lt.startsWith('[[DESTAQUE]]'))
+          destaque = lt.replace('[[DESTAQUE]]', '').trim();
+        else corpo.push(l);
+      }
+      return { titulo, texto: corpo.join('\n').trim(), pill, destaque };
+    });
+}
+
 // =============================================================
 // Mini-cabecalho da identidade (canto superior das paginas internas)
 // =============================================================
@@ -448,7 +479,145 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
   }
 
   // ============================================================
-  // DEMAIS (numeros, copa, campeonato, escudos)
+  // COPA — "1a/2a/3a Copa Fut Lendas"
+  // Esquerda: header + secoes narrativas + figurinha do chaveamento.
+  // Direita: logo + figurinha grande do campeao + grid 3x2 de etiquetas.
+  // ============================================================
+  if (pagina.tipo === 'copa') {
+    const campeao = figsOrdenadas.find((f) => (f.slot ?? 0) === 1);
+    const etiquetas = figsOrdenadas.filter(
+      (f) => (f.slot ?? 0) >= 2 && (f.slot ?? 0) <= 7
+    );
+    const chaveamento = figsOrdenadas.filter((f) => (f.slot ?? 0) >= 8);
+    const secoes = parseSecoes(pagina.texto ?? '');
+    const cor = pagina.subtitulo_cor ?? '#FFC400';
+
+    return (
+      <div className={cn('relative w-full grid grid-cols-1 md:grid-cols-2', ALTURA_PAGINA)}>
+        <div className="hidden md:block absolute left-1/2 top-4 bottom-4 w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-cyan-400/40 to-transparent" />
+
+        {/* Esquerda — header + secoes + chaveamento */}
+        <div className="h-full px-6 sm:px-8 py-6 flex flex-col overflow-y-auto">
+          <span className="text-[8px] tracking-[0.3em] text-cyan-100/40 font-semibold uppercase">
+            Fut Lendas · Edição Histórica · Copa
+          </span>
+          <h2 className="mt-1 font-black italic leading-[0.82] tracking-tight">
+            <span className="block text-3xl sm:text-4xl lg:text-5xl text-white">
+              {pagina.titulo}
+            </span>
+            {pagina.subtitulo && (
+              <span
+                className="block text-3xl sm:text-4xl lg:text-5xl"
+                style={{ color: cor }}
+              >
+                {pagina.subtitulo}
+              </span>
+            )}
+          </h2>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            {pagina.data_referencia && (
+              <span className="text-[9px] text-white/40 uppercase tracking-widest">
+                {pagina.data_referencia}
+              </span>
+            )}
+            {pagina.tag && (
+              <span
+                className="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider text-black"
+                style={{ background: cor }}
+              >
+                {pagina.tag}
+              </span>
+            )}
+          </div>
+
+          <span className="mt-4 text-[9px] tracking-[0.25em] text-cyan-100/40 uppercase font-semibold">
+            A história por trás do título
+          </span>
+
+          <div className="mt-2 space-y-3">
+            {secoes.map((sec, i) => (
+              <div key={i}>
+                <h3
+                  className="text-xs sm:text-sm lg:text-base font-black uppercase tracking-wide border-b border-white/10 pb-1"
+                  style={{ color: cor }}
+                >
+                  {sec.titulo}
+                </h3>
+                {sec.texto && (
+                  <p className="mt-1 text-[11px] sm:text-xs lg:text-sm text-cyan-100/70 leading-relaxed">
+                    {sec.texto}
+                  </p>
+                )}
+                {sec.pill && (
+                  <span className="mt-1.5 inline-block px-2.5 py-1 rounded-full border border-amber-400/40 bg-amber-500/10 text-[10px] text-amber-200">
+                    {sec.pill}
+                  </span>
+                )}
+                {sec.destaque && (
+                  <p
+                    className="mt-2 border-l-2 pl-3 italic text-[11px] sm:text-xs text-amber-100/85"
+                    style={{ borderColor: cor }}
+                  >
+                    {sec.destaque}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {chaveamento.length > 0 && (
+            <div className="mt-4 shrink-0">
+              <span className="text-[9px] tracking-widest text-cyan-100/40 uppercase">
+                Chaveamento
+              </span>
+              <div className="mt-1 grid grid-cols-2 gap-1.5">
+                {chaveamento.map((fig) => (
+                  <div key={fig.id} className="h-[110px] sm:h-[140px]">
+                    <Figurinha
+                      figurinha={fig}
+                      tamanho="cell"
+                      onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Direita — logo + campeao grande + 6 etiquetas */}
+        <div className="h-full px-5 sm:px-7 py-6 flex flex-col">
+          <div className="flex justify-end shrink-0">
+            <LogoCanto />
+          </div>
+          {campeao && (
+            <div className="mt-2 shrink-0 h-[200px] sm:h-[244px]">
+              <Figurinha
+                figurinha={campeao}
+                tamanho="cell"
+                onClick={onFigurinhaClick ? () => onFigurinhaClick(campeao) : undefined}
+              />
+            </div>
+          )}
+          {etiquetas.length > 0 && (
+            <div className="mt-2 flex-1 min-h-0 grid grid-cols-3 grid-rows-2 gap-2">
+              {etiquetas.map((fig) => (
+                <Figurinha
+                  key={fig.id}
+                  figurinha={fig}
+                  tamanho="cell"
+                  onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================================
+  // DEMAIS (campeonato, escudos)
   // Layout generico: cabecalho + texto a esquerda, grid a direita.
   // (refinamento fiel ao Figma vem nas proximas iteracoes)
   // ============================================================
