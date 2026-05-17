@@ -735,7 +735,93 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
   }
 
   // ============================================================
-  // DEMAIS (escudos)
+  // ESCUDOS — "Escudos dos Times"
+  // Esquerda: titulo + grid 3x3 dos 9 escudos.
+  // Direita: logo + texto+foto (1) + texto+foto (2). Cada foto = 2 slots.
+  // ============================================================
+  if (pagina.tipo === 'escudos') {
+    const partes = (pagina.texto ?? '').split('[[DIR]]');
+    const texto1 = partes[0]?.trim() ?? '';
+    const texto2 = partes[1]?.trim() ?? '';
+    const escudos = figsOrdenadas.filter(
+      (f) => (f.slot ?? 0) >= 1 && (f.slot ?? 0) <= 9
+    );
+    const foto1 = figsOrdenadas.filter(
+      (f) => (f.slot ?? 0) >= 10 && (f.slot ?? 0) <= 11
+    );
+    const foto2 = figsOrdenadas.filter((f) => (f.slot ?? 0) >= 12);
+
+    return (
+      <div className={cn('relative w-full grid grid-cols-1 md:grid-cols-2', ALTURA_PAGINA)}>
+        <div className="hidden md:block absolute left-1/2 top-4 bottom-4 w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-cyan-400/40 to-transparent" />
+
+        {/* Esquerda — titulo + grid de escudos */}
+        <div className="h-full px-6 sm:px-8 py-7 flex flex-col">
+          <h2 className="font-black text-3xl sm:text-4xl lg:text-5xl text-white/90 leading-[0.95]">
+            {pagina.titulo}
+          </h2>
+          {escudos.length > 0 && (
+            <div className="mt-5 flex-1 min-h-0 grid grid-cols-3 grid-rows-3 gap-2 sm:gap-3">
+              {escudos.map((fig) => (
+                <Figurinha
+                  key={fig.id}
+                  figurinha={fig}
+                  tamanho="cell"
+                  onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Direita — logo + textos + fotos (cada foto = 2 slots) */}
+        <div className="h-full px-6 sm:px-8 py-7 flex flex-col overflow-y-auto">
+          <div className="flex justify-end shrink-0">
+            <LogoCanto />
+          </div>
+          {texto1 && (
+            <p className="mt-1 text-xs sm:text-sm lg:text-base text-cyan-100/80 leading-relaxed">
+              {texto1}
+            </p>
+          )}
+          {foto1.length > 0 && (
+            <div className="mt-2 shrink-0 grid grid-cols-2 gap-1.5">
+              {foto1.map((fig) => (
+                <div key={fig.id} className="h-[130px] sm:h-[160px]">
+                  <Figurinha
+                    figurinha={fig}
+                    tamanho="cell"
+                    onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+          {texto2 && (
+            <p className="mt-4 text-xs sm:text-sm lg:text-base text-cyan-100/80 leading-relaxed">
+              {texto2}
+            </p>
+          )}
+          {foto2.length > 0 && (
+            <div className="mt-2 shrink-0 grid grid-cols-2 gap-1.5">
+              {foto2.map((fig) => (
+                <div key={fig.id} className="h-[130px] sm:h-[160px]">
+                  <Figurinha
+                    figurinha={fig}
+                    tamanho="cell"
+                    onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================================
+  // DEMAIS (fallback generico)
   // Layout generico: cabecalho + texto a esquerda, grid a direita.
   // (refinamento fiel ao Figma vem nas proximas iteracoes)
   // ============================================================

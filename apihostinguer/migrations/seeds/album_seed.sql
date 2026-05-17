@@ -35,7 +35,7 @@ INSERT INTO album_paginas (numero, tipo, titulo, subtitulo, subtitulo_cor, tag, 
 (11, 'campeonato',    '3º CAMPEONATO', 'SÃO PAULANDO BI', '#EC4899', 'BI-CAMPEÃO|A LANIPULAÇÃO', '10 de fevereiro de 2026 · 2 meses',
  'Depois de um período de "férias" da competitividade, estava na hora de voltar. Com novidades: Michel e Rafael pagaram o preço do rebaixamento, renovação no elenco, e uma surpresa bem-vinda — a volta da família Castilho.\n\nO draft trouxe um detalhe que animou todo mundo: cada time tinha seus irmãos. O Real Madruga com Iago e Andrei, o São Paulando com Caio e Gabriel Ferreira, o Inter dos Molão com Higor e Dieguinho, e o Shaktar dos Leks com a dupla mais inseparável do Fut Lendas — Alan e Wagner.\n\nNas primeiras rodadas, o São Paulando foi avassalador. Abriu mais de 16 pontos de vantagem e o bi parecia passeio. Mas a arrogância precede a queda — e o campeonato virou.\n\nChegamos na última rodada com o Shaktar na liderança e o Real Madruga comendo pelas beiradas. E foi aí que aconteceu talvez a maior LANIPULAÇÃO já vista no Fut Lendas. A regra de igualar jogos na última rodada obrigou o Shaktar a disputar apenas 3 partidas, enquanto o SP jogava 6 e o Real Madruga 7. Com apenas 4 pontos de vantagem, segurar o título dependia do tropeço dos adversários — que não veio.\n\nO São Paulando voltou aos trilhos. Das seis partidas, ganhou quatro e empatou duas. Bi-campeão.\n\nO Real Madruga chegou a se igualar em pontos com o Shaktar, mas o critério de desempate foi impiedoso — terceiro lugar e rebaixamento pro capitão Victor. Já o Inter dos Molão... tava molão mesmo. Mas o capitão soube sair pela porta certa: morreu como herói, eternizado como o Pé de Rato do time.'),
 (12, 'escudos',       'ESCUDOS DOS TIMES', NULL, '#FFFFFF', NULL, NULL,
- 'Os escudos eternizados das Lendas.'),
+ 'FutLendas também fez sua primeira partida no fut onze.[[DIR]]Onde o projeto Lendas virou o berço do maior time do mundo — e há quem diga que é o Mário de Caraguatatuba. ooooooowwwwww 1, 2, 3 Caraguás!'),
 (13, 'agradecimento', 'OBRIGADO', 'POR FAZER PARTE', '#FFC400', NULL, NULL,
  'Cada figurinha desse album e uma memoria. Obrigado por construir essa historia com a gente.');
 
@@ -153,4 +153,18 @@ INSERT INTO album_figurinhas (numero, nome, `time`, categoria, raridade, pagina_
 (99,  'Jogador Campeão 5 — 3º Camp.', NULL, 'etiqueta',    'comum',    11, 7),
 (100, 'Artilheiro do 3º Campeonato', NULL, 'estatistica', 'lendaria', 11, 8),
 (101, 'Armador do 3º Campeonato',    NULL, 'estatistica', 'lendaria', 11, 9),
-(102, 'MVP do 3º Campeonato',        NULL, 'estatistica', 'lendaria', 11, 10);
+(102, 'MVP do 3º Campeonato',        NULL, 'estatistica', 'lendaria', 11, 10),
+-- Pagina 12 "Escudos dos Times" — 9 escudos lendarios + 2 fotos (4 slots)
+(103, 'Escudo — Não-tê-escolliescolthi FC', NULL, 'escudo', 'lendaria', 12, 1),
+(104, 'Escudo — VS',                        NULL, 'escudo', 'lendaria', 12, 2),
+(105, 'Escudo — PSV',                       NULL, 'escudo', 'lendaria', 12, 3),
+(106, 'Escudo — FutLendas Vasco da Gama',   NULL, 'escudo', 'lendaria', 12, 4),
+(107, 'Escudo — São Paulando',              NULL, 'escudo', 'lendaria', 12, 5),
+(108, 'Escudo — Shaktar dos Leks',          NULL, 'escudo', 'lendaria', 12, 6),
+(109, 'Escudo — Real Madruga',              NULL, 'escudo', 'lendaria', 12, 7),
+(110, 'Escudo — Inter dos Molão',           NULL, 'escudo', 'lendaria', 12, 8),
+(111, 'Escudo — Caraguás',                  NULL, 'escudo', 'lendaria', 12, 9),
+(112, 'Primeira partida no Fut Onze — parte 1', NULL, 'etiqueta', 'comum', 12, 10),
+(113, 'Primeira partida no Fut Onze — parte 2', NULL, 'etiqueta', 'comum', 12, 11),
+(114, 'Caraguatatuba — parte 1', NULL, 'etiqueta', 'comum', 12, 12),
+(115, 'Caraguatatuba — parte 2', NULL, 'etiqueta', 'comum', 12, 13);
