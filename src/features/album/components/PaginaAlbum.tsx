@@ -665,14 +665,16 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
                 {pagina.data_referencia}
               </span>
             )}
-            {pagina.tag && (
-              <span
-                className="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider text-white"
-                style={{ background: cor }}
-              >
-                {pagina.tag}
-              </span>
-            )}
+            {pagina.tag &&
+              pagina.tag.split('|').map((t, i) => (
+                <span
+                  key={i}
+                  className="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider text-white"
+                  style={{ background: cor }}
+                >
+                  {t.trim()}
+                </span>
+              ))}
           </div>
 
           {pagina.texto && (
