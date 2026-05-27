@@ -30,6 +30,7 @@ const TimesPage = lazy(() => import("@/features/Times/routes/TimesPage").then(m 
 const PerfilPage = lazy(() => import("@/features/perfil/routes/PerfilPage"));
 const AnalyticsPage = lazy(() => import("@/features/Analytics/routes/AnalyticsPage").then(m => ({ default: m.AnalyticsPage })));
 const CampeonatoSorteioPage = lazy(() => import("@/features/campeonatos/components/CampeonatoSorteioPage"));
+const CampeonatoPartidaCopaPage = lazy(() => import("@/features/campeonatos/routes/CampeonatoPartidaCopaPage"));
 const CartolendaPage = lazy(() => import("@/features/cartolendas/routes/CartolendaPage").then(m => ({ default: m.CartolendaPage })));
 const PartidaDetalhePage = lazy(() => import("@/features/partidas/routes/PartidaDetalhePage"));
 const RachaPage = lazy(() => import("@/features/presenca/routes/RachaPage").then(m => ({ default: m.RachaPage })));
@@ -88,6 +89,7 @@ export const AppRoutes = () => {
           {/* Campeonatos — gerenciamento */}
           <Route path="/campeonatos/novo" element={<CampeonatoCreatePage />} />
           <Route path="/campeonatos/:id/sorteio" element={<CampeonatoSorteioPage />} />
+          <Route path="/campeonatos/:id/partida/:partidaId" element={<CampeonatoPartidaCopaPage />} />
           <Route path="/campeonatos/:id/rodadas/:rodadaId" element={<CampeonatoRodadaCheckinPage />} />
           <Route path="/campeonatos/:id/rodadas/:rodadaId/partidas" element={<CampeonatoPartidaLivePage />} />
 

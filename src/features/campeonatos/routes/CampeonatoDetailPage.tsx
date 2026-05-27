@@ -577,7 +577,7 @@ export function CampeonatoDetailPage() {
 
       {/* Conteúdo Principal */}
       {isInscricao ? (
-        isAdmin ? <div className="mb-8 animate-fade-in-up"><InscricaoSection campeonatoId={campeonatoId} /></div> : <p className="text-textMuted text-center py-8">Inscrições em andamento. Aguarde o administrador iniciar o campeonato.</p>
+        isAdmin && !isSorteio ? <div className="mb-8 animate-fade-in-up"><InscricaoSection campeonatoId={campeonatoId} /></div> : !isAdmin ? <p className="text-textMuted text-center py-8">Inscrições em andamento. Aguarde o administrador iniciar o campeonato.</p> : null
       ) : (
         <>
           {/* RENDERIZAÇÃO CONDICIONAL: Liga vs Copa */}
