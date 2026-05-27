@@ -637,11 +637,11 @@ class CampeonatoController
         }
 
         $timesConfig = [
-            ['nome' => 'Time Amarelo', 'logo_url' => '/src/assets/Amarelo.png'],
-            ['nome' => 'Time Preto',   'logo_url' => '/src/assets/Preto.png'],
-            ['nome' => 'Time Azul',    'logo_url' => '/src/assets/Azul.png'],
-            ['nome' => 'Time Rosa',    'logo_url' => '/src/assets/Rosa.png'],
-            ['nome' => 'Time Verde',   'logo_url' => null],
+            ['nome' => 'Time Amarelo', 'logo_url' => '/assets/Amarelo.webp'],
+            ['nome' => 'Time Verde',   'logo_url' => '/assets/Verde.png'],
+            ['nome' => 'Time Azul',    'logo_url' => '/assets/Azul.webp'],
+            ['nome' => 'Time Rosa',    'logo_url' => '/assets/Rosa.webp'],
+            ['nome' => 'Time 5',       'logo_url' => null],
         ];
 
         foreach ($input['times'] as $idx => $timeSorteado) {
@@ -911,6 +911,12 @@ class CampeonatoController
 
     private function gerarMataMata(int $campeonatoId, array $timeIds, string $formato, bool $temRepescagem): void
     {
+        // Remove partidas de mata-mata pendentes anteriores para evitar duplicatas
+        $this->db->execute(
+            "DELETE FROM campeonato_partidas WHERE campeonato_id = ? AND fase = 'mata_mata' AND status = 'pendente'",
+            [$campeonatoId]
+        );
+
         preg_match('/copa_\d+_(.+)/', $formato, $matches);
         $tipoMata = $matches[1] ?? 'semi_final';
         $n        = count($timeIds);
@@ -959,7 +965,7 @@ class CampeonatoController
     private function inserirPartidaMata(int $campeonatoId, ?int $timeA, ?int $timeB, string $fase, string $bracket, int $ordem): void
     {
         $this->db->execute("
-            INSERT INTO campeonato_partidas
+            INSERT IGNORE INTO campeonato_partidas
                 (campeonato_id, timeA_id, timeB_id, fase, fase_mata_mata, bracket, ordem_confronto, status)
             VALUES (?, ?, ?, 'mata_mata', ?, ?, ?, 'pendente')
         ", [$campeonatoId, $timeA, $timeB, $fase, $bracket, $ordem]);

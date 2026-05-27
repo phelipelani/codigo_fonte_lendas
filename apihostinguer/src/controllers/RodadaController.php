@@ -1571,7 +1571,8 @@ class RodadaController
     {
         $partida = $this->db->fetchOne("
             SELECT p.*,
-                t1.nome AS timeA_nome, t2.nome AS timeB_nome
+                t1.nome AS timeA_nome, t1.logo_url AS timeA_logo,
+                t2.nome AS timeB_nome, t2.logo_url AS timeB_logo
             FROM campeonato_partidas p
             LEFT JOIN times t1 ON t1.id = p.timeA_id
             LEFT JOIN times t2 ON t2.id = p.timeB_id

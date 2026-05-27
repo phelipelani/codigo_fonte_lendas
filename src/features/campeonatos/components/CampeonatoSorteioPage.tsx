@@ -45,9 +45,9 @@ interface JogadorDB {
 // ✅ NOMES E LOGOS DOS TIMES CORRETOS
 const TIMES_CONFIG = [
   { nome: 'Time Amarelo', logo: '/src/assets/Amarelo.webp', cor: 'from-yellow-500 to-amber-600' },
-  { nome: 'Time Preto', logo: '/src/assets/Preto.webp', cor: 'from-gray-700 to-gray-900' },
-  { nome: 'Time Azul', logo: '/src/assets/Azul.webp', cor: 'from-blue-500 to-blue-700' },
-  { nome: 'Time Rosa', logo: '/src/assets/Rosa.webp', cor: 'from-pink-400 to-pink-600' },
+  { nome: 'Time Verde',   logo: '/src/assets/Verde.png',    cor: 'from-green-500 to-green-700' },
+  { nome: 'Time Azul',   logo: '/src/assets/Azul.webp',    cor: 'from-blue-500 to-blue-700' },
+  { nome: 'Time Rosa',   logo: '/src/assets/Rosa.webp',    cor: 'from-pink-400 to-pink-600' },
 ];
 
 // ============================================================================
@@ -162,12 +162,13 @@ export function CampeonatoSorteioPage() {
         }))
       }));
 
-      const { data } = await api.post(`/campeonatos/${campeonatoId}/criar-times-sorteio`, {
+      await api.post(`/campeonatos/${campeonatoId}/criar-times-sorteio`, {
         times: timesPayload,
         jogadoresPorTime
       });
 
-      return data;
+      // Inicia o campeonato após criar os times (muda fase_atual de 'inscricao' para 'fase_de_grupos'/'em_andamento')
+      await api.post(`/campeonatos/${campeonatoId}/iniciar`);
     },
     onSuccess: () => {
       toast.success('Times criados e campeonato iniciado!', {
@@ -434,8 +435,8 @@ export function CampeonatoSorteioPage() {
             <div key={s} className="flex items-center">
               <div className={cn(
                 "w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all",
-                step === s 
-                  ? "bg-cyan-500 text-white" 
+                step === s
+                  ? "bg-cyan-500 text-white"
                   : i < ['input', 'notas', 'resultado'].indexOf(step)
                     ? "bg-emerald-500 text-white"
                     : "bg-[#0d1f35] text-cyan-100/40"
@@ -802,6 +803,7 @@ export function CampeonatoSorteioPage() {
               </div>
             </motion.div>
           )}
+
         </AnimatePresence>
       </div>
     </div>

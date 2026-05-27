@@ -24,8 +24,8 @@ export const LigasPage = () => {
 
   // Calcular stats
   const stats = useMemo(() => {
-    if (!ligas) return { total: 0, ativas: 0, encerradas: 0, pendentes: 0 };
-    
+    if (!ligas || !Array.isArray(ligas)) return { total: 0, ativas: 0, encerradas: 0, pendentes: 0 };
+
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
 

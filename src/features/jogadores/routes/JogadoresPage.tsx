@@ -67,9 +67,9 @@ export const JogadoresPage = () => {
 
     filtered.sort((a, b) => {
       switch (sortBy) {
-        case 'nome': return a.nome.localeCompare(b.nome);
-        case 'nivel': return b.nivel - a.nivel;
-        case 'posicao': return a.posicao.localeCompare(b.posicao);
+        case 'nome': return (a.nome ?? '').localeCompare(b.nome ?? '');
+        case 'nivel': return (b.nivel ?? 0) - (a.nivel ?? 0);
+        case 'posicao': return (a.posicao ?? '').localeCompare(b.posicao ?? '');
         default: return 0;
       }
     });
