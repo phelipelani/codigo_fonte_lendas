@@ -108,8 +108,12 @@ export const useAbrirPacote = () => {
       qc.invalidateQueries({ queryKey: ['album', 'meu'] });
       qc.invalidateQueries({ queryKey: ['album', 'pacotes'] });
     },
-    onError: (e: any) =>
-      toast.error(e?.response?.data?.message ?? 'Erro ao abrir pacote'),
+    onError: (e: any) => {
+      // Pacote inexistente/desatualizado: refaz a lista para limpar o cache.
+      qc.invalidateQueries({ queryKey: ['album', 'pacotes'] });
+      qc.invalidateQueries({ queryKey: ['album', 'meu'] });
+      toast.error(e?.response?.data?.message ?? 'Erro ao abrir pacote');
+    },
   });
 };
 
@@ -244,6 +248,160 @@ export const useDistribuirPacotes = () => {
       toast.error(e?.response?.data?.message ?? 'Erro ao distribuir pacotes'),
   });
 };
+
+// =============================================================
+// Mural de Trocas
+// =============================================================
+
+export type TrocaMural = {
+  id: number;
+  figurinha_id: number;
+  ofertante_id: number;
+  ofertante_nome: string;
+  criado_em: string;
+  numero: number;
+  nome: string;
+  time: string | null;
+  categoria: CategoriaFigurinha;
+  raridade: Raridade;
+  imagem_url: string | null;
+  ja_obtida: boolean;
+  minha: boolean;
+};
+
+export type OpcaoTroca = {
+  id: number;
+  numero: number;
+  nome: string;
+  time: string | null;
+  categoria: CategoriaFigurinha;
+  raridade: Raridade;
+  imagem_url: string | null;
+  quantidade: number;
+};
+
+export const useMural = () =>
+  useQuery<{ ok: boolean; trocas: TrocaMural[] }>({
+    queryKey: ['album', 'mural'],
+    queryFn: async () => (await api.get('/album/mural')).data,
+  });
+
+export const useDisponibilizarTroca = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (figurinha_id: number) =>
+      (await api.post('/album/mural', { figurinha_id })).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['album', 'mural'] });
+      toast.success('Figurinha disponibilizada no mural!');
+    },
+    onError: (e: any) =>
+      toast.error(e?.response?.data?.message ?? 'Erro ao disponibilizar figurinha'),
+  });
+};
+
+export const useRetirarTroca = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) =>
+      (await api.delete(`/album/mural/${id}`)).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['album', 'mural'] });
+      toast.success('Oferta retirada do mural.');
+    },
+    onError: (e: any) =>
+      toast.error(e?.response?.data?.message ?? 'Erro ao retirar oferta'),
+  });
+};
+
+export const useOpcoesTroca = (trocaId: number | null) =>
+  useQuery<{ ok: boolean; troca: TrocaMural; opcoes: OpcaoTroca[] }>({
+    queryKey: ['album', 'mural', trocaId, 'opcoes'],
+    queryFn: async () => (await api.get(`/album/mural/${trocaId}/opcoes`)).data,
+    enabled: trocaId != null,
+  });
+
+export const useExecutarTroca = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      trocaId,
+      figurinha_oferecida_id,
+    }: {
+      trocaId: number;
+      figurinha_oferecida_id: number;
+    }) =>
+      (await api.post(`/album/mural/${trocaId}/trocar`, { figurinha_oferecida_id }))
+        .data,
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['album'] });
+      toast.success(data?.message ?? 'Troca realizada!');
+    },
+    onError: (e: any) =>
+      toast.error(e?.response?.data?.message ?? 'Erro ao executar troca'),
+  });
+};
+
+// =============================================================
+// Novidades de troca (modal para o ofertante)
+// =============================================================
+
+export type NovidadeTroca = {
+  id: number;
+  concluido_em: string;
+  cedida_numero: number;
+  cedida_nome: string;
+  cedida_raridade: Raridade;
+  cedida_imagem: string | null;
+  recebida_numero: number | null;
+  recebida_nome: string | null;
+  recebida_raridade: Raridade | null;
+  recebida_imagem: string | null;
+  recebedor_nome: string;
+};
+
+export const useNovidadesTrocas = () =>
+  useQuery<{ ok: boolean; trocas: NovidadeTroca[] }>({
+    queryKey: ['album', 'trocas', 'novidades'],
+    queryFn: async () => (await api.get('/album/trocas/novidades')).data,
+  });
+
+export const useMarcarTrocasVistas = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () =>
+      (await api.post('/album/trocas/novidades/visto')).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['album', 'trocas', 'novidades'] });
+    },
+  });
+};
+
+// =============================================================
+// Origem de uma figurinha (como o usuário a obteve)
+// =============================================================
+
+export type EventoOrigem = {
+  tipo: 'pacote' | 'troca';
+  data: string | null;
+  texto: string;
+};
+
+export type OrigemFigurinha = {
+  ok: boolean;
+  figurinha: Figurinha;
+  quantidade: number;
+  obtida: boolean;
+  obtida_em: string | null;
+  eventos: EventoOrigem[];
+};
+
+export const useOrigemFigurinha = (figId: number | null) =>
+  useQuery<OrigemFigurinha>({
+    queryKey: ['album', 'figurinha', figId, 'origem'],
+    queryFn: async () => (await api.get(`/album/figurinhas/${figId}/origem`)).data,
+    enabled: figId != null,
+  });
 
 // =============================================================
 // Upload de imagem (reusa o endpoint /upload/foto existente)

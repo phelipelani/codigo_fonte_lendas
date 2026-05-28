@@ -1,0 +1,672 @@
+// Arquivo: src/features/album/components/TelaAlbum.tsx
+//
+// Versao MOBILE do album — uma tela por vez, coluna unica.
+// Cada "spread" antigo (2 paginas) vira 2 telas, pra nada ficar
+// espremido em tela pequena.
+
+import * as React from 'react';
+import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
+import { Figurinha } from './Figurinha';
+import type { Pagina, Figurinha as FigurinhaType } from '../api/albumApi';
+import capaHero from '../assets/capa-hero.png';
+import logoLendas from '@/assets/Logo.webp';
+import fotoAmigos1 from '../assets/image_1.png';
+import fotoAmigos2 from '../assets/image_2.png';
+import paginaRede from '../assets/pagina-03-rede.png';
+
+// =============================================================
+// Modelo de "tela": cada pagina do album vira 1 ou 2 telas.
+// =============================================================
+export type Parte =
+  | 'capa'
+  | 'fim'
+  | 'n-texto'
+  | 'n-foto'
+  | 'n5-esq'
+  | 'n5-dir'
+  | 'num-texto'
+  | 'num-grid'
+  | 'rede-img'
+  | 'rede-grid'
+  | 'copa-texto'
+  | 'copa-figs'
+  | 'camp-texto'
+  | 'camp-figs'
+  | 'esc-grid'
+  | 'esc-fotos'
+  | 'generico';
+
+/** Quais telas uma pagina gera. */
+export function partesDaPagina(p: Pagina): Parte[] {
+  switch (p.tipo) {
+    case 'capa':
+      return ['capa'];
+    case 'agradecimento':
+      return ['fim'];
+    case 'numeros':
+      return ['num-texto', 'num-grid'];
+    case 'rede':
+      return ['rede-img', 'rede-grid'];
+    case 'copa':
+      return ['copa-texto', 'copa-figs'];
+    case 'campeonato':
+      return ['camp-texto', 'camp-figs'];
+    case 'escudos':
+      return ['esc-grid', 'esc-fotos'];
+    case 'narrativa':
+      if (p.numero === 5) return ['n5-esq', 'n5-dir'];
+      if (p.numero === 2) return ['n-texto', 'n-foto'];
+      return ['n-texto'];
+    default:
+      return ['generico'];
+  }
+}
+
+/** Rotulo curto da parte (mostrado na navegacao). */
+export function rotuloParte(parte: Parte): string {
+  switch (parte) {
+    case 'num-grid':
+    case 'rede-grid':
+    case 'copa-figs':
+    case 'camp-figs':
+      return 'Figurinhas';
+    case 'esc-grid':
+      return 'Escudos';
+    case 'esc-fotos':
+    case 'n-foto':
+      return 'Fotos';
+    case 'n5-dir':
+      return 'Continuação';
+    default:
+      return 'História';
+  }
+}
+
+// =============================================================
+// Helpers de conteudo
+// =============================================================
+type SecaoNarrativa = {
+  titulo: string;
+  texto: string;
+  pills: string[];
+  destaque: string | null;
+};
+
+function parseSecoes(texto: string): SecaoNarrativa[] {
+  return texto
+    .split(/^## /m)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((bloco) => {
+      const linhas = bloco.split('\n');
+      const titulo = (linhas[0] ?? '').trim();
+      const pills: string[] = [];
+      let destaque: string | null = null;
+      const corpo: string[] = [];
+      for (const l of linhas.slice(1)) {
+        const lt = l.trim();
+        if (lt.startsWith('[[PILL]]')) pills.push(lt.replace('[[PILL]]', '').trim());
+        else if (lt.startsWith('[[DESTAQUE]]'))
+          destaque = lt.replace('[[DESTAQUE]]', '').trim();
+        else corpo.push(l);
+      }
+      return { titulo, texto: corpo.join('\n').trim(), pills, destaque };
+    });
+}
+
+const COLS: Record<number, string> = {
+  2: 'grid-cols-2',
+  3: 'grid-cols-3',
+  4: 'grid-cols-4',
+};
+
+// =============================================================
+// Sub-componentes
+// =============================================================
+const CabecalhoTela: React.FC<{
+  titulo: string;
+  subtitulo?: string | null;
+  cor?: string | null;
+  tag?: string | null;
+  data?: string | null;
+}> = ({ titulo, subtitulo, cor, tag, data }) => (
+  <header className="mb-1">
+    <div className="flex items-center gap-1.5">
+      <span className="h-px w-4 bg-amber-400/50" />
+      <span className="text-[8px] tracking-[0.3em] text-white/40 font-semibold uppercase">
+        Álbum Oficial
+      </span>
+    </div>
+    <h2 className="mt-1 font-black italic leading-[0.86] tracking-tight">
+      <span className="block text-2xl sm:text-3xl text-white">{titulo}</span>
+      {subtitulo && (
+        <span
+          className="block text-2xl sm:text-3xl"
+          style={{ color: cor ?? '#FFC400' }}
+        >
+          {subtitulo}
+        </span>
+      )}
+    </h2>
+    {(data || tag) && (
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        {data && (
+          <span className="text-[9px] tracking-widest text-white/40 uppercase">
+            {data}
+          </span>
+        )}
+        {tag &&
+          tag.split('|').map((t, i) => (
+            <span
+              key={i}
+              className="rounded px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-black"
+              style={{ background: cor ?? '#FFC400' }}
+            >
+              {t.trim()}
+            </span>
+          ))}
+      </div>
+    )}
+  </header>
+);
+
+const GridFigs: React.FC<{
+  figs: FigurinhaType[];
+  cols: number;
+  onClick?: (f: FigurinhaType) => void;
+}> = ({ figs, cols, onClick }) => (
+  <div className={cn('grid gap-2', COLS[cols] ?? 'grid-cols-3')}>
+    {figs.map((f) => (
+      <Figurinha
+        key={f.id}
+        figurinha={f}
+        tamanho="fluid"
+        onClick={onClick ? () => onClick(f) : undefined}
+      />
+    ))}
+  </div>
+);
+
+const RotuloSecao: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-cyan-300/70">
+    {children}
+  </span>
+);
+
+// =============================================================
+// Componente principal — renderiza UMA tela (coluna unica)
+// =============================================================
+type TelaAlbumProps = {
+  pagina: Pagina;
+  figurinhas: FigurinhaType[];
+  parte: Parte;
+  onFigurinhaClick?: (fig: FigurinhaType) => void;
+};
+
+export const TelaAlbum: React.FC<TelaAlbumProps> = ({
+  pagina,
+  figurinhas,
+  parte,
+  onFigurinhaClick,
+}) => {
+  const figs = [...figurinhas].sort((a, b) => (a.slot ?? 999) - (b.slot ?? 999));
+  const cor = pagina.subtitulo_cor ?? '#FFC400';
+
+  // ---------- CAPA ----------
+  if (parte === 'capa') {
+    return (
+      <div className="flex flex-col items-center px-6 py-10 text-center">
+        <div className="flex items-center gap-2">
+          <span className="h-px w-6 bg-amber-400/60" />
+          <span className="text-[10px] tracking-[0.4em] text-white/60 font-semibold">
+            ÁLBUM OFICIAL
+          </span>
+          <span className="h-px w-6 bg-amber-400/60" />
+        </div>
+        <h1 className="mt-5 font-black italic leading-[0.82] tracking-tight">
+          <span className="block text-6xl sm:text-7xl text-white drop-shadow-lg">
+            FUT
+          </span>
+          <span className="block text-6xl sm:text-7xl text-amber-400 drop-shadow-[0_0_18px_rgba(251,191,36,0.35)]">
+            LENDAS
+          </span>
+        </h1>
+        <span className="mt-3 text-xs sm:text-sm tracking-[0.4em] text-white/45 font-semibold">
+          COLEÇÃO COMPLETA
+        </span>
+        <motion.img
+          src={logoLendas}
+          alt="FutLendas"
+          animate={{
+            filter: [
+              'drop-shadow(0 0 6px rgba(251,191,36,0.35))',
+              'drop-shadow(0 0 20px rgba(251,191,36,0.65))',
+              'drop-shadow(0 0 6px rgba(251,191,36,0.35))',
+            ],
+          }}
+          transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+          className="mt-7 h-36 w-36 sm:h-44 sm:w-44 object-contain"
+        />
+        <div className="mt-7 w-full overflow-hidden rounded-xl border border-cyan-400/20">
+          <img src={capaHero} alt="FutLendas — Coleção" className="w-full object-contain" />
+        </div>
+      </div>
+    );
+  }
+
+  // ---------- AGRADECIMENTO ----------
+  if (parte === 'fim') {
+    return (
+      <div className="relative flex flex-col items-center px-7 py-12 text-center overflow-hidden">
+        <img
+          src={capaHero}
+          aria-hidden
+          className="absolute inset-0 h-full w-full object-cover opacity-[0.1] blur-sm scale-110"
+        />
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-[radial-gradient(ellipse_60%_45%_at_50%_40%,rgba(251,191,36,0.16)_0%,transparent_70%)]"
+        />
+        <div className="relative z-10 flex flex-col items-center">
+          <motion.img
+            src={logoLendas}
+            alt="FutLendas"
+            animate={{
+              scale: [1, 1.05, 1],
+              filter: [
+                'drop-shadow(0 0 10px rgba(251,191,36,0.4))',
+                'drop-shadow(0 0 26px rgba(251,191,36,0.75))',
+                'drop-shadow(0 0 10px rgba(251,191,36,0.4))',
+              ],
+            }}
+            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+            className="h-28 w-28 sm:h-32 sm:w-32 object-contain"
+          />
+          <div className="mt-4 flex items-center gap-2 text-amber-400/80">
+            <span className="h-px w-8 bg-amber-400/40" />
+            <span className="text-sm">★ ★ ★</span>
+            <span className="h-px w-8 bg-amber-400/40" />
+          </div>
+          <h2 className="mt-5 font-black leading-[0.9] tracking-tight">
+            <span className="block text-4xl sm:text-5xl text-white">
+              {pagina.titulo}
+            </span>
+            {pagina.subtitulo && (
+              <span
+                className="mt-1 block text-2xl sm:text-3xl"
+                style={{ color: cor }}
+              >
+                {pagina.subtitulo}
+              </span>
+            )}
+          </h2>
+          {pagina.texto && (
+            <p className="mt-6 text-sm sm:text-base text-cyan-100/80 leading-relaxed">
+              {pagina.texto}
+            </p>
+          )}
+          <span className="mt-8 text-[10px] tracking-[0.3em] text-amber-200/40 font-semibold uppercase">
+            Álbum Oficial · Coleção Completa
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------- NARRATIVA — texto (pag 2) ----------
+  if (parte === 'n-texto') {
+    return (
+      <div className="flex flex-col gap-4 px-6 py-8">
+        <CabecalhoTela
+          titulo={pagina.titulo ?? ''}
+          subtitulo={pagina.subtitulo}
+          cor={cor}
+          tag={pagina.tag}
+          data={pagina.data_referencia}
+        />
+        {pagina.texto && (
+          <p className="text-sm sm:text-base text-cyan-100/80 leading-relaxed whitespace-pre-line">
+            {pagina.texto}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  // ---------- NARRATIVA — foto (pag 2) ----------
+  if (parte === 'n-foto') {
+    return (
+      <div className="flex flex-col gap-4 px-6 py-8">
+        <RotuloSecao>A primeira foto</RotuloSecao>
+        <div className="overflow-hidden rounded-xl border-2 border-amber-400/50 shadow-[0_0_30px_-8px_rgba(251,191,36,0.45)]">
+          <div className="flex">
+            <img src={fotoAmigos1} alt="Os amigos" className="w-1/2 object-cover" />
+            <img src={fotoAmigos2} alt="Os amigos" className="w-1/2 object-cover" />
+          </div>
+        </div>
+        <p className="text-center text-xs text-cyan-100/45">
+          O começo de tudo — Arena Caiçara, agosto de 2022.
+        </p>
+      </div>
+    );
+  }
+
+  // ---------- NARRATIVA pag 5 — esquerda ----------
+  if (parte === 'n5-esq') {
+    const textoEsq = (pagina.texto ?? '').split('[[DIR]]')[0]?.trim() ?? '';
+    return (
+      <div className="flex flex-col gap-4 px-6 py-8">
+        <h2 className="font-black text-2xl sm:text-3xl text-white leading-tight">
+          {pagina.titulo}
+        </h2>
+        <p className="text-sm sm:text-base text-cyan-100/80 leading-relaxed whitespace-pre-line">
+          {textoEsq}
+        </p>
+      </div>
+    );
+  }
+
+  // ---------- NARRATIVA pag 5 — direita ----------
+  if (parte === 'n5-dir') {
+    const textoDir = (pagina.texto ?? '').split('[[DIR]]')[1]?.trim() ?? '';
+    return (
+      <div className="flex flex-col gap-4 px-6 py-8">
+        <RotuloSecao>Continuação</RotuloSecao>
+        <p className="text-sm sm:text-base text-cyan-100/80 leading-relaxed whitespace-pre-line">
+          {textoDir}
+        </p>
+        {figs.length > 0 && (
+          <div className="grid grid-cols-2 gap-2">
+            {figs.slice(0, 2).map((f) => (
+              <Figurinha
+                key={f.id}
+                figurinha={f}
+                tamanho="fluid"
+                onClick={onFigurinhaClick ? () => onFigurinhaClick(f) : undefined}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ---------- NUMEROS — texto ----------
+  if (parte === 'num-texto') {
+    return (
+      <div className="flex flex-col gap-4 px-6 py-8">
+        <CabecalhoTela
+          titulo={pagina.titulo ?? ''}
+          subtitulo={pagina.subtitulo}
+          cor={cor}
+          tag={pagina.tag}
+        />
+        {pagina.texto && (
+          <p className="text-sm sm:text-base text-cyan-100/80 leading-relaxed whitespace-pre-line">
+            {pagina.texto}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  // ---------- NUMEROS — grid 3x3 ----------
+  if (parte === 'num-grid') {
+    return (
+      <div className="flex flex-col gap-3 px-6 py-8">
+        <RotuloSecao>Os números da lenda</RotuloSecao>
+        <GridFigs figs={figs} cols={3} onClick={onFigurinhaClick} />
+      </div>
+    );
+  }
+
+  // ---------- REDE — imagem ----------
+  if (parte === 'rede-img') {
+    return (
+      <div className="flex flex-col gap-4 px-5 py-8">
+        <h2 className="font-black text-2xl sm:text-3xl text-white leading-tight">
+          {pagina.titulo}
+        </h2>
+        {pagina.texto && (
+          <p className="text-sm text-cyan-100/75 leading-relaxed">{pagina.texto}</p>
+        )}
+        <img
+          src={paginaRede}
+          alt={pagina.titulo ?? 'A Rede que Cresceu'}
+          className="w-full rounded-xl border border-cyan-400/20 object-contain"
+        />
+      </div>
+    );
+  }
+
+  // ---------- REDE — grid de figurinhas ----------
+  if (parte === 'rede-grid') {
+    return (
+      <div className="flex flex-col gap-3 px-5 py-8">
+        <RotuloSecao>Os atletas — {figs.length} figurinhas</RotuloSecao>
+        <GridFigs figs={figs} cols={3} onClick={onFigurinhaClick} />
+      </div>
+    );
+  }
+
+  // ---------- COPA — texto ----------
+  if (parte === 'copa-texto') {
+    const secoes = parseSecoes(pagina.texto ?? '');
+    return (
+      <div className="flex flex-col gap-3 px-6 py-8">
+        <CabecalhoTela
+          titulo={pagina.titulo ?? ''}
+          subtitulo={pagina.subtitulo}
+          cor={cor}
+          tag={pagina.tag}
+          data={pagina.data_referencia}
+        />
+        <RotuloSecao>A história por trás do título</RotuloSecao>
+        <div className="flex flex-col gap-4">
+          {secoes.map((sec, i) => (
+            <div key={i}>
+              <h3
+                className="text-sm sm:text-base font-black uppercase tracking-wide border-b border-white/10 pb-1"
+                style={{ color: cor }}
+              >
+                {sec.titulo}
+              </h3>
+              {sec.texto && (
+                <p className="mt-1.5 text-sm text-cyan-100/75 leading-relaxed">
+                  {sec.texto}
+                </p>
+              )}
+              {sec.pills.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {sec.pills.map((p, j) => (
+                    <span
+                      key={j}
+                      className="rounded-full border border-amber-400/40 bg-amber-500/10 px-2.5 py-1 text-[11px] text-amber-200"
+                    >
+                      {p}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {sec.destaque && (
+                <p
+                  className="mt-2 border-l-2 pl-3 italic text-sm text-amber-100/85"
+                  style={{ borderColor: cor }}
+                >
+                  {sec.destaque}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ---------- COPA — figurinhas ----------
+  if (parte === 'copa-figs') {
+    const campeao = figs.find((f) => (f.slot ?? 0) === 1);
+    const etiquetas = figs.filter((f) => (f.slot ?? 0) >= 2 && (f.slot ?? 0) <= 7);
+    const chaveamento = figs.filter((f) => (f.slot ?? 0) >= 8);
+    return (
+      <div className="flex flex-col gap-4 px-6 py-8">
+        <RotuloSecao>O time campeão</RotuloSecao>
+        {campeao && (
+          <div className="mx-auto w-2/3">
+            <Figurinha
+              figurinha={campeao}
+              tamanho="fluid"
+              onClick={onFigurinhaClick ? () => onFigurinhaClick(campeao) : undefined}
+            />
+          </div>
+        )}
+        {etiquetas.length > 0 && (
+          <>
+            <RotuloSecao>Os campeões</RotuloSecao>
+            <GridFigs figs={etiquetas} cols={3} onClick={onFigurinhaClick} />
+          </>
+        )}
+        {chaveamento.length > 0 && (
+          <>
+            <RotuloSecao>Chaveamento</RotuloSecao>
+            <GridFigs figs={chaveamento} cols={2} onClick={onFigurinhaClick} />
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // ---------- CAMPEONATO — texto ----------
+  if (parte === 'camp-texto') {
+    return (
+      <div className="flex flex-col gap-4 px-6 py-8">
+        <CabecalhoTela
+          titulo={pagina.titulo ?? ''}
+          subtitulo={pagina.subtitulo}
+          cor={cor}
+          tag={pagina.tag}
+          data={pagina.data_referencia}
+        />
+        {pagina.texto && (
+          <p className="text-sm sm:text-base text-cyan-100/80 leading-relaxed whitespace-pre-line">
+            {pagina.texto}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  // ---------- CAMPEONATO — figurinhas ----------
+  if (parte === 'camp-figs') {
+    const campeao = figs.find((f) => (f.slot ?? 0) === 1);
+    const jogadores = figs.filter((f) => (f.slot ?? 0) >= 2 && (f.slot ?? 0) <= 7);
+    const destaques = figs.filter((f) => (f.slot ?? 0) >= 8);
+    return (
+      <div className="flex flex-col gap-4 px-6 py-8">
+        <RotuloSecao>O time campeão</RotuloSecao>
+        {campeao && (
+          <div className="mx-auto w-2/3">
+            <Figurinha
+              figurinha={campeao}
+              tamanho="fluid"
+              onClick={onFigurinhaClick ? () => onFigurinhaClick(campeao) : undefined}
+            />
+          </div>
+        )}
+        {jogadores.length > 0 && (
+          <>
+            <RotuloSecao>Os campeões</RotuloSecao>
+            <GridFigs figs={jogadores} cols={3} onClick={onFigurinhaClick} />
+          </>
+        )}
+        {destaques.length > 0 && (
+          <>
+            <RotuloSecao>Destaques do campeonato</RotuloSecao>
+            <GridFigs figs={destaques} cols={3} onClick={onFigurinhaClick} />
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // ---------- ESCUDOS — grid ----------
+  if (parte === 'esc-grid') {
+    const escudos = figs.filter((f) => (f.slot ?? 0) >= 1 && (f.slot ?? 0) <= 9);
+    return (
+      <div className="flex flex-col gap-3 px-6 py-8">
+        <h2 className="font-black text-2xl sm:text-3xl text-white/90 leading-tight">
+          {pagina.titulo}
+        </h2>
+        <RotuloSecao>Escudos dos times</RotuloSecao>
+        <GridFigs figs={escudos} cols={3} onClick={onFigurinhaClick} />
+      </div>
+    );
+  }
+
+  // ---------- ESCUDOS — textos + fotos ----------
+  if (parte === 'esc-fotos') {
+    const partes = (pagina.texto ?? '').split('[[DIR]]');
+    const texto1 = partes[0]?.trim() ?? '';
+    const texto2 = partes[1]?.trim() ?? '';
+    const foto1 = figs.filter((f) => (f.slot ?? 0) >= 10 && (f.slot ?? 0) <= 11);
+    const foto2 = figs.filter((f) => (f.slot ?? 0) >= 12);
+    return (
+      <div className="flex flex-col gap-4 px-6 py-8">
+        {texto1 && (
+          <p className="text-sm sm:text-base text-cyan-100/80 leading-relaxed">
+            {texto1}
+          </p>
+        )}
+        {foto1.length > 0 && (
+          <div className="grid grid-cols-2 gap-2">
+            {foto1.map((f) => (
+              <Figurinha
+                key={f.id}
+                figurinha={f}
+                tamanho="fluid"
+                onClick={onFigurinhaClick ? () => onFigurinhaClick(f) : undefined}
+              />
+            ))}
+          </div>
+        )}
+        {texto2 && (
+          <p className="text-sm sm:text-base text-cyan-100/80 leading-relaxed">
+            {texto2}
+          </p>
+        )}
+        {foto2.length > 0 && (
+          <div className="grid grid-cols-2 gap-2">
+            {foto2.map((f) => (
+              <Figurinha
+                key={f.id}
+                figurinha={f}
+                tamanho="fluid"
+                onClick={onFigurinhaClick ? () => onFigurinhaClick(f) : undefined}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ---------- GENERICO (fallback) ----------
+  return (
+    <div className="flex flex-col gap-4 px-6 py-8">
+      <CabecalhoTela
+        titulo={pagina.titulo ?? ''}
+        subtitulo={pagina.subtitulo}
+        cor={cor}
+        tag={pagina.tag}
+        data={pagina.data_referencia}
+      />
+      {pagina.texto && (
+        <p className="text-sm text-cyan-100/75 leading-relaxed whitespace-pre-line">
+          {pagina.texto}
+        </p>
+      )}
+      {figs.length > 0 && <GridFigs figs={figs} cols={3} onClick={onFigurinhaClick} />}
+    </div>
+  );
+};

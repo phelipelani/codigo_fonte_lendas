@@ -1,34 +1,75 @@
 // Arquivo: src/features/album/routes/AlbumPage.tsx
 //
 // Pagina principal do Album de Figurinhas.
-// Cada "pagina" e uma tela cheia (spread) — igual ao design do Figma.
-// Navegacao: uma pagina por vez.
+//   - Desktop (>= 1024px): "livro" spread de 2 paginas — PaginaAlbum
+//   - Mobile  (< 1024px) : telas separadas em coluna unica — TelaAlbum
 
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Package, Loader2, Trophy } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Package,
+  Loader2,
+  Trophy,
+  ArrowLeftRight,
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import {
   useMeuAlbum,
   useMeuWhatsapp,
   useMeusPacotes,
   type Figurinha as FigurinhaType,
+  type Pagina,
 } from '../api/albumApi';
 import { PaginaAlbum } from '../components/PaginaAlbum';
+import {
+  TelaAlbum,
+  partesDaPagina,
+  rotuloParte,
+  type Parte,
+} from '../components/TelaAlbum';
 import { AbrirPacoteModal } from '../components/AbrirPacoteModal';
 import { VincularWhatsappModal } from '../components/VincularWhatsappModal';
+import { OrigemFigurinhaModal } from '../components/OrigemFigurinhaModal';
+
+// =============================================================
+// Hook simples para media-query (sem dependencia extra)
+// =============================================================
+function useMediaQuery(query: string): boolean {
+  const get = () =>
+    typeof window !== 'undefined' && window.matchMedia(query).matches;
+  const [matches, setMatches] = React.useState<boolean>(get);
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia(query);
+    const onChange = () => setMatches(mq.matches);
+    onChange();
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, [query]);
+  return matches;
+}
 
 export const AlbumPage: React.FC = () => {
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
+
   const { data: album, isLoading } = useMeuAlbum();
   const { data: whatsappData, isLoading: loadingWhats } = useMeuWhatsapp();
   const { data: pacotesData } = useMeusPacotes();
 
-  const [indice, setIndice] = React.useState(0);
+  // Indices separados para desktop (spreads) e mobile (telas).
+  // Assim se o user redimensionar a janela, cada visualizacao mantem
+  // sua propria posicao sem ficar inconsistente.
+  const [indiceDesktop, setIndiceDesktop] = React.useState(0);
+  const [indiceMobile, setIndiceMobile] = React.useState(0);
+
   const [pacoteAberto, setPacoteAberto] = React.useState<number | null>(null);
   const [whatsappOk, setWhatsappOk] = React.useState(false);
+  const [figClicada, setFigClicada] = React.useState<FigurinhaType | null>(null);
 
-  const precisaWhatsapp =
-    !loadingWhats && !whatsappData?.whatsapp && !whatsappOk;
+  const precisaWhatsapp = !loadingWhats && !whatsappData?.whatsapp && !whatsappOk;
 
   // Figurinhas agrupadas por pagina_id
   const figsPorPagina = React.useMemo(() => {
@@ -43,14 +84,41 @@ export const AlbumPage: React.FC = () => {
   }, [album?.figurinhas]);
 
   const paginas = album?.paginas ?? [];
-  const totalPaginas = paginas.length;
-  const paginaAtual = paginas[indice] ?? null;
+
+  // Lista plana de telas para o mobile
+  const telas = React.useMemo(() => {
+    const lista: { pagina: Pagina; parte: Parte }[] = [];
+    paginas.forEach((p) => {
+      partesDaPagina(p).forEach((parte) => lista.push({ pagina: p, parte }));
+    });
+    return lista;
+  }, [paginas]);
+
+  const totalDesktop = paginas.length;
+  const totalMobile = telas.length;
+
+  const idxD = Math.min(indiceDesktop, Math.max(0, totalDesktop - 1));
+  const idxM = Math.min(indiceMobile, Math.max(0, totalMobile - 1));
+
+  const paginaAtual = paginas[idxD] ?? null;
+  const telaAtual = telas[idxM] ?? null;
 
   const pacotesFechados =
     (pacotesData?.pacotes ?? []).filter((p) => p.status === 'fechado').length;
 
-  const avancar = () => setIndice((i) => Math.min(i + 1, totalPaginas - 1));
-  const voltar = () => setIndice((i) => Math.max(i - 1, 0));
+  const avancar = () => {
+    if (isDesktop) setIndiceDesktop((i) => Math.min(i + 1, totalDesktop - 1));
+    else setIndiceMobile((i) => Math.min(i + 1, totalMobile - 1));
+  };
+  const voltar = () => {
+    if (isDesktop) setIndiceDesktop((i) => Math.max(i - 1, 0));
+    else setIndiceMobile((i) => Math.max(i - 1, 0));
+  };
+
+  // No mobile, sobe para o topo ao trocar de tela.
+  React.useEffect(() => {
+    if (!isDesktop) window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [idxM, isDesktop]);
 
   if (isLoading) {
     return (
@@ -60,8 +128,12 @@ export const AlbumPage: React.FC = () => {
     );
   }
 
+  // Largura do container muda conforme breakpoint:
+  // mobile = max-w-3xl (coluna unica), desktop = max-w-7xl (livro largo)
+  const containerCls = isDesktop ? 'max-w-7xl' : 'max-w-3xl';
+
   return (
-    <div className="p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto">
+    <div className={cn('p-3 sm:p-5 lg:p-8 mx-auto', containerCls)}>
       {precisaWhatsapp && (
         <VincularWhatsappModal onVinculado={() => setWhatsappOk(true)} />
       )}
@@ -70,6 +142,15 @@ export const AlbumPage: React.FC = () => {
         pacoteId={pacoteAberto}
         onClose={() => setPacoteAberto(null)}
       />
+
+      <AnimatePresence>
+        {figClicada && (
+          <OrigemFigurinhaModal
+            figurinha={figClicada}
+            onClose={() => setFigClicada(null)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* ===== Header ===== */}
       <header className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -87,32 +168,42 @@ export const AlbumPage: React.FC = () => {
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            const fechado = (pacotesData?.pacotes ?? []).find(
-              (p) => p.status === 'fechado'
-            );
-            if (fechado) setPacoteAberto(fechado.id);
-          }}
-          disabled={pacotesFechados === 0}
-          className={cn(
-            'relative inline-flex items-center gap-2 rounded-xl px-4 py-2.5 font-bold transition-all',
-            pacotesFechados > 0
-              ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-[#0a1628] hover:from-amber-400 hover:to-amber-500 shadow-lg shadow-amber-500/25'
-              : 'bg-white/5 text-white/30 cursor-not-allowed'
-          )}
-        >
-          <Package className="h-5 w-5" />
-          {pacotesFechados > 0
-            ? `Abrir pacote (${pacotesFechados})`
-            : 'Sem pacotes'}
-          {pacotesFechados > 0 && (
-            <span className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 text-white text-xs font-black flex items-center justify-center animate-pulse">
-              {pacotesFechados}
-            </span>
-          )}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            to="/album/mural"
+            className="inline-flex items-center gap-2 rounded-xl border border-cyan-500/30 bg-[#0d1f35] px-4 py-2.5 font-bold text-cyan-200 transition-all hover:bg-cyan-500/10"
+          >
+            <ArrowLeftRight className="h-5 w-5" />
+            Mural de trocas
+          </Link>
+
+          <button
+            type="button"
+            onClick={() => {
+              const fechado = (pacotesData?.pacotes ?? []).find(
+                (p) => p.status === 'fechado'
+              );
+              if (fechado) setPacoteAberto(fechado.id);
+            }}
+            disabled={pacotesFechados === 0}
+            className={cn(
+              'relative inline-flex items-center gap-2 rounded-xl px-4 py-2.5 font-bold transition-all',
+              pacotesFechados > 0
+                ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-[#0a1628] hover:from-amber-400 hover:to-amber-500 shadow-lg shadow-amber-500/25'
+                : 'bg-white/5 text-white/30 cursor-not-allowed'
+            )}
+          >
+            <Package className="h-5 w-5" />
+            {pacotesFechados > 0
+              ? `Abrir pacote (${pacotesFechados})`
+              : 'Sem pacotes'}
+            {pacotesFechados > 0 && (
+              <span className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 text-white text-xs font-black flex items-center justify-center animate-pulse">
+                {pacotesFechados}
+              </span>
+            )}
+          </button>
+        </div>
       </header>
 
       {/* ===== Barra de progresso ===== */}
@@ -127,57 +218,105 @@ export const AlbumPage: React.FC = () => {
         </div>
       )}
 
-      {/* ===== O LIVRO — uma pagina (spread) por vez ===== */}
+      {/* ===== O conteudo do album ===== */}
       <div className="relative">
-        <div
-          className={cn(
-            'relative rounded-2xl border-2 border-cyan-400/40 overflow-hidden',
-            // Altura FIXA — todas as paginas tem o mesmo tamanho de livro
-            'h-[600px] sm:h-[680px] lg:h-[780px]',
-            // Fundo "Estadio a noite" — holofote radial
-            'bg-[radial-gradient(ellipse_75%_55%_at_50%_40%,#243650_0%,#1b2942_48%,#0e1830_100%)]',
-            'shadow-[0_0_40px_-12px_rgba(34,211,238,0.3)]'
-          )}
-        >
-          <AnimatePresence mode="wait">
-            {paginaAtual && (
-              <motion.div
-                key={paginaAtual.id}
-                initial={{ opacity: 0, x: 24 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -24 }}
-                transition={{ duration: 0.28 }}
-                className="h-full"
-              >
-                <PaginaAlbum
-                  pagina={paginaAtual}
-                  figurinhas={figsPorPagina.get(paginaAtual.id) ?? []}
-                />
-              </motion.div>
+        {isDesktop ? (
+          // -------- DESKTOP: livro (spread de 2 paginas) --------
+          <div
+            className={cn(
+              'relative rounded-2xl border-2 border-cyan-400/40 overflow-hidden',
+              'h-[600px] sm:h-[680px] lg:h-[780px]',
+              'bg-[radial-gradient(ellipse_75%_55%_at_50%_40%,#243650_0%,#1b2942_48%,#0e1830_100%)]',
+              'shadow-[0_0_40px_-12px_rgba(34,211,238,0.3)]'
             )}
-          </AnimatePresence>
-        </div>
+          >
+            <AnimatePresence mode="wait">
+              {paginaAtual && (
+                <motion.div
+                  key={paginaAtual.id}
+                  initial={{ opacity: 0, x: 24 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -24 }}
+                  transition={{ duration: 0.28 }}
+                  className="h-full"
+                >
+                  <PaginaAlbum
+                    pagina={paginaAtual}
+                    figurinhas={figsPorPagina.get(paginaAtual.id) ?? []}
+                    onFigurinhaClick={setFigClicada}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        ) : (
+          // -------- MOBILE: tela unica (coluna) --------
+          <div
+            className={cn(
+              'relative rounded-2xl border-2 border-cyan-400/40 overflow-hidden',
+              'min-h-[60vh]',
+              'bg-[radial-gradient(ellipse_85%_55%_at_50%_30%,#243650_0%,#1b2942_48%,#0e1830_100%)]',
+              'shadow-[0_0_40px_-12px_rgba(34,211,238,0.3)]'
+            )}
+          >
+            <AnimatePresence mode="wait">
+              {telaAtual && (
+                <motion.div
+                  key={idxM}
+                  initial={{ opacity: 0, x: 24 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -24 }}
+                  transition={{ duration: 0.25 }}
+                >
+                  <TelaAlbum
+                    pagina={telaAtual.pagina}
+                    figurinhas={figsPorPagina.get(telaAtual.pagina.id) ?? []}
+                    parte={telaAtual.parte}
+                    onFigurinhaClick={setFigClicada}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
 
-        {/* Navegacao */}
+        {/* ===== Navegacao ===== */}
         <div className="mt-4 flex items-center justify-between gap-3">
           <button
             type="button"
             onClick={voltar}
-            disabled={indice === 0}
+            disabled={(isDesktop ? idxD : idxM) === 0}
             className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-500/30 bg-[#0d1f35] px-4 py-2.5 text-sm font-semibold text-cyan-200 hover:bg-cyan-500/10 disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <ChevronLeft className="h-4 w-4" />
             Anterior
           </button>
 
-          <span className="text-xs text-cyan-100/50 tabular-nums">
-            {totalPaginas > 0 ? `${indice + 1} / ${totalPaginas}` : '—'}
-          </span>
+          <div className="text-center">
+            <div className="text-xs font-bold text-cyan-100/70 tabular-nums">
+              {isDesktop
+                ? totalDesktop > 0
+                  ? `${idxD + 1} / ${totalDesktop}`
+                  : '—'
+                : totalMobile > 0
+                  ? `${idxM + 1} / ${totalMobile}`
+                  : '—'}
+            </div>
+            {!isDesktop && telaAtual && (
+              <div className="text-[10px] uppercase tracking-widest text-cyan-100/35">
+                Pág. {telaAtual.pagina.numero} · {rotuloParte(telaAtual.parte)}
+              </div>
+            )}
+          </div>
 
           <button
             type="button"
             onClick={avancar}
-            disabled={indice >= totalPaginas - 1}
+            disabled={
+              isDesktop
+                ? idxD >= totalDesktop - 1
+                : idxM >= totalMobile - 1
+            }
             className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-500/30 bg-[#0d1f35] px-4 py-2.5 text-sm font-semibold text-cyan-200 hover:bg-cyan-500/10 disabled:opacity-30 disabled:cursor-not-allowed"
           >
             Próxima

@@ -1,8 +1,9 @@
 // Arquivo: src/features/album/components/PaginaAlbum.tsx
 //
-// Renderiza UMA pagina do album (tela cheia / spread) conforme o tipo.
-// Cada pagina tem layout interno de 2 colunas com a "lombada" no meio,
-// fiel ao design do Figma.
+// Versao DESKTOP do album — renderiza UMA pagina do album como spread
+// de 2 colunas com a "lombada" no meio, fiel ao design do Figma.
+//
+// Para a versao MOBILE (coluna unica, telas separadas) ver TelaAlbum.tsx.
 
 import * as React from 'react';
 import { motion } from 'framer-motion';
@@ -630,7 +631,7 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
             A história por trás do título
           </span>
 
-          <div className="mt-2 space-y-3">
+          <div className="mt-2 space-y-2.5">
             {secoes.map((sec, i) => (
               <div key={i}>
                 <h3
@@ -669,13 +670,13 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
           </div>
 
           {chaveamento.length > 0 && (
-            <div className="mt-4 shrink-0">
+            <div className="mt-3 shrink-0">
               <span className="text-[9px] tracking-widest text-cyan-100/40 uppercase">
                 Chaveamento
               </span>
               <div className="mt-1 grid grid-cols-2 gap-1.5">
                 {chaveamento.map((fig) => (
-                  <div key={fig.id} className="h-[110px] sm:h-[140px]">
+                  <div key={fig.id} className="h-[92px] sm:h-[112px]">
                     <Figurinha
                       figurinha={fig}
                       tamanho="cell"
@@ -918,7 +919,6 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
   // ============================================================
   // DEMAIS (fallback generico)
   // Layout generico: cabecalho + texto a esquerda, grid a direita.
-  // (refinamento fiel ao Figma vem nas proximas iteracoes)
   // ============================================================
   return (
     <div className={cn('relative w-full grid grid-cols-1 md:grid-cols-2', ALTURA_PAGINA)}>

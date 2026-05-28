@@ -1107,18 +1107,21 @@ try {
             require $presencaRoot . '/api/dados.php'; exit;
         }
 
-        // POST /presenca/acao — confirmar/ausente/lembrete manual
+        // POST /presenca/acao — confirmar/ausente/lembrete manual (admin)
         if ($path === '/presenca/acao' && $method === 'POST') {
+            AuthMiddleware::isAdmin();
             require $presencaRoot . '/api/acao.php'; exit;
         }
 
-        // POST /presenca/recarregar — forca reenvio do relatorio
+        // POST /presenca/recarregar — forca reenvio do relatorio (admin)
         if ($path === '/presenca/recarregar' && $method === 'POST') {
+            AuthMiddleware::isAdmin();
             require $presencaRoot . '/recarregar.php'; exit;
         }
 
-        // POST /presenca/mensagem — mensagem avulsa para jogador ou grupo
+        // POST /presenca/mensagem — mensagem avulsa para jogador ou grupo (admin)
         if ($path === '/presenca/mensagem' && $method === 'POST') {
+            AuthMiddleware::isAdmin();
             require $presencaRoot . '/api/mensagem.php'; exit;
         }
 
@@ -1134,24 +1137,28 @@ try {
             require $presencaRoot . '/setup.php'; exit;
         }
 
-        // GET|PUT /presenca/configuracoes — configuracoes do bot
+        // GET|PUT /presenca/configuracoes — configuracoes do bot (admin)
         if ($path === '/presenca/configuracoes') {
+            AuthMiddleware::isAdmin();
             require $presencaRoot . '/api/configuracoes.php'; exit;
         }
 
-        // GET /presenca/jogadores — lista jogadores
+        // GET /presenca/jogadores — lista jogadores (admin — contem telefones)
         if ($path === '/presenca/jogadores' && ($method === 'GET' || $method === 'POST')) {
+            AuthMiddleware::isAdmin();
             require $presencaRoot . '/api/jogadores.php'; exit;
         }
 
-        // PUT|DELETE /presenca/jogadores/{id} — editar ou remover
+        // PUT|DELETE /presenca/jogadores/{id} — editar ou remover (admin)
         if (preg_match('#^/presenca/jogadores/(\d+)$#', $path, $m)) {
+            AuthMiddleware::isAdmin();
             $jogadorId = (int)$m[1];
             require $presencaRoot . '/api/jogadores.php'; exit;
         }
 
-        // POST /presenca/jogadores/{id}/toggle — ativar/desativar
+        // POST /presenca/jogadores/{id}/toggle — ativar/desativar (admin)
         if (preg_match('#^/presenca/jogadores/(\d+)/toggle$#', $path, $m) && $method === 'POST') {
+            AuthMiddleware::isAdmin();
             $jogadorId = (int)$m[1];
             require $presencaRoot . '/api/jogadores.php'; exit;
         }
@@ -1241,6 +1248,44 @@ try {
     if ($path === '/album/whatsapp' && $method === 'PUT') {
         AuthMiddleware::handle();
         (new AlbumController())->setWhatsapp(); exit;
+    }
+
+    // --- Novidades de troca (modal para o ofertante) ---
+    if ($path === '/album/trocas/novidades' && $method === 'GET') {
+        AuthMiddleware::handle();
+        (new AlbumController())->novidadesTrocas(); exit;
+    }
+    if ($path === '/album/trocas/novidades/visto' && $method === 'POST') {
+        AuthMiddleware::handle();
+        (new AlbumController())->marcarTrocasVistas(); exit;
+    }
+
+    // --- Origem de uma figurinha (como o usuario a obteve) ---
+    if (preg_match('#^/album/figurinhas/(\d+)/origem$#', $path, $m) && $method === 'GET') {
+        AuthMiddleware::handle();
+        (new AlbumController())->origemFigurinha((int)$m[1]); exit;
+    }
+
+    // --- Mural de trocas ---
+    if ($path === '/album/mural' && $method === 'GET') {
+        AuthMiddleware::handle();
+        (new AlbumController())->listarMural(); exit;
+    }
+    if ($path === '/album/mural' && $method === 'POST') {
+        AuthMiddleware::handle();
+        (new AlbumController())->disponibilizarTroca(); exit;
+    }
+    if (preg_match('#^/album/mural/(\d+)$#', $path, $m) && $method === 'DELETE') {
+        AuthMiddleware::handle();
+        (new AlbumController())->retirarTroca((int)$m[1]); exit;
+    }
+    if (preg_match('#^/album/mural/(\d+)/opcoes$#', $path, $m) && $method === 'GET') {
+        AuthMiddleware::handle();
+        (new AlbumController())->opcoesTroca((int)$m[1]); exit;
+    }
+    if (preg_match('#^/album/mural/(\d+)/trocar$#', $path, $m) && $method === 'POST') {
+        AuthMiddleware::handle();
+        (new AlbumController())->executarTroca((int)$m[1]); exit;
     }
 
     // --- Admin: usuarios + distribuir pacotes ---
