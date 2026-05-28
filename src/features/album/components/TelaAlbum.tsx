@@ -35,6 +35,8 @@ export type Parte =
   | 'camp-figs'
   | 'esc-grid'
   | 'esc-fotos'
+  | 'elenco-ab'
+  | 'elenco-cd'
   | 'generico';
 
 /** Quais telas uma pagina gera. */
@@ -52,6 +54,8 @@ export function partesDaPagina(p: Pagina): Parte[] {
       return ['copa-texto', 'copa-figs'];
     case 'campeonato':
       return ['camp-texto', 'camp-figs'];
+    case 'elenco':
+      return ['elenco-ab', 'elenco-cd'];
     case 'escudos':
       return ['esc-grid', 'esc-fotos'];
     case 'narrativa':
@@ -78,6 +82,10 @@ export function rotuloParte(parte: Parte): string {
       return 'Fotos';
     case 'n5-dir':
       return 'Continuação';
+    case 'elenco-ab':
+      return 'Times A e B';
+    case 'elenco-cd':
+      return 'Times C e D';
     default:
       return 'História';
   }
@@ -586,6 +594,63 @@ export const TelaAlbum: React.FC<TelaAlbumProps> = ({
             <GridFigs figs={destaques} cols={3} onClick={onFigurinhaClick} />
           </>
         )}
+      </div>
+    );
+  }
+
+  // ---------- ELENCO — 2 times por tela ----------
+  if (parte === 'elenco-ab' || parte === 'elenco-cd') {
+    const isAB = parte === 'elenco-ab';
+    const time1Slots = isAB ? [1, 7] : [15, 21];
+    const time2Slots = isAB ? [8, 14] : [22, 28];
+    const time1Nome = isAB ? 'Time A' : 'Time C';
+    const time2Nome = isAB ? 'Time B' : 'Time D';
+    const time1 = figs.filter(
+      (f) => (f.slot ?? 0) >= time1Slots[0] && (f.slot ?? 0) <= time1Slots[1]
+    );
+    const time2 = figs.filter(
+      (f) => (f.slot ?? 0) >= time2Slots[0] && (f.slot ?? 0) <= time2Slots[1]
+    );
+
+    const TimeBloco: React.FC<{ nome: string; lista: FigurinhaType[] }> = ({
+      nome,
+      lista,
+    }) => (
+      <div className="rounded-xl border border-cyan-400/20 bg-black/30 p-3">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-sm font-black uppercase tracking-widest text-white">
+            {nome}
+          </span>
+          <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-amber-200">
+            ★ Logo + Capitão
+          </span>
+        </div>
+        <GridFigs figs={lista} cols={4} onClick={onFigurinhaClick} />
+      </div>
+    );
+
+    return (
+      <div className="flex flex-col gap-4 px-5 py-7">
+        <header>
+          <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-cyan-200/70">
+            {isAB ? 'Times que disputaram — parte 1' : 'Times que disputaram — parte 2'}
+          </span>
+          <h2 className="mt-1 font-black italic leading-[0.9] tracking-tight">
+            <span className="block text-xl sm:text-2xl text-white">
+              {pagina.titulo}
+            </span>
+            {pagina.subtitulo && (
+              <span
+                className="block text-lg sm:text-xl"
+                style={{ color: pagina.subtitulo_cor ?? '#A855F7' }}
+              >
+                {pagina.subtitulo}
+              </span>
+            )}
+          </h2>
+        </header>
+        <TimeBloco nome={time1Nome} lista={time1} />
+        <TimeBloco nome={time2Nome} lista={time2} />
       </div>
     );
   }

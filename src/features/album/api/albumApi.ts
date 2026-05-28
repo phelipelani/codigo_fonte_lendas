@@ -19,6 +19,7 @@ export type TipoPagina =
   | 'numeros'
   | 'copa'
   | 'campeonato'
+  | 'elenco'
   | 'escudos'
   | 'agradecimento';
 

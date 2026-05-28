@@ -831,6 +831,93 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
   }
 
   // ============================================================
+  // ELENCO — "Elencos que disputaram a Nª edição"
+  // Esquerda: header + Time A + Time B (2 cards).
+  // Direita: logo + Time C + Time D (2 cards).
+  // Cada time tem 7 figurinhas (Logo + Capitao lendarias + 5 jogadores).
+  // ============================================================
+  if (pagina.tipo === 'elenco') {
+    const cor = pagina.subtitulo_cor ?? '#A855F7';
+    const times = [
+      { titulo: 'Time A', figs: figsOrdenadas.filter((f) => (f.slot ?? 0) >= 1 && (f.slot ?? 0) <= 7) },
+      { titulo: 'Time B', figs: figsOrdenadas.filter((f) => (f.slot ?? 0) >= 8 && (f.slot ?? 0) <= 14) },
+      { titulo: 'Time C', figs: figsOrdenadas.filter((f) => (f.slot ?? 0) >= 15 && (f.slot ?? 0) <= 21) },
+      { titulo: 'Time D', figs: figsOrdenadas.filter((f) => (f.slot ?? 0) >= 22 && (f.slot ?? 0) <= 28) },
+    ];
+
+    const TimeCard: React.FC<{ titulo: string; figs: FigurinhaType[] }> = ({ titulo, figs }) => (
+      <div className="rounded-xl border border-cyan-400/20 bg-black/30 p-2.5 sm:p-3">
+        <div className="mb-1.5 flex items-center justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-200/80">
+            {titulo}
+          </span>
+          <span
+            className="text-[8px] font-bold uppercase tracking-widest text-black px-1.5 py-0.5 rounded"
+            style={{ background: cor }}
+          >
+            ★ Logo + Capitão
+          </span>
+        </div>
+        <div className="grid grid-cols-4 gap-1.5">
+          {figs.map((fig) => (
+            <Figurinha
+              key={fig.id}
+              figurinha={fig}
+              tamanho="fluid"
+              onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
+            />
+          ))}
+          {Array.from({ length: Math.max(0, 8 - figs.length) }).map((_, i) => (
+            <div
+              key={'vazio-' + i}
+              className="aspect-[114/155] rounded-lg border border-dashed border-white/5"
+            />
+          ))}
+        </div>
+      </div>
+    );
+
+    return (
+      <div className={cn('relative w-full grid grid-cols-1 md:grid-cols-2', ALTURA_PAGINA)}>
+        <div className="hidden md:block absolute left-1/2 top-4 bottom-4 w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-cyan-400/40 to-transparent" />
+
+        {/* Esquerda — header + Time A + Time B */}
+        <div className="h-full px-5 sm:px-7 py-6 flex flex-col gap-3 overflow-y-auto">
+          <header>
+            <span className="text-[8px] tracking-[0.3em] text-cyan-100/40 font-semibold uppercase">
+              Fut Lendas · Elencos
+            </span>
+            <h2 className="mt-1 font-black italic leading-[0.85] tracking-tight">
+              <span className="block text-xl sm:text-2xl lg:text-3xl text-white">
+                {pagina.titulo}
+              </span>
+              {pagina.subtitulo && (
+                <span
+                  className="block text-xl sm:text-2xl lg:text-3xl"
+                  style={{ color: cor }}
+                >
+                  {pagina.subtitulo}
+                </span>
+              )}
+            </h2>
+          </header>
+          <TimeCard titulo={times[0].titulo} figs={times[0].figs} />
+          <TimeCard titulo={times[1].titulo} figs={times[1].figs} />
+        </div>
+
+        {/* Direita — logo + Time C + Time D */}
+        <div className="h-full px-5 sm:px-7 py-6 flex flex-col gap-3 overflow-y-auto">
+          <div className="flex justify-end shrink-0">
+            <LogoCanto />
+          </div>
+          <TimeCard titulo={times[2].titulo} figs={times[2].figs} />
+          <TimeCard titulo={times[3].titulo} figs={times[3].figs} />
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================================
   // ESCUDOS — "Escudos dos Times"
   // Esquerda: titulo + grid 3x3 dos 9 escudos.
   // Direita: logo + texto+foto (1) + texto+foto (2). Cada foto = 2 slots.

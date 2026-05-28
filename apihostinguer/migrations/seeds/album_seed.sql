@@ -1,14 +1,16 @@
 -- ================================================================
--- SEED — Album de Figurinhas (DADOS MOCKADOS para desenvolvimento)
+-- SEED — Album de Figurinhas (DADOS COMPLETOS)
 -- ================================================================
--- Roda DEPOIS das migrations 003 e 004.
--- Popula 13 paginas + ~32 figurinhas placeholder (sem imagem real).
+-- Roda DEPOIS das migrations 003, 004, 005 e 006.
+-- Popula 16 paginas + 199 figurinhas placeholder (sem imagem real).
 -- As imagens reais serao cadastradas pela tela de admin depois.
 --
--- Para limpar e repopular:
---   DELETE FROM album_figurinhas; DELETE FROM album_paginas;
---   ALTER TABLE album_figurinhas AUTO_INCREMENT = 1;
---   ALTER TABLE album_paginas AUTO_INCREMENT = 1;
+-- Para limpar e repopular (banco DEV):
+--   SET FOREIGN_KEY_CHECKS=0;
+--   TRUNCATE album_inventario; TRUNCATE album_pacote_figurinhas;
+--   TRUNCATE album_pacotes; TRUNCATE album_trocas;
+--   TRUNCATE album_figurinhas; TRUNCATE album_paginas;
+--   SET FOREIGN_KEY_CHECKS=1;
 -- ================================================================
 
 -- ---------- PAGINAS ----------
@@ -30,19 +32,19 @@ INSERT INTO album_paginas (numero, tipo, titulo, subtitulo, subtitulo_cor, tag, 
  '## O GOL AOS 09:55\n1 a 1. Faltavam 5 segundos. Rafael toca para Lani. Lani de costas faz o pivô. Encaixa para André que vinha de frente. GOL DO TÍTULO. O cronômetro marcava 9:55 — e o jogo deveria acabar aos 10 minutos.\n[[DESTAQUE]] 9:55. Rafael toca. Lani gira. André finaliza. Gol. O título estava feito com 5 segundos de sobra.\n\n## O ÁRBITRO SUSPEITO\nO árbitro daquele jogo era Higor — irmão do Dieguinho, jogador do Time Rosa. O apito não veio aos 10 minutos. O jogo continuou por mais 1 minuto inteiro. O gol não saiu. O Amarelo segurou.\n[[PILL]] Higor apitou o jogo do próprio irmão\n[[PILL]] Lani e Rafael igualam Tiago com 2 títulos de Copa'),
 (9,  'campeonato',    '1º CAMPEONATO', 'PONTOS CORRIDOS', '#A855F7', 'CAMPEÃO: VASCO', '22 de outubro de 2025 · 1 mês',
  'A ideia já vinha ventilando faz tempo. Precisava amadurecer, precisava do momento certo.\nEntão veio a decisão: vamos fazer o teste.\n\nE a emoção não esperou a bola rolar, já começou no draft. O Gambito dos Capitães: quais Lendas escolher? Como montar o time? Como pensar na estratégia sem entregar o jogo antes de começar?\n\nCampeonato rolando, cada rodada contava. Os times foram se entrosando, evoluindo ou derretendo sob pressão. Um formato mais competitivo, mais disputado, que forçava cada Lenda a dar um passo além do racha de sempre. E claro, o primeiro camp não podia ser sem polêmica.\n\nJogo entre PSV contra Vasco, PSV com 33 pontos, Vasco com 31. O PSV precisava de um empate para o título. E então veio a famosa cãibra, o lendário gol da rataria, e no fim... título pro Vascão! Coroando uma campanha sólida, construída rodada por rodada.\n\nO teste passou. A Copa virou tradição.'),
-(10, 'campeonato',    '2º CAMPEONATO', 'PONTOS CORRIDOS', '#EC4899', 'SÃO PAULANDO', '12 de novembro de 2025 · 2 meses',
+(10, 'elenco',        'ELENCOS QUE DISPUTARAM', 'A 1ª EDIÇÃO', '#A855F7', NULL, NULL, NULL),
+(11, 'campeonato',    '2º CAMPEONATO', 'PONTOS CORRIDOS', '#EC4899', 'SÃO PAULANDO', '12 de novembro de 2025 · 2 meses',
  'O primeiro camp deixou gosto de quero mais. Então a galera foi além, trouxe ideias, sugeriu regras, ajudou a construir. Novos capitães, sistema de rebaixamento, um período maior de campeonato. Mais tempo pra se entrosar. Mais tempo pra derreter também.\n\nE dessa vez, ninguém imaginou que tudo ficaria pra ser decidido na última rodada.\n\nShaktar com 44 pontos. São Paulando com 40. No confronto direto, último minuto, Wilian encontrou Gabriel Ferreira e a bola entrou. Vitória do São Paulando — que teria mais um jogo, só precisava de um empate e levantava o caneco.\n\nAí veio a jogada que ninguém esperava: o Shaktar, fora da briga pelo título, cedeu jogadores pro Vasco enfrentar o São Paulando. A ideia? Ajudar o adversário a tropeçar.\n\nA ironia ficou registrada pra sempre: o Shaktar ajudou o rival e perdeu o título assim mesmo — Mike perdeu um gol feito, dando a vitória ao São Paulando.\n\nCampeão: São Paulando. De virada, na raça, e com um roteiro que só o Fut Lendas escreve.'),
-(11, 'campeonato',    '3º CAMPEONATO', 'SÃO PAULANDO BI', '#EC4899', 'BI-CAMPEÃO|A LANIPULAÇÃO', '10 de fevereiro de 2026 · 2 meses',
+(12, 'elenco',        'ELENCOS QUE DISPUTARAM', 'A 2ª EDIÇÃO', '#EC4899', NULL, NULL, NULL),
+(13, 'campeonato',    '3º CAMPEONATO', 'SÃO PAULANDO BI', '#EC4899', 'BI-CAMPEÃO|A LANIPULAÇÃO', '10 de fevereiro de 2026 · 2 meses',
  'Depois de um período de "férias" da competitividade, estava na hora de voltar. Com novidades: Michel e Rafael pagaram o preço do rebaixamento, renovação no elenco, e uma surpresa bem-vinda — a volta da família Castilho.\n\nO draft trouxe um detalhe que animou todo mundo: cada time tinha seus irmãos. O Real Madruga com Iago e Andrei, o São Paulando com Caio e Gabriel Ferreira, o Inter dos Molão com Higor e Dieguinho, e o Shaktar dos Leks com a dupla mais inseparável do Fut Lendas — Alan e Wagner.\n\nNas primeiras rodadas, o São Paulando foi avassalador. Abriu mais de 16 pontos de vantagem e o bi parecia passeio. Mas a arrogância precede a queda — e o campeonato virou.\n\nChegamos na última rodada com o Shaktar na liderança e o Real Madruga comendo pelas beiradas. E foi aí que aconteceu talvez a maior LANIPULAÇÃO já vista no Fut Lendas. A regra de igualar jogos na última rodada obrigou o Shaktar a disputar apenas 3 partidas, enquanto o SP jogava 6 e o Real Madruga 7. Com apenas 4 pontos de vantagem, segurar o título dependia do tropeço dos adversários — que não veio.\n\nO São Paulando voltou aos trilhos. Das seis partidas, ganhou quatro e empatou duas. Bi-campeão.\n\nO Real Madruga chegou a se igualar em pontos com o Shaktar, mas o critério de desempate foi impiedoso — terceiro lugar e rebaixamento pro capitão Victor. Já o Inter dos Molão... tava molão mesmo. Mas o capitão soube sair pela porta certa: morreu como herói, eternizado como o Pé de Rato do time.'),
-(12, 'escudos',       'ESCUDOS DOS TIMES', NULL, '#FFFFFF', NULL, NULL,
+(14, 'elenco',        'ELENCOS QUE DISPUTARAM', 'A 3ª EDIÇÃO', '#EC4899', NULL, NULL, NULL),
+(15, 'escudos',       'ESCUDOS DOS TIMES', NULL, '#FFFFFF', NULL, NULL,
  'FutLendas também fez sua primeira partida no fut onze.[[DIR]]Onde o projeto Lendas virou o berço do maior time do mundo — e há quem diga que é o Mário de Caraguatatuba. ooooooowwwwww 1, 2, 3 Caraguás!'),
-(13, 'agradecimento', 'OBRIGADO', 'POR FAZER PARTE', '#FFC400', NULL, NULL,
+(16, 'agradecimento', 'OBRIGADO', 'POR FAZER PARTE', '#FFC400', NULL, NULL,
  'Cada figurinha deste álbum é uma memória. Obrigado por construir essa história com a gente.');
 
 -- ---------- FIGURINHAS — Pagina 3 "A Rede que Cresceu" (34) ----------
--- Slots 1-5 vao embaixo da imagem (esquerda); 6-34 no grid da direita.
--- Apenas Apolo (#9) e lendaria. As demais paginas (4, 6, 12...) terao
--- suas figurinhas quando forem montadas.
 INSERT INTO album_figurinhas (numero, nome, `time`, categoria, raridade, pagina_id, slot) VALUES
 (1,  'Lani',          'FutLendas', 'jogador', 'comum',    3, 1),
 (2,  'Xan',           'FutLendas', 'jogador', 'comum',    3, 2),
@@ -121,7 +123,7 @@ INSERT INTO album_figurinhas (numero, nome, `time`, categoria, raridade, pagina_
 (70, 'Jogador Campeão 5 — 3ª Copa', NULL, 'etiqueta', 'comum', 8, 7),
 (71, 'Chaveamento 3ª Copa — parte 1', NULL, 'etiqueta', 'comum', 8, 8),
 (72, 'Chaveamento 3ª Copa — parte 2', NULL, 'etiqueta', 'comum', 8, 9),
--- Pagina 9 "1o Campeonato Pontos Corridos"
+-- Pagina 9 "1o Campeonato Pontos Corridos" (pagina_id=9)
 (73, 'Time Campeão — 1º Camp.',      NULL, 'etiqueta',    'comum',    9, 1),
 (74, 'Jogador Campeão 6 — 1º Camp.', NULL, 'etiqueta',    'comum',    9, 2),
 (75, 'Jogador Campeão 1 — 1º Camp.', NULL, 'etiqueta',    'comum',    9, 3),
@@ -132,39 +134,133 @@ INSERT INTO album_figurinhas (numero, nome, `time`, categoria, raridade, pagina_
 (80, 'Artilheiro do Campeonato',     NULL, 'estatistica', 'lendaria', 9, 8),
 (81, 'Armador do Campeonato',        NULL, 'estatistica', 'lendaria', 9, 9),
 (82, 'MVP do Campeonato',            NULL, 'estatistica', 'lendaria', 9, 10),
--- Pagina 10 "2o Campeonato Pontos Corridos"
-(83, 'Time Campeão — 2º Camp.',      NULL, 'etiqueta',    'comum',    10, 1),
-(84, 'Jogador Campeão 6 — 2º Camp.', NULL, 'etiqueta',    'comum',    10, 2),
-(85, 'Jogador Campeão 1 — 2º Camp.', NULL, 'etiqueta',    'comum',    10, 3),
-(86, 'Jogador Campeão 2 — 2º Camp.', NULL, 'etiqueta',    'comum',    10, 4),
-(87, 'Jogador Campeão 3 — 2º Camp.', NULL, 'etiqueta',    'comum',    10, 5),
-(88, 'Jogador Campeão 4 — 2º Camp.', NULL, 'etiqueta',    'comum',    10, 6),
-(89, 'Jogador Campeão 5 — 2º Camp.', NULL, 'etiqueta',    'comum',    10, 7),
-(90, 'Artilheiro do 2º Campeonato', NULL, 'estatistica', 'lendaria', 10, 8),
-(91, 'Armador do 2º Campeonato',    NULL, 'estatistica', 'lendaria', 10, 9),
-(92, 'MVP do 2º Campeonato',        NULL, 'estatistica', 'lendaria', 10, 10),
--- Pagina 11 "3o Campeonato Sao Paulando Bi"
-(93,  'Time Campeão — 3º Camp.',      NULL, 'etiqueta',    'comum',    11, 1),
-(94,  'Jogador Campeão 6 — 3º Camp.', NULL, 'etiqueta',    'comum',    11, 2),
-(95,  'Jogador Campeão 1 — 3º Camp.', NULL, 'etiqueta',    'comum',    11, 3),
-(96,  'Jogador Campeão 2 — 3º Camp.', NULL, 'etiqueta',    'comum',    11, 4),
-(97,  'Jogador Campeão 3 — 3º Camp.', NULL, 'etiqueta',    'comum',    11, 5),
-(98,  'Jogador Campeão 4 — 3º Camp.', NULL, 'etiqueta',    'comum',    11, 6),
-(99,  'Jogador Campeão 5 — 3º Camp.', NULL, 'etiqueta',    'comum',    11, 7),
-(100, 'Artilheiro do 3º Campeonato', NULL, 'estatistica', 'lendaria', 11, 8),
-(101, 'Armador do 3º Campeonato',    NULL, 'estatistica', 'lendaria', 11, 9),
-(102, 'MVP do 3º Campeonato',        NULL, 'estatistica', 'lendaria', 11, 10),
--- Pagina 12 "Escudos dos Times" — 9 escudos lendarios + 2 fotos (4 slots)
-(103, 'Escudo — Não-tê-escolliescolthi FC', NULL, 'escudo', 'lendaria', 12, 1),
-(104, 'Escudo — VS',                        NULL, 'escudo', 'lendaria', 12, 2),
-(105, 'Escudo — PSV',                       NULL, 'escudo', 'lendaria', 12, 3),
-(106, 'Escudo — FutLendas Vasco da Gama',   NULL, 'escudo', 'lendaria', 12, 4),
-(107, 'Escudo — São Paulando',              NULL, 'escudo', 'lendaria', 12, 5),
-(108, 'Escudo — Shaktar dos Leks',          NULL, 'escudo', 'lendaria', 12, 6),
-(109, 'Escudo — Real Madruga',              NULL, 'escudo', 'lendaria', 12, 7),
-(110, 'Escudo — Inter dos Molão',           NULL, 'escudo', 'lendaria', 12, 8),
-(111, 'Escudo — Caraguás',                  NULL, 'escudo', 'lendaria', 12, 9),
-(112, 'Primeira partida no Fut Onze — parte 1', NULL, 'etiqueta', 'comum', 12, 10),
-(113, 'Primeira partida no Fut Onze — parte 2', NULL, 'etiqueta', 'comum', 12, 11),
-(114, 'Caraguatatuba — parte 1', NULL, 'etiqueta', 'comum', 12, 12),
-(115, 'Caraguatatuba — parte 2', NULL, 'etiqueta', 'comum', 12, 13);
+-- Pagina 11 "2o Campeonato Pontos Corridos" (pagina_id=11)
+(83, 'Time Campeão — 2º Camp.',      NULL, 'etiqueta',    'comum',    11, 1),
+(84, 'Jogador Campeão 6 — 2º Camp.', NULL, 'etiqueta',    'comum',    11, 2),
+(85, 'Jogador Campeão 1 — 2º Camp.', NULL, 'etiqueta',    'comum',    11, 3),
+(86, 'Jogador Campeão 2 — 2º Camp.', NULL, 'etiqueta',    'comum',    11, 4),
+(87, 'Jogador Campeão 3 — 2º Camp.', NULL, 'etiqueta',    'comum',    11, 5),
+(88, 'Jogador Campeão 4 — 2º Camp.', NULL, 'etiqueta',    'comum',    11, 6),
+(89, 'Jogador Campeão 5 — 2º Camp.', NULL, 'etiqueta',    'comum',    11, 7),
+(90, 'Artilheiro do 2º Campeonato',  NULL, 'estatistica', 'lendaria', 11, 8),
+(91, 'Armador do 2º Campeonato',     NULL, 'estatistica', 'lendaria', 11, 9),
+(92, 'MVP do 2º Campeonato',         NULL, 'estatistica', 'lendaria', 11, 10),
+-- Pagina 13 "3o Campeonato Sao Paulando Bi" (pagina_id=13)
+(93,  'Time Campeão — 3º Camp.',      NULL, 'etiqueta',    'comum',    13, 1),
+(94,  'Jogador Campeão 6 — 3º Camp.', NULL, 'etiqueta',    'comum',    13, 2),
+(95,  'Jogador Campeão 1 — 3º Camp.', NULL, 'etiqueta',    'comum',    13, 3),
+(96,  'Jogador Campeão 2 — 3º Camp.', NULL, 'etiqueta',    'comum',    13, 4),
+(97,  'Jogador Campeão 3 — 3º Camp.', NULL, 'etiqueta',    'comum',    13, 5),
+(98,  'Jogador Campeão 4 — 3º Camp.', NULL, 'etiqueta',    'comum',    13, 6),
+(99,  'Jogador Campeão 5 — 3º Camp.', NULL, 'etiqueta',    'comum',    13, 7),
+(100, 'Artilheiro do 3º Campeonato',  NULL, 'estatistica', 'lendaria', 13, 8),
+(101, 'Armador do 3º Campeonato',     NULL, 'estatistica', 'lendaria', 13, 9),
+(102, 'MVP do 3º Campeonato',         NULL, 'estatistica', 'lendaria', 13, 10),
+-- Pagina 15 "Escudos dos Times" (pagina_id=15) — 9 escudos lendarios + 4 fotos
+(103, 'Escudo — Não-tê-escolhi FC',         NULL, 'escudo',   'lendaria', 15, 1),
+(104, 'Escudo — VS',                        NULL, 'escudo',   'lendaria', 15, 2),
+(105, 'Escudo — PSV',                       NULL, 'escudo',   'lendaria', 15, 3),
+(106, 'Escudo — FutLendas Vasco da Gama',   NULL, 'escudo',   'lendaria', 15, 4),
+(107, 'Escudo — São Paulando',              NULL, 'escudo',   'lendaria', 15, 5),
+(108, 'Escudo — Shaktar dos Leks',          NULL, 'escudo',   'lendaria', 15, 6),
+(109, 'Escudo — Real Madruga',              NULL, 'escudo',   'lendaria', 15, 7),
+(110, 'Escudo — Inter dos Molão',           NULL, 'escudo',   'lendaria', 15, 8),
+(111, 'Escudo — Caraguás',                  NULL, 'escudo',   'lendaria', 15, 9),
+(112, 'Primeira partida no Fut Onze — parte 1', NULL, 'etiqueta', 'comum', 15, 10),
+(113, 'Primeira partida no Fut Onze — parte 2', NULL, 'etiqueta', 'comum', 15, 11),
+(114, 'Caraguatatuba — parte 1',            NULL, 'etiqueta', 'comum', 15, 12),
+(115, 'Caraguatatuba — parte 2',            NULL, 'etiqueta', 'comum', 15, 13),
+-- ===============================================================
+-- Pagina 10 "Elenco 1o Campeonato" (pagina_id=10) — 4 times x 7 figs = 28
+-- Por time: Logo (lendaria) + Capitao (lendaria) + Jog 2-6 (comum)
+-- ===============================================================
+(116, 'Logo Time A — 1º Camp.',     NULL, 'escudo',  'lendaria', 10, 1),
+(117, 'Capitão Time A — 1º Camp.',  NULL, 'jogador', 'lendaria', 10, 2),
+(118, 'Jogador 2 Time A — 1º Camp.', NULL, 'jogador', 'comum',   10, 3),
+(119, 'Jogador 3 Time A — 1º Camp.', NULL, 'jogador', 'comum',   10, 4),
+(120, 'Jogador 4 Time A — 1º Camp.', NULL, 'jogador', 'comum',   10, 5),
+(121, 'Jogador 5 Time A — 1º Camp.', NULL, 'jogador', 'comum',   10, 6),
+(122, 'Jogador 6 Time A — 1º Camp.', NULL, 'jogador', 'comum',   10, 7),
+(123, 'Logo Time B — 1º Camp.',     NULL, 'escudo',  'lendaria', 10, 8),
+(124, 'Capitão Time B — 1º Camp.',  NULL, 'jogador', 'lendaria', 10, 9),
+(125, 'Jogador 2 Time B — 1º Camp.', NULL, 'jogador', 'comum',   10, 10),
+(126, 'Jogador 3 Time B — 1º Camp.', NULL, 'jogador', 'comum',   10, 11),
+(127, 'Jogador 4 Time B — 1º Camp.', NULL, 'jogador', 'comum',   10, 12),
+(128, 'Jogador 5 Time B — 1º Camp.', NULL, 'jogador', 'comum',   10, 13),
+(129, 'Jogador 6 Time B — 1º Camp.', NULL, 'jogador', 'comum',   10, 14),
+(130, 'Logo Time C — 1º Camp.',     NULL, 'escudo',  'lendaria', 10, 15),
+(131, 'Capitão Time C — 1º Camp.',  NULL, 'jogador', 'lendaria', 10, 16),
+(132, 'Jogador 2 Time C — 1º Camp.', NULL, 'jogador', 'comum',   10, 17),
+(133, 'Jogador 3 Time C — 1º Camp.', NULL, 'jogador', 'comum',   10, 18),
+(134, 'Jogador 4 Time C — 1º Camp.', NULL, 'jogador', 'comum',   10, 19),
+(135, 'Jogador 5 Time C — 1º Camp.', NULL, 'jogador', 'comum',   10, 20),
+(136, 'Jogador 6 Time C — 1º Camp.', NULL, 'jogador', 'comum',   10, 21),
+(137, 'Logo Time D — 1º Camp.',     NULL, 'escudo',  'lendaria', 10, 22),
+(138, 'Capitão Time D — 1º Camp.',  NULL, 'jogador', 'lendaria', 10, 23),
+(139, 'Jogador 2 Time D — 1º Camp.', NULL, 'jogador', 'comum',   10, 24),
+(140, 'Jogador 3 Time D — 1º Camp.', NULL, 'jogador', 'comum',   10, 25),
+(141, 'Jogador 4 Time D — 1º Camp.', NULL, 'jogador', 'comum',   10, 26),
+(142, 'Jogador 5 Time D — 1º Camp.', NULL, 'jogador', 'comum',   10, 27),
+(143, 'Jogador 6 Time D — 1º Camp.', NULL, 'jogador', 'comum',   10, 28),
+-- ===============================================================
+-- Pagina 12 "Elenco 2o Campeonato" (pagina_id=12) — 28 figs
+-- ===============================================================
+(144, 'Logo Time A — 2º Camp.',     NULL, 'escudo',  'lendaria', 12, 1),
+(145, 'Capitão Time A — 2º Camp.',  NULL, 'jogador', 'lendaria', 12, 2),
+(146, 'Jogador 2 Time A — 2º Camp.', NULL, 'jogador', 'comum',   12, 3),
+(147, 'Jogador 3 Time A — 2º Camp.', NULL, 'jogador', 'comum',   12, 4),
+(148, 'Jogador 4 Time A — 2º Camp.', NULL, 'jogador', 'comum',   12, 5),
+(149, 'Jogador 5 Time A — 2º Camp.', NULL, 'jogador', 'comum',   12, 6),
+(150, 'Jogador 6 Time A — 2º Camp.', NULL, 'jogador', 'comum',   12, 7),
+(151, 'Logo Time B — 2º Camp.',     NULL, 'escudo',  'lendaria', 12, 8),
+(152, 'Capitão Time B — 2º Camp.',  NULL, 'jogador', 'lendaria', 12, 9),
+(153, 'Jogador 2 Time B — 2º Camp.', NULL, 'jogador', 'comum',   12, 10),
+(154, 'Jogador 3 Time B — 2º Camp.', NULL, 'jogador', 'comum',   12, 11),
+(155, 'Jogador 4 Time B — 2º Camp.', NULL, 'jogador', 'comum',   12, 12),
+(156, 'Jogador 5 Time B — 2º Camp.', NULL, 'jogador', 'comum',   12, 13),
+(157, 'Jogador 6 Time B — 2º Camp.', NULL, 'jogador', 'comum',   12, 14),
+(158, 'Logo Time C — 2º Camp.',     NULL, 'escudo',  'lendaria', 12, 15),
+(159, 'Capitão Time C — 2º Camp.',  NULL, 'jogador', 'lendaria', 12, 16),
+(160, 'Jogador 2 Time C — 2º Camp.', NULL, 'jogador', 'comum',   12, 17),
+(161, 'Jogador 3 Time C — 2º Camp.', NULL, 'jogador', 'comum',   12, 18),
+(162, 'Jogador 4 Time C — 2º Camp.', NULL, 'jogador', 'comum',   12, 19),
+(163, 'Jogador 5 Time C — 2º Camp.', NULL, 'jogador', 'comum',   12, 20),
+(164, 'Jogador 6 Time C — 2º Camp.', NULL, 'jogador', 'comum',   12, 21),
+(165, 'Logo Time D — 2º Camp.',     NULL, 'escudo',  'lendaria', 12, 22),
+(166, 'Capitão Time D — 2º Camp.',  NULL, 'jogador', 'lendaria', 12, 23),
+(167, 'Jogador 2 Time D — 2º Camp.', NULL, 'jogador', 'comum',   12, 24),
+(168, 'Jogador 3 Time D — 2º Camp.', NULL, 'jogador', 'comum',   12, 25),
+(169, 'Jogador 4 Time D — 2º Camp.', NULL, 'jogador', 'comum',   12, 26),
+(170, 'Jogador 5 Time D — 2º Camp.', NULL, 'jogador', 'comum',   12, 27),
+(171, 'Jogador 6 Time D — 2º Camp.', NULL, 'jogador', 'comum',   12, 28),
+-- ===============================================================
+-- Pagina 14 "Elenco 3o Campeonato" (pagina_id=14) — 28 figs
+-- ===============================================================
+(172, 'Logo Time A — 3º Camp.',     NULL, 'escudo',  'lendaria', 14, 1),
+(173, 'Capitão Time A — 3º Camp.',  NULL, 'jogador', 'lendaria', 14, 2),
+(174, 'Jogador 2 Time A — 3º Camp.', NULL, 'jogador', 'comum',   14, 3),
+(175, 'Jogador 3 Time A — 3º Camp.', NULL, 'jogador', 'comum',   14, 4),
+(176, 'Jogador 4 Time A — 3º Camp.', NULL, 'jogador', 'comum',   14, 5),
+(177, 'Jogador 5 Time A — 3º Camp.', NULL, 'jogador', 'comum',   14, 6),
+(178, 'Jogador 6 Time A — 3º Camp.', NULL, 'jogador', 'comum',   14, 7),
+(179, 'Logo Time B — 3º Camp.',     NULL, 'escudo',  'lendaria', 14, 8),
+(180, 'Capitão Time B — 3º Camp.',  NULL, 'jogador', 'lendaria', 14, 9),
+(181, 'Jogador 2 Time B — 3º Camp.', NULL, 'jogador', 'comum',   14, 10),
+(182, 'Jogador 3 Time B — 3º Camp.', NULL, 'jogador', 'comum',   14, 11),
+(183, 'Jogador 4 Time B — 3º Camp.', NULL, 'jogador', 'comum',   14, 12),
+(184, 'Jogador 5 Time B — 3º Camp.', NULL, 'jogador', 'comum',   14, 13),
+(185, 'Jogador 6 Time B — 3º Camp.', NULL, 'jogador', 'comum',   14, 14),
+(186, 'Logo Time C — 3º Camp.',     NULL, 'escudo',  'lendaria', 14, 15),
+(187, 'Capitão Time C — 3º Camp.',  NULL, 'jogador', 'lendaria', 14, 16),
+(188, 'Jogador 2 Time C — 3º Camp.', NULL, 'jogador', 'comum',   14, 17),
+(189, 'Jogador 3 Time C — 3º Camp.', NULL, 'jogador', 'comum',   14, 18),
+(190, 'Jogador 4 Time C — 3º Camp.', NULL, 'jogador', 'comum',   14, 19),
+(191, 'Jogador 5 Time C — 3º Camp.', NULL, 'jogador', 'comum',   14, 20),
+(192, 'Jogador 6 Time C — 3º Camp.', NULL, 'jogador', 'comum',   14, 21),
+(193, 'Logo Time D — 3º Camp.',     NULL, 'escudo',  'lendaria', 14, 22),
+(194, 'Capitão Time D — 3º Camp.',  NULL, 'jogador', 'lendaria', 14, 23),
+(195, 'Jogador 2 Time D — 3º Camp.', NULL, 'jogador', 'comum',   14, 24),
+(196, 'Jogador 3 Time D — 3º Camp.', NULL, 'jogador', 'comum',   14, 25),
+(197, 'Jogador 4 Time D — 3º Camp.', NULL, 'jogador', 'comum',   14, 26),
+(198, 'Jogador 5 Time D — 3º Camp.', NULL, 'jogador', 'comum',   14, 27),
+(199, 'Jogador 6 Time D — 3º Camp.', NULL, 'jogador', 'comum',   14, 28);
