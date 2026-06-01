@@ -285,6 +285,10 @@ export const useMural = () =>
   useQuery<{ ok: boolean; trocas: TrocaMural[] }>({
     queryKey: ['album', 'mural'],
     queryFn: async () => (await api.get('/album/mural')).data,
+    // Atualiza automaticamente a cada 15s e ao voltar para a aba —
+    // garante que figurinhas já trocadas somam sem precisar recarregar a pagina.
+    refetchInterval: 15_000,
+    refetchOnWindowFocus: true,
   });
 
 export const useDisponibilizarTroca = () => {
@@ -335,7 +339,10 @@ export const useExecutarTroca = () => {
       (await api.post(`/album/mural/${trocaId}/trocar`, { figurinha_oferecida_id }))
         .data,
     onSuccess: (data) => {
+      // Invalida tudo do album (inventario, mural, album completo)
       qc.invalidateQueries({ queryKey: ['album'] });
+      // Força refetch imediato do mural para a figurinha trocada sumir na hora
+      qc.refetchQueries({ queryKey: ['album', 'mural'] });
       toast.success(data?.message ?? 'Troca realizada!');
     },
     onError: (e: any) =>
