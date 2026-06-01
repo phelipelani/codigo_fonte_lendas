@@ -10,7 +10,7 @@ import api from '@/api';
 // Tipos
 // =============================================================
 
-export type Raridade = 'comum' | 'lendaria';
+export type Raridade = 'comum' | 'rara' | 'lendaria';
 export type CategoriaFigurinha = 'jogador' | 'etiqueta' | 'escudo' | 'estatistica' | 'foto';
 export type TipoPagina =
   | 'capa'

@@ -39,7 +39,9 @@ class AlbumController
     private $db;
 
     // Probabilidades de raridade no sorteio de figurinhas
-    private const PROB_LENDARIA = 0.10;     // 10%
+    // 85% comum / 10% rara / 5% lendaria
+    private const PROB_LENDARIA = 0.05;
+    private const PROB_RARA     = 0.10;
     private const PACOTE_TAMANHO = 5;       // figurinhas por pacote
     private const ANTI_FRUSTRACAO = 10;     // pacotes sem lendária → próxima garante 1
 
@@ -157,7 +159,7 @@ class AlbumController
         if (!in_array($categoria, ['jogador','etiqueta','escudo','estatistica','foto'], true)) {
             throw new HttpError('Categoria inválida.', 400);
         }
-        if (!in_array($raridade, ['comum','lendaria'], true)) {
+        if (!in_array($raridade, ['comum','rara','lendaria'], true)) {
             throw new HttpError('Raridade inválida.', 400);
         }
         try {
@@ -386,55 +388,76 @@ class AlbumController
 
     /**
      * Sorteia PACOTE_TAMANHO figurinhas DISTINTAS entre si.
-     * 90% comum / 10% lendária. Aplica anti-frustração.
+     * Distribuicao: 85% comum / 10% rara / 5% lendaria. Aplica anti-frustracao.
      */
     private function sortearFigurinhas(int $uid): array
     {
-        $comuns    = $this->db->fetchAll(
-            "SELECT id FROM album_figurinhas WHERE ativa = 1 AND raridade = 'comum'"
-        );
-        $lendarias = $this->db->fetchAll(
-            "SELECT id FROM album_figurinhas WHERE ativa = 1 AND raridade = 'lendaria'"
-        );
-        $comuns    = array_map(fn($r) => (int)$r['id'], $comuns);
-        $lendarias = array_map(fn($r) => (int)$r['id'], $lendarias);
+        $comuns    = $this->idsPorRaridade('comum');
+        $raras     = $this->idsPorRaridade('rara');
+        $lendarias = $this->idsPorRaridade('lendaria');
 
-        if (empty($comuns) && empty($lendarias)) {
+        if (empty($comuns) && empty($raras) && empty($lendarias)) {
             return [];
         }
 
         $escolhidas = [];
         $usados     = [];
 
-        // Anti-frustração: se passou de N pacotes sem lendária, garante 1
+        // Anti-frustracao: pacotes sem lendaria → forca 1 lendaria
         $garantirLendaria = !empty($lendarias) && $this->precisaGarantirLendaria($uid);
 
         for ($i = 0; $i < self::PACOTE_TAMANHO; $i++) {
-            $querLendaria = false;
-
+            // Define qual raridade tentar nesta posicao
             if ($garantirLendaria && $i === 0) {
-                $querLendaria = true;
-            } elseif (!empty($lendarias) && (mt_rand(1, 10000) / 10000) <= self::PROB_LENDARIA) {
-                $querLendaria = true;
+                $tier = 'lendaria';
+            } else {
+                $r = mt_rand(1, 10000) / 10000;
+                if (!empty($lendarias) && $r <= self::PROB_LENDARIA) {
+                    $tier = 'lendaria';
+                } elseif (!empty($raras) && $r <= self::PROB_LENDARIA + self::PROB_RARA) {
+                    $tier = 'rara';
+                } else {
+                    $tier = 'comum';
+                }
             }
 
-            $pool = $querLendaria && !empty($lendarias) ? $lendarias : $comuns;
-            // Se o pool preferido está esgotado para distinção, cai no outro
-            $disponiveis = array_values(array_diff($pool, $usados));
-            if (empty($disponiveis)) {
-                $outro = $pool === $comuns ? $lendarias : $comuns;
-                $disponiveis = array_values(array_diff($outro, $usados));
+            // Tenta no pool preferido; se esgotado, fallback nos outros
+            $ordem = $this->ordemFallback($tier);
+            $escolhida = null;
+            foreach ($ordem as $t) {
+                $pool = $t === 'lendaria' ? $lendarias : ($t === 'rara' ? $raras : $comuns);
+                $disp = array_values(array_diff($pool, $usados));
+                if (!empty($disp)) {
+                    $escolhida = $disp[array_rand($disp)];
+                    break;
+                }
             }
-            if (empty($disponiveis)) {
-                break; // catálogo menor que 5 — devolve o que tem
-            }
-
-            $escolhida = $disponiveis[array_rand($disponiveis)];
+            if ($escolhida === null) break; // catalogo menor que PACOTE_TAMANHO
             $escolhidas[] = $escolhida;
             $usados[]     = $escolhida;
         }
 
         return $escolhidas;
+    }
+
+    /** IDs das figurinhas ativas com a raridade pedida. */
+    private function idsPorRaridade(string $raridade): array
+    {
+        $rows = $this->db->fetchAll(
+            'SELECT id FROM album_figurinhas WHERE ativa = 1 AND raridade = ?',
+            [$raridade]
+        );
+        return array_map(fn($r) => (int)$r['id'], $rows);
+    }
+
+    /** Ordem de fallback de pools quando o preferido esta esgotado. */
+    private function ordemFallback(string $tier): array
+    {
+        switch ($tier) {
+            case 'lendaria': return ['lendaria','rara','comum'];
+            case 'rara':     return ['rara','comum','lendaria'];
+            default:         return ['comum','rara','lendaria'];
+        }
     }
 
     /**

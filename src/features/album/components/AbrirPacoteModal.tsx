@@ -34,6 +34,7 @@ const MAX_DRAG = LARGURA - 30;
 const LIMIAR = MAX_DRAG * 0.6;
 
 const DUR_COMUM = 1700;
+const DUR_RARA = 2400;
 const DUR_LENDARIA = 3600;
 const EASE_OUT: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -75,11 +76,9 @@ export const AbrirPacoteModal: React.FC<AbrirPacoteModalProps> = ({
       const t = window.setTimeout(() => setProntoContinuar(true), 500);
       return () => window.clearTimeout(t);
     }
-    const lendaria = figurinhas[idx]?.raridade === 'lendaria';
-    const t = window.setTimeout(
-      () => setIdx((i) => i + 1),
-      lendaria ? DUR_LENDARIA : DUR_COMUM
-    );
+    const rar = figurinhas[idx]?.raridade;
+    const dur = rar === 'lendaria' ? DUR_LENDARIA : rar === 'rara' ? DUR_RARA : DUR_COMUM;
+    const t = window.setTimeout(() => setIdx((i) => i + 1), dur);
     return () => window.clearTimeout(t);
   }, [fase, idx, figurinhas]);
 
@@ -288,7 +287,9 @@ export const AbrirPacoteModal: React.FC<AbrirPacoteModalProps> = ({
                         (i < idx
                           ? f.raridade === 'lendaria'
                             ? 'w-7 bg-amber-400'
-                            : 'w-7 bg-cyan-400'
+                            : f.raridade === 'rara'
+                              ? 'w-7 bg-violet-400'
+                              : 'w-7 bg-cyan-400'
                           : i === idx
                             ? 'w-7 bg-white'
                             : 'w-1.5 bg-white/20')
@@ -474,9 +475,41 @@ const TiraLacre: React.FC = () => (
 // =============================================================
 const RevelacaoCarta: React.FC<{ fig: FigurinhaType }> = ({ fig }) => {
   const lendaria = fig.raridade === 'lendaria';
+  const rara = fig.raridade === 'rara';
 
   return (
     <div className="relative flex flex-col items-center">
+      {/* ===== efeitos de RARA — discreto: glow + faiscas roxas ===== */}
+      {rara && (
+        <>
+          <motion.div
+            aria-hidden
+            initial={{ opacity: 0, scale: 0.6 }}
+            animate={{ opacity: 0.75, scale: 1 }}
+            transition={{ duration: 0.7, ease: EASE_OUT }}
+            style={{ x: '-50%', y: '-50%' }}
+            className="absolute top-1/2 left-1/2 h-[260px] w-[260px] rounded-full bg-[radial-gradient(circle,rgba(167,139,250,0.45),transparent_70%)]"
+          />
+          {Array.from({ length: 6 }).map((_, i) => {
+            const a = (i / 6) * Math.PI * 2;
+            return (
+              <motion.span
+                key={i}
+                aria-hidden
+                initial={{ x: 0, y: 0, opacity: 0 }}
+                animate={{
+                  x: Math.cos(a) * 130,
+                  y: Math.sin(a) * 130,
+                  opacity: [0, 1, 0],
+                }}
+                transition={{ duration: 1, delay: 0.2, ease: 'easeOut' }}
+                className="absolute top-1/2 left-1/2 h-1.5 w-1.5 rounded-full bg-violet-300"
+              />
+            );
+          })}
+        </>
+      )}
+
       {/* ===== efeitos de lendaria ===== */}
       {lendaria && (
         <>
@@ -544,19 +577,22 @@ const RevelacaoCarta: React.FC<{ fig: FigurinhaType }> = ({ fig }) => {
       <motion.div
         initial={{
           opacity: 0,
-          scale: lendaria ? 0.55 : 0.86,
-          y: lendaria ? 26 : 48,
+          scale: lendaria ? 0.55 : rara ? 0.7 : 0.86,
+          y: lendaria ? 26 : rara ? 36 : 48,
         }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{
-          duration: lendaria ? 0.85 : 0.5,
+          duration: lendaria ? 0.85 : rara ? 0.65 : 0.5,
           ease: EASE_OUT,
-          delay: lendaria ? 0.35 : 0,
+          delay: lendaria ? 0.35 : rara ? 0.18 : 0,
         }}
         className="relative z-10"
       >
         {lendaria && (
           <div className="absolute -inset-3 rounded-2xl bg-[radial-gradient(circle,rgba(251,191,36,0.55),transparent_72%)] blur-md" />
+        )}
+        {rara && (
+          <div className="absolute -inset-2 rounded-2xl bg-[radial-gradient(circle,rgba(167,139,250,0.45),transparent_72%)] blur-md" />
         )}
         <div className="relative">
           <Figurinha figurinha={fig} forcarObtida tamanho="lg" />
@@ -570,7 +606,7 @@ const RevelacaoCarta: React.FC<{ fig: FigurinhaType }> = ({ fig }) => {
         transition={{
           duration: 0.4,
           ease: EASE_OUT,
-          delay: lendaria ? 0.8 : 0.25,
+          delay: lendaria ? 0.8 : rara ? 0.5 : 0.25,
         }}
         className="relative z-10 mt-5 flex flex-col items-center"
       >
@@ -582,6 +618,16 @@ const RevelacaoCarta: React.FC<{ fig: FigurinhaType }> = ({ fig }) => {
               animate={{ x: ['-140%', '280%'] }}
               transition={{ duration: 1.6, repeat: Infinity, ease: 'linear' }}
               className="absolute inset-y-0 w-1/3 -skew-x-12 bg-white/55"
+            />
+          </div>
+        ) : rara ? (
+          <div className="relative overflow-hidden rounded-full bg-gradient-to-r from-violet-600 via-violet-400 to-violet-600 px-6 py-1.5 text-sm font-black uppercase tracking-[0.22em] text-white shadow-[0_0_18px_-2px_rgba(167,139,250,0.75)]">
+            ◆ Rara ◆
+            <motion.div
+              aria-hidden
+              animate={{ x: ['-140%', '280%'] }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+              className="absolute inset-y-0 w-1/3 -skew-x-12 bg-white/40"
             />
           </div>
         ) : (

@@ -10,6 +10,11 @@ const RARIDADE_STYLE: Record<Raridade, { borda: string; glow: string; faixa: str
     glow: '',
     faixa: 'bg-cyan-500/20 text-cyan-200',
   },
+  rara: {
+    borda: 'border-violet-400/70',
+    glow: 'shadow-[0_0_14px_-4px_rgba(167,139,250,0.55)]',
+    faixa: 'bg-violet-500/25 text-violet-200',
+  },
   lendaria: {
     borda: 'border-amber-400/70',
     glow: 'shadow-[0_0_18px_-4px_rgba(251,191,36,0.55)]',
@@ -100,7 +105,9 @@ export const Figurinha: React.FC<FigurinhaProps> = ({
                 'absolute inset-0 flex flex-col items-center justify-center gap-1 p-1',
                 figurinha.raridade === 'lendaria'
                   ? 'bg-gradient-to-br from-amber-900/40 to-[#0d1f35]'
-                  : 'bg-gradient-to-br from-cyan-900/40 to-[#0d1f35]'
+                  : figurinha.raridade === 'rara'
+                    ? 'bg-gradient-to-br from-violet-900/40 to-[#0d1f35]'
+                    : 'bg-gradient-to-br from-cyan-900/40 to-[#0d1f35]'
               )}
             >
               <span className="font-black text-white/30 text-2xl leading-none">
@@ -119,7 +126,11 @@ export const Figurinha: React.FC<FigurinhaProps> = ({
               estilo.faixa
             )}
           >
-            {figurinha.raridade === 'lendaria' ? '★ Lendária' : 'Comum'}
+            {figurinha.raridade === 'lendaria'
+              ? '★ Lendária'
+              : figurinha.raridade === 'rara'
+                ? '◆ Rara'
+                : 'Comum'}
           </span>
 
           {/* Badge de repetidas */}
