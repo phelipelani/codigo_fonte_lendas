@@ -19,6 +19,7 @@ import {
   Send,
   Lock,
   Unlock,
+  MessageCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
@@ -29,6 +30,7 @@ import {
   useDispararLista,
   useFecharLista,
   useRecarregarLista,
+  useReenviarConvocacao,
 } from '../api/presencaApi';
 
 import { ListaAtualTab } from '../components/ListaAtualTab';
@@ -68,6 +70,7 @@ export const RachaPage: React.FC = () => {
   const dispararMut = useDispararLista();
   const fecharMut = useFecharLista();
   const recarregarMut = useRecarregarLista();
+  const reenviarMut = useReenviarConvocacao();
 
   const lista = dados?.lista ?? null;
 
@@ -90,6 +93,18 @@ export const RachaPage: React.FC = () => {
           {/* Botoes de acao globais — somente admin, e se ja existe lista */}
           {lista && isAdmin && (
             <div className="flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => reenviarMut.mutate()}
+                disabled={reenviarMut.isPending || !!lista?.fechado}
+                title="Reenvia a mensagem de convocação para quem ainda não respondeu"
+                className="border-emerald-500/30 text-emerald-200 hover:bg-emerald-500/10 disabled:opacity-40"
+              >
+                <MessageCircle className={cn('mr-2 h-4 w-4', reenviarMut.isPending && 'animate-pulse')} />
+                {reenviarMut.isPending ? 'Enviando...' : 'Reenviar convocação'}
+              </Button>
+
               <Button
                 size="sm"
                 variant="outline"

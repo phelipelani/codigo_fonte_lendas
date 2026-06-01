@@ -1119,6 +1119,12 @@ try {
             require $presencaRoot . '/recarregar.php'; exit;
         }
 
+        // POST /presenca/reenviar — reenvia convocacao para quem nao respondeu (admin)
+        if ($path === '/presenca/reenviar' && $method === 'POST') {
+            AuthMiddleware::isAdmin();
+            require $presencaRoot . '/api/reenviar_convocacao.php'; exit;
+        }
+
         // POST /presenca/mensagem — mensagem avulsa para jogador ou grupo (admin)
         if ($path === '/presenca/mensagem' && $method === 'POST') {
             AuthMiddleware::isAdmin();
