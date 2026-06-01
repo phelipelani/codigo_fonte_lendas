@@ -8,6 +8,8 @@ import * as React from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Figurinha } from './Figurinha';
+import { FotoDividida } from './FotoDividida';
+import { FotoQuadripartida } from './FotoQuadripartida';
 import type { Pagina, Figurinha as FigurinhaType } from '../api/albumApi';
 import capaHero from '../assets/capa-hero.png';
 import logoLendas from '@/assets/Logo.webp';
@@ -127,6 +129,7 @@ const COLS: Record<number, string> = {
   2: 'grid-cols-2',
   3: 'grid-cols-3',
   4: 'grid-cols-4',
+  5: 'grid-cols-5',
 };
 
 // =============================================================
@@ -347,12 +350,13 @@ export const TelaAlbum: React.FC<TelaAlbumProps> = ({
     return (
       <div className="flex flex-col gap-4 px-6 py-8">
         <RotuloSecao>A primeira foto</RotuloSecao>
-        <div className="overflow-hidden rounded-xl border-2 border-amber-400/50 shadow-[0_0_30px_-8px_rgba(251,191,36,0.45)]">
-          <div className="flex">
-            <img src={fotoAmigos1} alt="Os amigos" className="w-1/2 object-cover" />
-            <img src={fotoAmigos2} alt="Os amigos" className="w-1/2 object-cover" />
-          </div>
-        </div>
+        <FotoDividida
+          parte1={figs.find((f) => (f.slot ?? 0) === 1)}
+          parte2={figs.find((f) => (f.slot ?? 0) === 2)}
+          fallback1={fotoAmigos1}
+          fallback2={fotoAmigos2}
+          onFigurinhaClick={onFigurinhaClick}
+        />
         <p className="text-center text-xs text-cyan-100/45">
           O começo de tudo — Arena Caiçara, agosto de 2022.
         </p>
@@ -385,16 +389,15 @@ export const TelaAlbum: React.FC<TelaAlbumProps> = ({
           {textoDir}
         </p>
         {figs.length > 0 && (
-          <div className="grid grid-cols-2 gap-2">
-            {figs.slice(0, 2).map((f) => (
-              <Figurinha
-                key={f.id}
-                figurinha={f}
-                tamanho="fluid"
-                onClick={onFigurinhaClick ? () => onFigurinhaClick(f) : undefined}
-              />
-            ))}
-          </div>
+          <FotoQuadripartida
+            partes={[
+              figs.find((f) => (f.slot ?? 0) === 1),
+              figs.find((f) => (f.slot ?? 0) === 2),
+              figs.find((f) => (f.slot ?? 0) === 3),
+              figs.find((f) => (f.slot ?? 0) === 4),
+            ]}
+            onFigurinhaClick={onFigurinhaClick}
+          />
         )}
       </div>
     );
@@ -419,12 +422,12 @@ export const TelaAlbum: React.FC<TelaAlbumProps> = ({
     );
   }
 
-  // ---------- NUMEROS — grid 3x3 ----------
+  // ---------- NUMEROS — grid 2x2 (4 figurinhas) ----------
   if (parte === 'num-grid') {
     return (
       <div className="flex flex-col gap-3 px-6 py-8">
         <RotuloSecao>Os números da lenda</RotuloSecao>
-        <GridFigs figs={figs} cols={3} onClick={onFigurinhaClick} />
+        <GridFigs figs={figs} cols={2} onClick={onFigurinhaClick} />
       </div>
     );
   }
@@ -514,31 +517,42 @@ export const TelaAlbum: React.FC<TelaAlbumProps> = ({
 
   // ---------- COPA — figurinhas ----------
   if (parte === 'copa-figs') {
-    const campeao = figs.find((f) => (f.slot ?? 0) === 1);
-    const etiquetas = figs.filter((f) => (f.slot ?? 0) >= 2 && (f.slot ?? 0) <= 7);
-    const chaveamento = figs.filter((f) => (f.slot ?? 0) >= 8);
+    const nJogadores = (pagina.meta_json as { jogadores?: number } | null)?.jogadores ?? 5;
+    const slotChave1 = 5 + nJogadores;
+    const timeCampeao = [1, 2, 3, 4].map((s) =>
+      figs.find((f) => (f.slot ?? 0) === s)
+    );
+    const jogadores = figs.filter(
+      (f) => (f.slot ?? 0) >= 5 && (f.slot ?? 0) <= 4 + nJogadores
+    );
+    const chave = figs.filter(
+      (f) => (f.slot ?? 0) === slotChave1 || (f.slot ?? 0) === slotChave1 + 1
+    );
+    const temTime = timeCampeao.some(Boolean);
+    const colsJogadores = nJogadores >= 6 ? 3 : nJogadores >= 5 ? 5 : 4;
     return (
       <div className="flex flex-col gap-4 px-6 py-8">
         <RotuloSecao>O time campeão</RotuloSecao>
-        {campeao && (
-          <div className="mx-auto w-2/3">
-            <Figurinha
-              figurinha={campeao}
-              tamanho="fluid"
-              onClick={onFigurinhaClick ? () => onFigurinhaClick(campeao) : undefined}
-            />
-          </div>
+        {temTime && (
+          <FotoQuadripartida
+            partes={timeCampeao}
+            onFigurinhaClick={onFigurinhaClick}
+          />
         )}
-        {etiquetas.length > 0 && (
+        {jogadores.length > 0 && (
           <>
             <RotuloSecao>Os campeões</RotuloSecao>
-            <GridFigs figs={etiquetas} cols={3} onClick={onFigurinhaClick} />
+            <GridFigs figs={jogadores} cols={colsJogadores} onClick={onFigurinhaClick} />
           </>
         )}
-        {chaveamento.length > 0 && (
+        {chave.length > 0 && (
           <>
             <RotuloSecao>Chaveamento</RotuloSecao>
-            <GridFigs figs={chaveamento} cols={2} onClick={onFigurinhaClick} />
+            <FotoDividida
+              parte1={chave.find((f) => (f.slot ?? 0) === slotChave1)}
+              parte2={chave.find((f) => (f.slot ?? 0) === slotChave1 + 1)}
+              onFigurinhaClick={onFigurinhaClick}
+            />
           </>
         )}
       </div>
@@ -565,34 +579,20 @@ export const TelaAlbum: React.FC<TelaAlbumProps> = ({
     );
   }
 
-  // ---------- CAMPEONATO — figurinhas ----------
+  // ---------- CAMPEONATO — foto do campeao em 4 partes ----------
   if (parte === 'camp-figs') {
-    const campeao = figs.find((f) => (f.slot ?? 0) === 1);
-    const jogadores = figs.filter((f) => (f.slot ?? 0) >= 2 && (f.slot ?? 0) <= 7);
-    const destaques = figs.filter((f) => (f.slot ?? 0) >= 8);
+    const partesCampeao = [1, 2, 3, 4].map((s) =>
+      figs.find((f) => (f.slot ?? 0) === s)
+    );
+    const temCampeao = partesCampeao.some(Boolean);
     return (
       <div className="flex flex-col gap-4 px-6 py-8">
         <RotuloSecao>O time campeão</RotuloSecao>
-        {campeao && (
-          <div className="mx-auto w-2/3">
-            <Figurinha
-              figurinha={campeao}
-              tamanho="fluid"
-              onClick={onFigurinhaClick ? () => onFigurinhaClick(campeao) : undefined}
-            />
-          </div>
-        )}
-        {jogadores.length > 0 && (
-          <>
-            <RotuloSecao>Os campeões</RotuloSecao>
-            <GridFigs figs={jogadores} cols={3} onClick={onFigurinhaClick} />
-          </>
-        )}
-        {destaques.length > 0 && (
-          <>
-            <RotuloSecao>Destaques do campeonato</RotuloSecao>
-            <GridFigs figs={destaques} cols={3} onClick={onFigurinhaClick} />
-          </>
+        {temCampeao && (
+          <FotoQuadripartida
+            partes={partesCampeao}
+            onFigurinhaClick={onFigurinhaClick}
+          />
         )}
       </div>
     );
@@ -601,24 +601,38 @@ export const TelaAlbum: React.FC<TelaAlbumProps> = ({
   // ---------- ELENCO — 2 times por tela ----------
   if (parte === 'elenco-ab' || parte === 'elenco-cd') {
     const isAB = parte === 'elenco-ab';
-    const time1Slots = isAB ? [1, 7] : [15, 21];
-    const time2Slots = isAB ? [8, 14] : [22, 28];
-    const time1Nome = isAB ? 'Time A' : 'Time C';
-    const time2Nome = isAB ? 'Time B' : 'Time D';
-    const time1 = figs.filter(
-      (f) => (f.slot ?? 0) >= time1Slots[0] && (f.slot ?? 0) <= time1Slots[1]
-    );
-    const time2 = figs.filter(
-      (f) => (f.slot ?? 0) >= time2Slots[0] && (f.slot ?? 0) <= time2Slots[1]
-    );
+    const metaTimes = (pagina.meta_json as { times?: { nome?: string; cor?: string; jogadores?: number }[] } | null)?.times ?? [];
+    // Tamanho dos 4 times (default 7 = 2 + 5 jogadores)
+    const tamanhos = [0, 1, 2, 3].map((i) => 2 + (metaTimes[i]?.jogadores ?? 5));
+    const inicios = tamanhos.reduce<number[]>((acc, _, i) => {
+      acc.push(i === 0 ? 1 : acc[i - 1] + tamanhos[i - 1]);
+      return acc;
+    }, []);
+    const padroes = isAB ? ['Time A', 'Time B'] : ['Time C', 'Time D'];
+    const idxs = isAB ? [0, 1] : [2, 3];
+    const time1Nome = metaTimes[idxs[0]]?.nome ?? padroes[0];
+    const time2Nome = metaTimes[idxs[1]]?.nome ?? padroes[1];
+    const time1Cor = metaTimes[idxs[0]]?.cor ?? '#FFFFFF';
+    const time2Cor = metaTimes[idxs[1]]?.cor ?? '#FFFFFF';
+    const sliceFigs = (idx: number) => {
+      const ini = inicios[idx];
+      const fim = ini + tamanhos[idx] - 1;
+      return figs.filter((f) => (f.slot ?? 0) >= ini && (f.slot ?? 0) <= fim);
+    };
+    const time1 = sliceFigs(idxs[0]);
+    const time2 = sliceFigs(idxs[1]);
 
-    const TimeBloco: React.FC<{ nome: string; lista: FigurinhaType[] }> = ({
+    const TimeBloco: React.FC<{ nome: string; corNome: string; lista: FigurinhaType[] }> = ({
       nome,
+      corNome,
       lista,
     }) => (
       <div className="rounded-xl border border-cyan-400/20 bg-black/30 p-3">
         <div className="mb-2 flex items-center justify-between">
-          <span className="text-sm font-black uppercase tracking-widest text-white">
+          <span
+            className="text-sm font-black uppercase tracking-widest"
+            style={{ color: corNome, textShadow: '0 0 8px rgba(0,0,0,0.6)' }}
+          >
             {nome}
           </span>
           <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-amber-200">
@@ -649,8 +663,8 @@ export const TelaAlbum: React.FC<TelaAlbumProps> = ({
             )}
           </h2>
         </header>
-        <TimeBloco nome={time1Nome} lista={time1} />
-        <TimeBloco nome={time2Nome} lista={time2} />
+        <TimeBloco nome={time1Nome} corNome={time1Cor} lista={time1} />
+        <TimeBloco nome={time2Nome} corNome={time2Cor} lista={time2} />
       </div>
     );
   }
@@ -684,16 +698,11 @@ export const TelaAlbum: React.FC<TelaAlbumProps> = ({
           </p>
         )}
         {foto1.length > 0 && (
-          <div className="grid grid-cols-2 gap-2">
-            {foto1.map((f) => (
-              <Figurinha
-                key={f.id}
-                figurinha={f}
-                tamanho="fluid"
-                onClick={onFigurinhaClick ? () => onFigurinhaClick(f) : undefined}
-              />
-            ))}
-          </div>
+          <FotoDividida
+            parte1={foto1.find((f) => (f.slot ?? 0) === 10)}
+            parte2={foto1.find((f) => (f.slot ?? 0) === 11)}
+            onFigurinhaClick={onFigurinhaClick}
+          />
         )}
         {texto2 && (
           <p className="text-sm sm:text-base text-cyan-100/80 leading-relaxed">
@@ -701,16 +710,11 @@ export const TelaAlbum: React.FC<TelaAlbumProps> = ({
           </p>
         )}
         {foto2.length > 0 && (
-          <div className="grid grid-cols-2 gap-2">
-            {foto2.map((f) => (
-              <Figurinha
-                key={f.id}
-                figurinha={f}
-                tamanho="fluid"
-                onClick={onFigurinhaClick ? () => onFigurinhaClick(f) : undefined}
-              />
-            ))}
-          </div>
+          <FotoDividida
+            parte1={foto2.find((f) => (f.slot ?? 0) === 12)}
+            parte2={foto2.find((f) => (f.slot ?? 0) === 13)}
+            onFigurinhaClick={onFigurinhaClick}
+          />
         )}
       </div>
     );

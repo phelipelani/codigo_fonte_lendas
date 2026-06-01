@@ -9,6 +9,8 @@ import * as React from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Figurinha } from './Figurinha';
+import { FotoDividida } from './FotoDividida';
+import { FotoQuadripartida } from './FotoQuadripartida';
 import type { Pagina, Figurinha as FigurinhaType } from '../api/albumApi';
 import capaHero from '../assets/capa-hero.png';
 import logoLendas from '@/assets/Logo.webp';
@@ -333,16 +335,16 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
             {textoDir}
           </p>
           {figsOrdenadas.length > 0 && (
-            <div className="mt-4 shrink-0 grid grid-cols-2 gap-1.5">
-              {figsOrdenadas.slice(0, 2).map((fig) => (
-                <div key={fig.id} className="h-[150px] sm:h-[190px]">
-                  <Figurinha
-                    figurinha={fig}
-                    tamanho="cell"
-                    onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
-                  />
-                </div>
-              ))}
+            <div className="mt-4 shrink-0">
+              <FotoQuadripartida
+                partes={[
+                  figsOrdenadas.find((f) => (f.slot ?? 0) === 1),
+                  figsOrdenadas.find((f) => (f.slot ?? 0) === 2),
+                  figsOrdenadas.find((f) => (f.slot ?? 0) === 3),
+                  figsOrdenadas.find((f) => (f.slot ?? 0) === 4),
+                ]}
+                onFigurinhaClick={onFigurinhaClick}
+              />
             </div>
           )}
         </div>
@@ -418,13 +420,15 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.15 }}
-                className="rounded-lg border-2 border-amber-400/50 overflow-hidden shadow-[0_0_36px_-6px_rgba(251,191,36,0.45)] w-full max-w-2xl"
+                className="w-full max-w-2xl"
               >
-                {/* a foto = duas metades lado a lado (viram 2 figurinhas) */}
-                <div className="flex">
-                  <img src={fotoAmigos1} alt="Os amigos — começo" className="w-1/2 object-cover" />
-                  <img src={fotoAmigos2} alt="Os amigos — começo" className="w-1/2 object-cover" />
-                </div>
+                <FotoDividida
+                  parte1={figsOrdenadas.find((f) => (f.slot ?? 0) === 1)}
+                  parte2={figsOrdenadas.find((f) => (f.slot ?? 0) === 2)}
+                  fallback1={fotoAmigos1}
+                  fallback2={fotoAmigos2}
+                  onFigurinhaClick={onFigurinhaClick}
+                />
               </motion.div>
             </div>
           )}
@@ -488,19 +492,20 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
           )}
         </div>
 
-        {/* Direita — logo + grid 3x3 das estatisticas */}
+        {/* Direita — logo + grid 2x2 das 4 estatisticas */}
         <div className="h-full px-5 sm:px-7 py-6 flex flex-col">
           <div className="flex justify-end shrink-0">
             <LogoCanto />
           </div>
-          <div className="flex-1 min-h-0 mt-3 grid grid-cols-3 grid-rows-3 gap-2 sm:gap-3">
+          <div className="flex-1 min-h-0 mt-3 grid grid-cols-2 gap-3 sm:gap-4 content-center justify-items-center">
             {figsOrdenadas.map((fig) => (
-              <Figurinha
-                key={fig.id}
-                figurinha={fig}
-                tamanho="cell"
-                onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
-              />
+              <div key={fig.id} className="w-full max-w-[170px]">
+                <Figurinha
+                  figurinha={fig}
+                  tamanho="fluid"
+                  onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
+                />
+              </div>
             ))}
           </div>
         </div>
@@ -581,11 +586,21 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
   // Direita: logo + figurinha grande do campeao + grid 3x2 de etiquetas.
   // ============================================================
   if (pagina.tipo === 'copa') {
-    const campeao = figsOrdenadas.find((f) => (f.slot ?? 0) === 1);
-    const etiquetas = figsOrdenadas.filter(
-      (f) => (f.slot ?? 0) >= 2 && (f.slot ?? 0) <= 7
+    // Slots 1-4: foto Time Campeao (2x2)
+    // Slots 5 a (4+N): N jogadores campeoes (N vem do meta_json.jogadores, default 5)
+    // Slots seguintes: chaveamento (2 partes)
+    const nJogadores = (pagina.meta_json as { jogadores?: number } | null)?.jogadores ?? 5;
+    const slotChave1 = 5 + nJogadores; // primeira parte da chave
+    const timeCampeao = [1, 2, 3, 4].map((s) =>
+      figsOrdenadas.find((f) => (f.slot ?? 0) === s)
     );
-    const chaveamento = figsOrdenadas.filter((f) => (f.slot ?? 0) >= 8);
+    const jogadores = figsOrdenadas.filter(
+      (f) => (f.slot ?? 0) >= 5 && (f.slot ?? 0) <= 4 + nJogadores
+    );
+    const chave = figsOrdenadas.filter(
+      (f) => (f.slot ?? 0) === slotChave1 || (f.slot ?? 0) === slotChave1 + 1
+    );
+    const temTime = timeCampeao.some(Boolean);
     const secoes = parseSecoes(pagina.texto ?? '');
     const cor = pagina.subtitulo_cor ?? '#FFC400';
 
@@ -669,47 +684,45 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
             ))}
           </div>
 
-          {chaveamento.length > 0 && (
+          {chave.length > 0 && (
             <div className="mt-3 shrink-0">
               <span className="text-[9px] tracking-widest text-cyan-100/40 uppercase">
                 Chaveamento
               </span>
-              <div className="mt-1 grid grid-cols-2 gap-1.5">
-                {chaveamento.map((fig) => (
-                  <div key={fig.id} className="h-[92px] sm:h-[112px]">
-                    <Figurinha
-                      figurinha={fig}
-                      tamanho="cell"
-                      onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
-                    />
-                  </div>
-                ))}
+              <div className="mt-1">
+                <FotoDividida
+                  parte1={chave.find((f) => (f.slot ?? 0) === 10)}
+                  parte2={chave.find((f) => (f.slot ?? 0) === 11)}
+                  onFigurinhaClick={onFigurinhaClick}
+                />
               </div>
             </div>
           )}
         </div>
 
-        {/* Direita — logo + campeao grande + 6 etiquetas */}
-        <div className="h-full px-5 sm:px-7 py-6 flex flex-col">
+        {/* Direita — logo + foto Time Campeao (2x2) + 5 jogadores */}
+        <div className="h-full px-5 sm:px-7 py-6 flex flex-col gap-3 overflow-y-auto">
           <div className="flex justify-end shrink-0">
             <LogoCanto />
           </div>
-          {campeao && (
-            <div className="mt-2 shrink-0 h-[200px] sm:h-[244px]">
-              <Figurinha
-                figurinha={campeao}
-                tamanho="cell"
-                onClick={onFigurinhaClick ? () => onFigurinhaClick(campeao) : undefined}
+          {temTime && (
+            <div className="shrink-0">
+              <FotoQuadripartida
+                partes={timeCampeao}
+                onFigurinhaClick={onFigurinhaClick}
               />
             </div>
           )}
-          {etiquetas.length > 0 && (
-            <div className="mt-2 flex-1 min-h-0 grid grid-cols-3 grid-rows-2 gap-2">
-              {etiquetas.map((fig) => (
+          {jogadores.length > 0 && (
+            <div
+              className="grid gap-1.5"
+              style={{ gridTemplateColumns: `repeat(${nJogadores >= 6 ? 3 : nJogadores}, 1fr)` }}
+            >
+              {jogadores.map((fig) => (
                 <Figurinha
                   key={fig.id}
                   figurinha={fig}
-                  tamanho="cell"
+                  tamanho="fluid"
                   onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
                 />
               ))}
@@ -726,11 +739,11 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
   // Direita: logo + Time Campeao grande + grid 3x2 (6 jogadores).
   // ============================================================
   if (pagina.tipo === 'campeonato') {
-    const campeao = figsOrdenadas.find((f) => (f.slot ?? 0) === 1);
-    const jogadores = figsOrdenadas.filter(
-      (f) => (f.slot ?? 0) >= 2 && (f.slot ?? 0) <= 7
+    // Slots 1-4: foto do campeao em 4 partes (2x2)
+    const partesCampeao = [1, 2, 3, 4].map((s) =>
+      figsOrdenadas.find((f) => (f.slot ?? 0) === s)
     );
-    const destaques = figsOrdenadas.filter((f) => (f.slot ?? 0) >= 8);
+    const temCampeao = partesCampeao.some(Boolean);
     const cor = pagina.subtitulo_cor ?? '#A855F7';
 
     return (
@@ -779,50 +792,20 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
             </p>
           )}
 
-          {destaques.length > 0 && (
-            <div className="mt-4 shrink-0">
-              <span className="text-[9px] tracking-widest text-cyan-100/40 uppercase">
-                Destaques do campeonato
-              </span>
-              <div className="mt-1.5 grid grid-cols-3 gap-2">
-                {destaques.map((fig) => (
-                  <div key={fig.id} className="h-[120px] sm:h-[150px]">
-                    <Figurinha
-                      figurinha={fig}
-                      tamanho="cell"
-                      onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* Direita — logo + campeao grande + 6 jogadores */}
-        <div className="h-full px-5 sm:px-7 py-6 flex flex-col">
+        {/* Direita — logo + foto do campeao em 4 partes */}
+        <div className="h-full px-5 sm:px-7 py-6 flex flex-col gap-3">
           <div className="flex justify-end shrink-0">
             <LogoCanto />
           </div>
-          {campeao && (
-            <div className="mt-2 shrink-0 h-[200px] sm:h-[244px]">
-              <Figurinha
-                figurinha={campeao}
-                tamanho="cell"
-                onClick={onFigurinhaClick ? () => onFigurinhaClick(campeao) : undefined}
+          {temCampeao && (
+            <div className="flex-1 flex items-center">
+              <FotoQuadripartida
+                partes={partesCampeao}
+                onFigurinhaClick={onFigurinhaClick}
+                className="w-full"
               />
-            </div>
-          )}
-          {jogadores.length > 0 && (
-            <div className="mt-2 flex-1 min-h-0 grid grid-cols-3 grid-rows-2 gap-2">
-              {jogadores.map((fig) => (
-                <Figurinha
-                  key={fig.id}
-                  figurinha={fig}
-                  tamanho="cell"
-                  onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
-                />
-              ))}
             </div>
           )}
         </div>
@@ -838,44 +821,70 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
   // ============================================================
   if (pagina.tipo === 'elenco') {
     const cor = pagina.subtitulo_cor ?? '#A855F7';
-    const times = [
-      { titulo: 'Time A', figs: figsOrdenadas.filter((f) => (f.slot ?? 0) >= 1 && (f.slot ?? 0) <= 7) },
-      { titulo: 'Time B', figs: figsOrdenadas.filter((f) => (f.slot ?? 0) >= 8 && (f.slot ?? 0) <= 14) },
-      { titulo: 'Time C', figs: figsOrdenadas.filter((f) => (f.slot ?? 0) >= 15 && (f.slot ?? 0) <= 21) },
-      { titulo: 'Time D', figs: figsOrdenadas.filter((f) => (f.slot ?? 0) >= 22 && (f.slot ?? 0) <= 28) },
-    ];
+    // Nomes/cores/tamanhos customizados via meta_json.times; fallback "Time A/B/C/D" com 5 jogadores
+    const metaTimes = (pagina.meta_json as { times?: { nome?: string; cor?: string; jogadores?: number }[] } | null)?.times ?? [];
+    const nomePadrao = ['Time A', 'Time B', 'Time C', 'Time D'];
+    // Tamanho = 2 (logo + capitao) + jogadores (default 5 → 7 figs)
+    const tamanhos = nomePadrao.map((_, i) => 2 + (metaTimes[i]?.jogadores ?? 5));
+    // Calcula slot inicial de cada time
+    const inicios = tamanhos.reduce<number[]>((acc, _, i) => {
+      acc.push(i === 0 ? 1 : acc[i - 1] + tamanhos[i - 1]);
+      return acc;
+    }, []);
+    const times = nomePadrao.map((p, i) => {
+      const ini = inicios[i];
+      const fim = ini + tamanhos[i] - 1;
+      return {
+        titulo: metaTimes[i]?.nome ?? p,
+        cor: metaTimes[i]?.cor ?? '#22d3ee',
+        figs: figsOrdenadas.filter((f) => (f.slot ?? 0) >= ini && (f.slot ?? 0) <= fim),
+        max: tamanhos[i],
+      };
+    });
 
-    const TimeCard: React.FC<{ titulo: string; figs: FigurinhaType[] }> = ({ titulo, figs }) => (
-      <div className="rounded-xl border border-cyan-400/20 bg-black/30 p-2.5 sm:p-3">
-        <div className="mb-1.5 flex items-center justify-between">
-          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-200/80">
-            {titulo}
-          </span>
-          <span
-            className="text-[8px] font-bold uppercase tracking-widest text-black px-1.5 py-0.5 rounded"
-            style={{ background: cor }}
-          >
-            ★ Logo + Capitão
-          </span>
+    const TimeCard: React.FC<{ titulo: string; corNome: string; figs: FigurinhaType[]; max: number }> = ({
+      titulo,
+      corNome,
+      figs,
+      max,
+    }) => {
+      // Arredonda max para multiplo de 4 para encher a ultima fileira sem gap
+      const totalGrid = Math.ceil(max / 4) * 4;
+      return (
+        <div className="rounded-xl border border-cyan-400/20 bg-black/30 p-2.5 sm:p-3">
+          <div className="mb-1.5 flex items-center justify-between">
+            <span
+              className="text-[11px] font-black uppercase tracking-[0.18em]"
+              style={{ color: corNome, textShadow: '0 0 8px rgba(0,0,0,0.6)' }}
+            >
+              {titulo}
+            </span>
+            <span
+              className="text-[8px] font-bold uppercase tracking-widest text-black px-1.5 py-0.5 rounded"
+              style={{ background: cor }}
+            >
+              ★ Logo + Capitão
+            </span>
+          </div>
+          <div className="grid grid-cols-4 gap-1.5">
+            {figs.map((fig) => (
+              <Figurinha
+                key={fig.id}
+                figurinha={fig}
+                tamanho="fluid"
+                onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
+              />
+            ))}
+            {Array.from({ length: Math.max(0, totalGrid - figs.length) }).map((_, i) => (
+              <div
+                key={'vazio-' + i}
+                className="aspect-[114/155] rounded-lg border border-dashed border-white/5"
+              />
+            ))}
+          </div>
         </div>
-        <div className="grid grid-cols-4 gap-1.5">
-          {figs.map((fig) => (
-            <Figurinha
-              key={fig.id}
-              figurinha={fig}
-              tamanho="fluid"
-              onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
-            />
-          ))}
-          {Array.from({ length: Math.max(0, 8 - figs.length) }).map((_, i) => (
-            <div
-              key={'vazio-' + i}
-              className="aspect-[114/155] rounded-lg border border-dashed border-white/5"
-            />
-          ))}
-        </div>
-      </div>
-    );
+      );
+    };
 
     return (
       <div className={cn('relative w-full grid grid-cols-1 md:grid-cols-2', ALTURA_PAGINA)}>
@@ -901,8 +910,8 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
               )}
             </h2>
           </header>
-          <TimeCard titulo={times[0].titulo} figs={times[0].figs} />
-          <TimeCard titulo={times[1].titulo} figs={times[1].figs} />
+          <TimeCard titulo={times[0].titulo} corNome={times[0].cor} figs={times[0].figs} max={times[0].max} />
+          <TimeCard titulo={times[1].titulo} corNome={times[1].cor} figs={times[1].figs} max={times[1].max} />
         </div>
 
         {/* Direita — logo + Time C + Time D */}
@@ -910,8 +919,8 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
           <div className="flex justify-end shrink-0">
             <LogoCanto />
           </div>
-          <TimeCard titulo={times[2].titulo} figs={times[2].figs} />
-          <TimeCard titulo={times[3].titulo} figs={times[3].figs} />
+          <TimeCard titulo={times[2].titulo} corNome={times[2].cor} figs={times[2].figs} max={times[2].max} />
+          <TimeCard titulo={times[3].titulo} corNome={times[3].cor} figs={times[3].figs} max={times[3].max} />
         </div>
       </div>
     );
@@ -968,16 +977,12 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
             </p>
           )}
           {foto1.length > 0 && (
-            <div className="mt-2 shrink-0 grid grid-cols-2 gap-1.5">
-              {foto1.map((fig) => (
-                <div key={fig.id} className="h-[130px] sm:h-[160px]">
-                  <Figurinha
-                    figurinha={fig}
-                    tamanho="cell"
-                    onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
-                  />
-                </div>
-              ))}
+            <div className="mt-2 shrink-0">
+              <FotoDividida
+                parte1={foto1.find((f) => (f.slot ?? 0) === 10)}
+                parte2={foto1.find((f) => (f.slot ?? 0) === 11)}
+                onFigurinhaClick={onFigurinhaClick}
+              />
             </div>
           )}
           {texto2 && (
@@ -986,16 +991,12 @@ export const PaginaAlbum: React.FC<PaginaAlbumProps> = ({
             </p>
           )}
           {foto2.length > 0 && (
-            <div className="mt-2 shrink-0 grid grid-cols-2 gap-1.5">
-              {foto2.map((fig) => (
-                <div key={fig.id} className="h-[130px] sm:h-[160px]">
-                  <Figurinha
-                    figurinha={fig}
-                    tamanho="cell"
-                    onClick={onFigurinhaClick ? () => onFigurinhaClick(fig) : undefined}
-                  />
-                </div>
-              ))}
+            <div className="mt-2 shrink-0">
+              <FotoDividida
+                parte1={foto2.find((f) => (f.slot ?? 0) === 12)}
+                parte2={foto2.find((f) => (f.slot ?? 0) === 13)}
+                onFigurinhaClick={onFigurinhaClick}
+              />
             </div>
           )}
         </div>
