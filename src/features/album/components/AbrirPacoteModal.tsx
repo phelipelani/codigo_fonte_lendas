@@ -17,6 +17,7 @@ import {
 import { X, Loader2, ChevronsRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Figurinha } from './Figurinha';
+import { OrigemFigurinhaModal } from './OrigemFigurinhaModal';
 import { useAbrirPacote, type Figurinha as FigurinhaType } from '../api/albumApi';
 import logoLendas from '@/assets/Logo.webp';
 
@@ -49,6 +50,7 @@ export const AbrirPacoteModal: React.FC<AbrirPacoteModalProps> = ({
   const [xTear, setXTear] = React.useState(0);
   const [idx, setIdx] = React.useState(0);
   const [prontoContinuar, setProntoContinuar] = React.useState(false);
+  const [figDetalhes, setFigDetalhes] = React.useState<FigurinhaType | null>(null);
 
   const x = useMotionValue(0);
   const progresso = useTransform(x, [0, MAX_DRAG], [0, 1]);
@@ -118,6 +120,7 @@ export const AbrirPacoteModal: React.FC<AbrirPacoteModalProps> = ({
   if (pacoteId == null) return null;
 
   return (
+    <>
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -328,7 +331,12 @@ export const AbrirPacoteModal: React.FC<AbrirPacoteModalProps> = ({
                               ease: EASE_OUT,
                             }}
                           >
-                            <Figurinha figurinha={fig} forcarObtida tamanho="md" />
+                            <Figurinha
+                              figurinha={fig}
+                              forcarObtida
+                              tamanho="md"
+                              onClick={() => setFigDetalhes(fig)}
+                            />
                           </motion.div>
                         ))}
                       </div>
@@ -358,6 +366,17 @@ export const AbrirPacoteModal: React.FC<AbrirPacoteModalProps> = ({
             )}
           </div>
         </motion.div>
+
+      {/* Modal de detalhe da figurinha (clique em cima dela na tela final) */}
+      <AnimatePresence>
+        {figDetalhes && (
+          <OrigemFigurinhaModal
+            figurinha={figDetalhes}
+            onClose={() => setFigDetalhes(null)}
+          />
+        )}
+      </AnimatePresence>
+    </>
   );
 };
 
