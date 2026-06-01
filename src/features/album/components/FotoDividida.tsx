@@ -93,18 +93,16 @@ const Metade: React.FC<{
   if (obtida && src) {
     return (
       <div
-        className={cn('relative flex-1', separador)}
-        // garante area minima quando a outra metade nao tiver imagem
-        style={{ minHeight: 1 }}
+        className={cn('relative flex-1 min-h-[220px]', separador)}
       >
-        <img src={src} alt="" className="block h-full w-full object-cover" />
+        <img src={src} alt="" className="absolute inset-0 h-full w-full object-cover" />
       </div>
     );
   }
 
   // Placeholder com "?"
   const Conteudo = (
-    <div className="flex aspect-[3/2] w-full flex-col items-center justify-center bg-[#0d1f35]">
+    <div className="flex w-full min-h-[220px] flex-col items-center justify-center bg-[#0d1f35]">
       <span className="text-5xl font-black leading-none text-white/15">?</span>
       {fig && (
         <span className="mt-1 text-[10px] font-bold text-white/40">

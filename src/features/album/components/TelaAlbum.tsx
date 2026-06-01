@@ -125,11 +125,13 @@ function parseSecoes(texto: string): SecaoNarrativa[] {
     });
 }
 
+// No mobile usamos menos colunas para as figurinhas ficarem maiores e legíveis.
+// sm: >= 640px (tablets/landscape), lg: >= 1024px (desktop).
 const COLS: Record<number, string> = {
   2: 'grid-cols-2',
-  3: 'grid-cols-3',
-  4: 'grid-cols-4',
-  5: 'grid-cols-5',
+  3: 'grid-cols-2 sm:grid-cols-3',
+  4: 'grid-cols-2 sm:grid-cols-4',
+  5: 'grid-cols-3 sm:grid-cols-5',
 };
 
 // =============================================================
@@ -187,7 +189,7 @@ const GridFigs: React.FC<{
   cols: number;
   onClick?: (f: FigurinhaType) => void;
 }> = ({ figs, cols, onClick }) => (
-  <div className={cn('grid gap-2', COLS[cols] ?? 'grid-cols-3')}>
+  <div className={cn('grid gap-3', COLS[cols] ?? 'grid-cols-2 sm:grid-cols-3')}>
     {figs.map((f) => (
       <Figurinha
         key={f.id}
