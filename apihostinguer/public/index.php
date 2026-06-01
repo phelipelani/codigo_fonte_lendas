@@ -1125,6 +1125,12 @@ try {
             require $presencaRoot . '/api/reenviar_convocacao.php'; exit;
         }
 
+        // POST /presenca/sincronizar — busca msgs perdidas na Evolution API e processa (admin)
+        if ($path === '/presenca/sincronizar' && $method === 'POST') {
+            AuthMiddleware::isAdmin();
+            require $presencaRoot . '/api/sincronizar.php'; exit;
+        }
+
         // POST /presenca/mensagem — mensagem avulsa para jogador ou grupo (admin)
         if ($path === '/presenca/mensagem' && $method === 'POST') {
             AuthMiddleware::isAdmin();

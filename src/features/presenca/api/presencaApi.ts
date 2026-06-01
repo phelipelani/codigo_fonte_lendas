@@ -231,6 +231,18 @@ export const useRecarregarLista = () => {
   });
 };
 
+export const useSincronizarRespostas = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => (await api.post('/presenca/sincronizar')).data,
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['presenca', 'dados'] });
+      if (data?.msg) toast.success(data.msg);
+    },
+    onError: (e: any) => toast.error(e?.response?.data?.msg ?? 'Erro ao sincronizar respostas'),
+  });
+};
+
 export const useReenviarConvocacao = () => {
   const qc = useQueryClient();
   return useMutation({

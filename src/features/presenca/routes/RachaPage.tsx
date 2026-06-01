@@ -20,6 +20,7 @@ import {
   Lock,
   Unlock,
   MessageCircle,
+  Zap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
@@ -31,6 +32,7 @@ import {
   useFecharLista,
   useRecarregarLista,
   useReenviarConvocacao,
+  useSincronizarRespostas,
 } from '../api/presencaApi';
 
 import { ListaAtualTab } from '../components/ListaAtualTab';
@@ -71,6 +73,7 @@ export const RachaPage: React.FC = () => {
   const fecharMut = useFecharLista();
   const recarregarMut = useRecarregarLista();
   const reenviarMut = useReenviarConvocacao();
+  const sincronizarMut = useSincronizarRespostas();
 
   const lista = dados?.lista ?? null;
 
@@ -93,6 +96,18 @@ export const RachaPage: React.FC = () => {
           {/* Botoes de acao globais — somente admin, e se ja existe lista */}
           {lista && isAdmin && (
             <div className="flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => sincronizarMut.mutate()}
+                disabled={sincronizarMut.isPending}
+                title="Busca mensagens enviadas enquanto o bot estava fora e atualiza a lista"
+                className="border-violet-500/30 text-violet-200 hover:bg-violet-500/10 disabled:opacity-40"
+              >
+                <Zap className={cn('mr-2 h-4 w-4', sincronizarMut.isPending && 'animate-pulse')} />
+                {sincronizarMut.isPending ? 'Sincronizando...' : 'Sincronizar respostas'}
+              </Button>
+
               <Button
                 size="sm"
                 variant="outline"
