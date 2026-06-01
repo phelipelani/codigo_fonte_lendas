@@ -285,9 +285,10 @@ export const useMural = () =>
   useQuery<{ ok: boolean; trocas: TrocaMural[] }>({
     queryKey: ['album', 'mural'],
     queryFn: async () => (await api.get('/album/mural')).data,
-    // Atualiza automaticamente a cada 15s e ao voltar para a aba —
-    // garante que figurinhas já trocadas somam sem precisar recarregar a pagina.
-    refetchInterval: 15_000,
+    // Atualiza automaticamente a cada 60s e ao voltar para a aba —
+    // garante que figurinhas já trocadas somem sem precisar recarregar a página.
+    // 60s é suficiente para o caso de uso e evita exceder o limite de conexões do Hostinger.
+    refetchInterval: 60_000,
     refetchOnWindowFocus: true,
   });
 
