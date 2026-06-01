@@ -271,8 +271,8 @@ UPDATE album_paginas SET meta_json = JSON_OBJECT(
   'times', JSON_ARRAY(
     JSON_OBJECT('nome', 'Não te escolhi FC', 'cor', '#FFC400'),
     JSON_OBJECT('nome', 'Vasco',              'cor', '#FFFFFF'),
-    JSON_OBJECT('nome', 'Meninos de Vó',     'cor', '#38BDF8'),
-    JSON_OBJECT('nome', 'Peguei sua Vó',     'cor', '#EC4899')
+    JSON_OBJECT('nome', 'Peguei sua Vó',     'cor', '#EC4899'),
+    JSON_OBJECT('nome', 'Meninos de Vó',     'cor', '#38BDF8')
   )
 ) WHERE id = 10;
 
@@ -280,8 +280,8 @@ UPDATE album_paginas SET meta_json = JSON_OBJECT(
   'times', JSON_ARRAY(
     JSON_OBJECT('nome', 'Shaktar dos Leks', 'cor', '#FFC400'),
     JSON_OBJECT('nome', 'Vasco',             'cor', '#FFFFFF'),
-    JSON_OBJECT('nome', 'São Paulando',     'cor', '#38BDF8'),
-    JSON_OBJECT('nome', 'Meninos de Vó',    'cor', '#EC4899')
+    JSON_OBJECT('nome', 'Meninos de Vó',    'cor', '#EC4899'),
+    JSON_OBJECT('nome', 'São Paulando',     'cor', '#38BDF8')
   )
 ) WHERE id = 12;
 

@@ -24,6 +24,7 @@ import {
   type Pagina,
 } from '../api/albumApi';
 import { PaginaAlbum } from '../components/PaginaAlbum';
+import { AlbumErrorBoundary } from '../components/AlbumErrorBoundary';
 import {
   TelaAlbum,
   partesDaPagina,
@@ -220,6 +221,7 @@ export const AlbumPage: React.FC = () => {
 
       {/* ===== O conteudo do album ===== */}
       <div className="relative">
+      <AlbumErrorBoundary>
         {isDesktop ? (
           // -------- DESKTOP: livro (spread de 2 paginas) --------
           <div
@@ -280,6 +282,7 @@ export const AlbumPage: React.FC = () => {
           </div>
         )}
 
+      </AlbumErrorBoundary>
         {/* ===== Navegacao ===== */}
         <div className="mt-4 flex items-center justify-between gap-3">
           <button
