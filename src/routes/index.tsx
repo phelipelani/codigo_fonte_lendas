@@ -74,8 +74,9 @@ export const AppRoutes = () => {
           <Route path="/times" element={<TimesPage />} />
           <Route path="/jogadores" element={<JogadoresPage />} />
 
-          {/* Perfil */}
+          {/* Perfil — com ou sem ID de jogador */}
           <Route path="/perfil" element={<PerfilPage />} />
+          <Route path="/perfil/:id" element={<PerfilPage />} />
 
           {/* Racha — gestão de presença / bot WhatsApp */}
           <Route path="/racha" element={<RachaPage />} />
