@@ -58,19 +58,23 @@ const MatchCard = memo(function MatchCard({ p, isAdmin, onEdit, onDelete, onClic
 
         {/* Placar */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          <span className={cn(
-            'text-2xl sm:text-3xl font-black tabular-nums w-8 text-right',
-            winA ? 'text-emerald-400' : isDraw ? 'text-amber-400' : 'text-white/30',
-          )}>
-            {p.placarA}
-          </span>
-          <span className="text-white/15 text-xs font-light">×</span>
-          <span className={cn(
-            'text-2xl sm:text-3xl font-black tabular-nums w-8',
-            winB ? 'text-emerald-400' : isDraw ? 'text-amber-400' : 'text-white/30',
-          )}>
-            {p.placarB}
-          </span>
+          <span
+            className={cn('text-3xl sm:text-4xl tabular-nums w-9 text-right leading-none',
+              winA ? 'text-emerald-400' : isDraw ? 'text-amber-400' : 'text-white/25')}
+            style={{
+              fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900,
+              textShadow: winA ? '0 0 14px rgba(52,211,153,0.6)' : isDraw ? '0 0 14px rgba(251,191,36,0.5)' : 'none',
+            }}
+          >{p.placarA}</span>
+          <span className="text-white/20 text-sm font-light">×</span>
+          <span
+            className={cn('text-3xl sm:text-4xl tabular-nums w-9 leading-none',
+              winB ? 'text-emerald-400' : isDraw ? 'text-amber-400' : 'text-white/25')}
+            style={{
+              fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900,
+              textShadow: winB ? '0 0 14px rgba(52,211,153,0.6)' : isDraw ? '0 0 14px rgba(251,191,36,0.5)' : 'none',
+            }}
+          >{p.placarB}</span>
         </div>
 
         {/* Time B */}
@@ -97,7 +101,7 @@ const MatchCard = memo(function MatchCard({ p, isAdmin, onEdit, onDelete, onClic
           Toque para detalhes
         </span>
         {isAdmin && (
-          <div className="flex gap-1.5 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex gap-1.5">
             <button
               onClick={(e) => { e.stopPropagation(); onEdit(); }}
               className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/30 hover:text-white hover:bg-white/10 transition-all"

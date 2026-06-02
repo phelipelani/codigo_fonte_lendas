@@ -52,11 +52,19 @@ const KPICard = React.memo(function KPICard({
       {/* valor + label */}
       <div>
         <div className="flex items-baseline gap-1">
-          <span className="text-2xl sm:text-3xl font-black text-white leading-none tabular-nums">
+          <span
+            className={cn('text-3xl sm:text-4xl leading-none tabular-nums', a.text)}
+            style={{
+              fontFamily: "'Barlow Condensed', sans-serif",
+              fontWeight: 900,
+              textShadow: `0 0 16px currentColor`,
+              opacity: 0.95,
+            }}
+          >
             {value}
           </span>
           {suffix && (
-            <span className="text-xs font-bold text-white/25">{suffix}</span>
+            <span className="text-[10px] font-bold text-white/25">{suffix}</span>
           )}
         </div>
         <p className="mt-1 text-[9px] font-black uppercase tracking-[0.18em] text-white/30">
