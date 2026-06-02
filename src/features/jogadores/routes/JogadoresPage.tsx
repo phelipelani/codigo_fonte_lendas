@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/AlertDialog';
 
 import { useJogadores } from '../api/useJogadores';
-import { JogadorCard } from '../components/JogadorCard';
+import { JogadorCardGrid } from '../components/Jogadorcardgrid';
 import api from '@/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useQueryClient } from '@tanstack/react-query';
@@ -271,9 +271,9 @@ export const JogadoresPage = () => {
           </div>
         )}
 
-        {/* ✅ GRID 3 COLUNAS */}
+        {/* GRID FIFA CARDS — 2 colunas mobile, 3 tablet, 4 desktop */}
         {filteredJogadores.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             <AnimatePresence mode="popLayout">
               {filteredJogadores.map((jogador, index) => (
                 <motion.div
@@ -282,9 +282,9 @@ export const JogadoresPage = () => {
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ delay: index * 0.02 }}
+                  transition={{ delay: Math.min(index * 0.02, 0.3) }}
                 >
-                  <JogadorCard jogador={jogador} onDelete={isAdmin ? handleDeleteClick : undefined} isAdmin={isAdmin} />
+                  <JogadorCardGrid jogador={jogador} onDelete={isAdmin ? handleDeleteClick : undefined} isAdmin={isAdmin} />
                 </motion.div>
               ))}
             </AnimatePresence>

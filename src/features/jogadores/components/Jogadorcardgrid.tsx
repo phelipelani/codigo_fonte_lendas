@@ -1,8 +1,9 @@
 // Arquivo: src/features/jogadores/components/JogadorCardGrid.tsx
-// Versão alternativa para modo GRID - mais visual, cards verticais
-import { useState } from 'react';
+// Card estilo FIFA Ultimate Team — mobile-first, raridade por nível
+
+import { useState, memo } from 'react';
 import { motion } from 'framer-motion';
-import { Edit, Trash2, User, Shield, Mail, CheckCircle, XCircle, Crown, Star } from 'lucide-react';
+import { Edit, Trash2, Mail, User, Shield, Crown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Jogador } from '@/@types';
 import { Button } from '@/components/ui/Button';
@@ -11,25 +12,89 @@ import { useGerarConvite } from '../api/useGerarConvite';
 import { ConviteModal } from './ConviteModal';
 import { SelecionarTipoUsuarioDialog } from './SelecionarTipoUsuarioDialog';
 
+// ── Sistema de raridade por nível ────────────────────────────
+const TIERS = {
+  LENDA: {
+    bg: 'linear-gradient(160deg, #08060A 0%, #150E20 30%, #0D0A00 70%, #08060A 100%)',
+    accent: '#FFD700',
+    border: 'rgba(255,215,0,0.55)',
+    glow: '0 0 28px rgba(255,215,0,0.35)',
+    shimmer: 'rgba(255,215,0,0.12)',
+    name: 'LENDA',
+  },
+  ELITE: {
+    bg: 'linear-gradient(160deg, #0A0514 0%, #1C0A30 35%, #0F061A 100%)',
+    accent: '#C084FC',
+    border: 'rgba(168,85,247,0.55)',
+    glow: '0 0 28px rgba(192,132,252,0.35)',
+    shimmer: 'rgba(168,85,247,0.12)',
+    name: 'ELITE',
+  },
+  OURO: {
+    bg: 'linear-gradient(160deg, #0C0900 0%, #1C1500 40%, #0C0900 100%)',
+    accent: '#FBBF24',
+    border: 'rgba(251,191,36,0.48)',
+    glow: '0 0 22px rgba(251,191,36,0.28)',
+    shimmer: 'rgba(251,191,36,0.10)',
+    name: 'OURO',
+  },
+  PRATA: {
+    bg: 'linear-gradient(160deg, #080C12 0%, #121C28 40%, #080C12 100%)',
+    accent: '#94A3B8',
+    border: 'rgba(148,163,184,0.38)',
+    glow: '0 0 18px rgba(148,163,184,0.2)',
+    shimmer: 'rgba(148,163,184,0.07)',
+    name: 'PRATA',
+  },
+  BRONZE: {
+    bg: 'linear-gradient(160deg, #0E0700 0%, #1C0F04 40%, #0E0700 100%)',
+    accent: '#CD7F32',
+    border: 'rgba(205,127,50,0.38)',
+    glow: '0 0 18px rgba(205,127,50,0.2)',
+    shimmer: 'rgba(205,127,50,0.08)',
+    name: 'BRONZE',
+  },
+} as const;
+
+type TierKey = keyof typeof TIERS;
+
+const getTier = (nivel: number): typeof TIERS[TierKey] => {
+  if (nivel >= 10) return TIERS.LENDA;
+  if (nivel >= 8)  return TIERS.ELITE;
+  if (nivel >= 6)  return TIERS.OURO;
+  if (nivel >= 4)  return TIERS.PRATA;
+  return TIERS.BRONZE;
+};
+
+// nivel 1-10 → overall 50-99
+const nivelToOverall = (nivel: number) => Math.round(50 + ((nivel - 1) / 9) * 49);
+
+// ── Componente ────────────────────────────────────────────────
 type JogadorCardGridProps = {
   jogador: Jogador;
   onDelete?: (id: number) => void;
+  isAdmin?: boolean;
 };
 
-export const JogadorCardGrid = ({ jogador, onDelete }: JogadorCardGridProps) => {
+export const JogadorCardGrid = memo(({ jogador, onDelete, isAdmin = false }: JogadorCardGridProps) => {
   const [selecionarTipoOpen, setSelecionarTipoOpen] = useState(false);
   const [conviteModalOpen, setConviteModalOpen] = useState(false);
   const gerarConviteMutation = useGerarConvite();
 
+  const tier = getTier(jogador.nivel ?? 1);
+  const overall = nivelToOverall(jogador.nivel ?? 1);
+  const isGoleiro = jogador.posicao === 'goleiro';
+  const temContaAtiva = jogador.usuario?.tem_conta_ativa ?? false;
+  const isJogadorAdmin = jogador.usuario?.role === 'admin';
+
   const getInitials = (nome: string) => {
     const parts = nome.trim().split(' ');
-    if (parts.length >= 2) {
-      return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
-    }
-    return nome.substring(0, 2).toUpperCase();
+    return parts.length >= 2
+      ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+      : nome.substring(0, 2).toUpperCase();
   };
 
-  const handleGerarConviteClick = (e: React.MouseEvent) => {
+  const handleConviteClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setSelecionarTipoOpen(true);
@@ -37,191 +102,189 @@ export const JogadorCardGrid = ({ jogador, onDelete }: JogadorCardGridProps) => 
 
   const handleTipoSelecionado = async (tipo: 'user' | 'admin') => {
     setSelecionarTipoOpen(false);
-    const result = await gerarConviteMutation.mutateAsync({
-      jogador_id: jogador.id,
-      tipo_usuario: tipo,
-    });
-    if (result) {
-      setConviteModalOpen(true);
-    }
+    const result = await gerarConviteMutation.mutateAsync({ jogador_id: jogador.id, tipo_usuario: tipo });
+    if (result) setConviteModalOpen(true);
   };
-
-  const temContaAtiva = jogador.usuario?.tem_conta_ativa || false;
-  const isAdmin = jogador.usuario?.role === 'admin';
-  const isGoleiro = jogador.posicao === 'goleiro';
-
-  const positionColors = isGoleiro 
-    ? { 
-        gradient: 'from-emerald-500 to-teal-600',
-        glow: 'shadow-emerald-500/25',
-        border: 'border-emerald-500/30',
-        text: 'text-emerald-400',
-        bg: 'bg-emerald-500/10'
-      }
-    : { 
-        gradient: 'from-cyan-500 to-blue-600',
-        glow: 'shadow-cyan-500/25',
-        border: 'border-cyan-500/30',
-        text: 'text-cyan-400',
-        bg: 'bg-cyan-500/10'
-      };
 
   return (
     <>
-      <Link to={`/perfil/${jogador.id}`}>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          whileHover={{ y: -6, scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          className="group relative cursor-pointer"
-        >
-          {/* Card */}
-          <div className={cn(
-            "relative overflow-hidden rounded-2xl border bg-[#0a1628]/90 backdrop-blur-sm transition-all duration-300",
-            positionColors.border,
-            `hover:shadow-xl hover:${positionColors.glow}`
-          )}>
-            {/* Glow no topo */}
-            <div className={cn(
-              "absolute top-0 left-0 right-0 h-24 bg-gradient-to-b opacity-20",
-              positionColors.gradient
-            )} />
+      <motion.div
+        whileTap={{ scale: 0.96 }}
+        className="relative"
+      >
+        <Link to={`/perfil/${jogador.id}`} className="block">
+          <div
+            className="relative overflow-hidden rounded-2xl select-none"
+            style={{
+              background: tier.bg,
+              border: `1px solid ${tier.border}`,
+              boxShadow: tier.glow,
+            }}
+          >
+            {/* Shimmer diagonal overlay */}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: `linear-gradient(135deg, ${tier.shimmer} 0%, transparent 50%, ${tier.shimmer} 100%)`,
+              }}
+            />
 
-            {/* Conteúdo */}
-            <div className="relative p-4">
-              {/* Foto/Avatar */}
-              <div className="relative mx-auto mb-4 w-20 h-20">
-                <div className={cn(
-                  "w-full h-full rounded-2xl overflow-hidden ring-2 ring-offset-2 ring-offset-[#0a1628] shadow-lg",
-                  isGoleiro ? "ring-emerald-500/50" : "ring-cyan-500/50",
-                  `shadow-${isGoleiro ? 'emerald' : 'cyan'}-500/20`
-                )}>
-                  {jogador.foto_url ? (
-                    <img
-                      src={jogador.foto_url}
-                      alt={jogador.nome}
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    />
-                  ) : (
-                    <div className={cn(
-                      "flex h-full w-full items-center justify-center bg-gradient-to-br text-2xl font-bold text-white",
-                      positionColors.gradient
-                    )}>
-                      {getInitials(jogador.nome)}
-                    </div>
-                  )}
-                </div>
-
-                {/* Badge de Posição */}
-                <div className={cn(
-                  "absolute -bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2 py-1 rounded-full text-white text-xs font-bold shadow-lg",
-                  `bg-gradient-to-r ${positionColors.gradient}`
-                )}>
-                  {isGoleiro ? <Shield size={10} /> : <User size={10} />}
-                  {isGoleiro ? 'GOL' : 'LIN'}
-                </div>
-              </div>
-
-              {/* Nome */}
-              <h3 className="text-center font-bold text-white truncate mb-1">
-                {jogador.nome}
-              </h3>
-
-              {/* Nível com estrelas */}
-              <div className="flex items-center justify-center gap-1 mb-3">
-                <div className={cn(
-                  "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold",
-                  positionColors.bg,
-                  positionColors.text
-                )}>
-                  <Star size={10} className="fill-current" />
-                  <span>Nível {jogador.nivel}</span>
-                </div>
-              </div>
-
-              {/* Status */}
-              <div className="flex items-center justify-center gap-2 mb-4">
-                {jogador.joga_recuado && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 font-medium">
-                    🛡️ DEF
-                  </span>
-                )}
-                
-                {temContaAtiva ? (
-                  <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">
-                    <CheckCircle size={8} />
-                    {isAdmin ? (
-                      <span className="flex items-center gap-0.5">
-                        <Crown size={8} className="text-amber-400" />
-                        Admin
-                      </span>
-                    ) : (
-                      'Ativo'
-                    )}
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-red-500/10 text-red-400">
-                    <XCircle size={8} />
-                    Sem acesso
-                  </span>
-                )}
-              </div>
-
-              {/* Ações */}
-              <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                {!temContaAtiva && (
-                  <Button
-                    onClick={handleGerarConviteClick}
-                    disabled={gerarConviteMutation.isPending}
-                    size="sm"
-                    className={cn(
-                      "h-7 px-2 text-xs bg-gradient-to-r",
-                      positionColors.gradient
-                    )}
-                  >
-                    <Mail size={10} className="mr-1" />
-                    Convite
-                  </Button>
-                )}
-
-                <Button
-                  asChild
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 w-7 p-0 text-cyan-300 hover:text-cyan-200 hover:bg-cyan-500/10"
-                  onClick={(e) => e.stopPropagation()}
+            {/* ── Header: overall + posição + tier ────── */}
+            <div className="relative z-10 flex items-start justify-between px-2.5 pt-2.5 pb-0">
+              {/* Overall */}
+              <div className="flex flex-col items-center leading-none">
+                <span
+                  className="text-xl font-black tabular-nums leading-none"
+                  style={{
+                    color: tier.accent,
+                    fontFamily: "'Barlow Condensed', sans-serif",
+                    textShadow: `0 0 10px ${tier.accent}80`,
+                  }}
                 >
-                  <Link to={`/jogadores/${jogador.id}/edit`}>
-                    <Edit size={12} />
-                  </Link>
-                </Button>
+                  {overall}
+                </span>
+                <span
+                  className="text-[7px] font-black uppercase tracking-wider mt-0.5"
+                  style={{ color: `${tier.accent}90`, fontFamily: "'Rajdhani', sans-serif" }}
+                >
+                  {isGoleiro ? 'GOL' : 'LN'}
+                </span>
+              </div>
 
-                {onDelete && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      onDelete(jogador.id);
-                    }}
-                    className="h-7 w-7 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+              {/* Tier badge */}
+              <span
+                className="text-[7px] font-black uppercase tracking-[0.14em] px-1.5 py-0.5 rounded-full"
+                style={{
+                  color: tier.accent,
+                  background: `${tier.shimmer}`,
+                  border: `1px solid ${tier.border}`,
+                  fontFamily: "'Rajdhani', sans-serif",
+                }}
+              >
+                {tier.name}
+              </span>
+            </div>
+
+            {/* ── Foto ────────────────────────────── */}
+            <div className="relative z-10 flex justify-center pt-1 pb-1.5 px-3">
+              <div
+                className="relative w-16 h-16 rounded-xl overflow-hidden"
+                style={{
+                  border: `2px solid ${tier.border}`,
+                  boxShadow: `0 0 14px ${tier.accent}30`,
+                }}
+              >
+                {jogador.foto_url ? (
+                  <img
+                    src={jogador.foto_url}
+                    alt={jogador.nome}
+                    className="w-full h-full object-cover object-top"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div
+                    className="w-full h-full flex items-center justify-center"
+                    style={{ background: `${tier.shimmer}` }}
                   >
-                    <Trash2 size={12} />
-                  </Button>
+                    {isGoleiro
+                      ? <Shield size={22} style={{ color: tier.accent, opacity: 0.7 }} />
+                      : <User size={22} style={{ color: tier.accent, opacity: 0.7 }} />
+                    }
+                    <span
+                      className="absolute text-base font-black"
+                      style={{ color: tier.accent, fontFamily: "'Barlow Condensed', sans-serif" }}
+                    >
+                      {getInitials(jogador.nome)}
+                    </span>
+                  </div>
+                )}
+
+                {/* Gradiente inferior na foto */}
+                <div
+                  className="absolute bottom-0 left-0 right-0 h-6"
+                  style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.5), transparent)' }}
+                />
+
+                {/* Badge admin */}
+                {isJogadorAdmin && (
+                  <div
+                    className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full flex items-center justify-center"
+                    style={{ background: '#FFD700', boxShadow: '0 0 6px rgba(255,215,0,0.6)' }}
+                  >
+                    <Crown size={8} className="text-black" fill="currentColor" />
+                  </div>
                 )}
               </div>
             </div>
 
-            {/* Linha decorativa na base */}
-            <div className={cn(
-              "absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r opacity-50",
-              positionColors.gradient
-            )} />
+            {/* ── Nome ────────────────────────────── */}
+            <div className="relative z-10 text-center px-2 pb-1">
+              <p
+                className="text-sm font-black text-white truncate leading-tight uppercase"
+                style={{
+                  fontFamily: "'Barlow Condensed', sans-serif",
+                  letterSpacing: '0.04em',
+                  textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+                }}
+              >
+                {jogador.nome}
+              </p>
+
+              {/* Linha acento */}
+              <div
+                className="mx-auto mt-1 h-px w-10 rounded-full"
+                style={{ background: `linear-gradient(90deg, transparent, ${tier.accent}, transparent)` }}
+              />
+            </div>
+
+            {/* ── Ações admin ────────────────────── */}
+            {isAdmin && (
+              <div
+                className="relative z-10 flex items-center justify-center gap-1 px-2 pb-2.5 pt-1"
+                onClick={(e) => e.preventDefault()}
+              >
+                {!temContaAtiva && (
+                  <button
+                    onClick={handleConviteClick}
+                    disabled={gerarConviteMutation.isPending}
+                    className="flex items-center gap-0.5 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wide transition-all active:scale-90"
+                    style={{
+                      background: `${tier.accent}20`,
+                      border: `1px solid ${tier.accent}40`,
+                      color: tier.accent,
+                    }}
+                  >
+                    <Mail size={8} /> Convite
+                  </button>
+                )}
+                <Link
+                  to={`/jogadores/${jogador.id}/edit`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex items-center gap-0.5 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wide text-white/40 transition-all active:scale-90"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+                >
+                  <Edit size={8} /> Edit
+                </Link>
+                {onDelete && (
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(jogador.id); }}
+                    className="flex items-center justify-center w-6 h-6 rounded-lg transition-all active:scale-90"
+                    style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}
+                  >
+                    <Trash2 size={9} className="text-red-400" />
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Barra de acento na base */}
+            <div
+              className="absolute bottom-0 left-0 right-0 h-[2px]"
+              style={{ background: `linear-gradient(90deg, transparent, ${tier.accent}90, transparent)` }}
+            />
           </div>
-        </motion.div>
-      </Link>
+        </Link>
+      </motion.div>
 
       <SelecionarTipoUsuarioDialog
         open={selecionarTipoOpen}
@@ -230,7 +293,6 @@ export const JogadorCardGrid = ({ jogador, onDelete }: JogadorCardGridProps) => 
         jogadorNome={jogador.nome}
         isLoading={gerarConviteMutation.isPending}
       />
-
       <ConviteModal
         open={conviteModalOpen}
         onOpenChange={setConviteModalOpen}
@@ -238,4 +300,4 @@ export const JogadorCardGrid = ({ jogador, onDelete }: JogadorCardGridProps) => 
       />
     </>
   );
-};
+});
