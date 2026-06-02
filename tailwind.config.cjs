@@ -1,4 +1,4 @@
-// Arquivo: tailwind.config.cjs
+// Arquivo: tailwind.config.cjs — FIFA/EA Sports Game UI Design System
 /* eslint-env node */
 const defaultTheme = require('tailwindcss/defaultTheme');
 
@@ -16,99 +16,106 @@ module.exports = {
     container: {
       center: true,
       padding: '2rem',
-      screens: {
-        '2xl': '1400px',
-      },
+      screens: { '2xl': '1400px' },
     },
     extend: {
       fontFamily: {
-        sans: ['Roboto', ...defaultTheme.fontFamily.sans],
-        display: ['Oswald', ...defaultTheme.fontFamily.sans],
+        sans: ['Rajdhani', 'Roboto', ...defaultTheme.fontFamily.sans],
+        display: ['Barlow Condensed', 'Oswald', ...defaultTheme.fontFamily.sans],
+        game: ['Barlow Condensed', ...defaultTheme.fontFamily.sans],
+        hud: ['Rajdhani', ...defaultTheme.fontFamily.sans],
       },
       colors: {
         // === CORES BASE ===
-        background: '#030611',
-        surface: 'rgba(8, 20, 33, 0.85)',
-        surfaceElevated: 'rgba(15, 30, 45, 0.95)', // Novo: para cards em destaque
-        surfaceHover: 'rgba(20, 35, 50, 0.9)',     // Novo: hover em cards
-        border: 'rgba(19, 38, 58, 0.7)',
-        borderLight: 'rgba(56, 189, 248, 0.2)',    // Novo: bordas com accent
-        
+        background: '#040810',
+        surface: 'rgba(6, 16, 30, 0.92)',
+        surfaceElevated: 'rgba(10, 24, 46, 0.96)',
+        surfaceHover: 'rgba(15, 34, 62, 0.96)',
+        border: 'rgba(0, 195, 255, 0.12)',
+        borderLight: 'rgba(0, 195, 255, 0.30)',
+        borderGold: 'rgba(255, 215, 0, 0.35)',
+        borderGreen: 'rgba(0, 230, 118, 0.30)',
+
         // === TEXTOS ===
-        textPrimary: '#f8fafc',
-        textSecondary: '#ecf3ff',
-        textMuted: 'rgba(203, 213, 245, 0.8)',
-        
+        textPrimary: '#F0F8FF',
+        textSecondary: '#B8D4FF',
+        textMuted: 'rgba(184, 212, 255, 0.55)',
+        textGold: '#FFD700',
+        textGame: '#00C3FF',
+
         // === ACENTOS ===
-        accentPrimary: '#38bdf8',      // Azul cyan vibrante
-        accentSecondary: '#facc15',    // Amarelo ouro
-        accentPink: '#ec4899',         // Novo: Rosa vibrante
-        accentPurple: '#8b5cf6',       // Novo: Roxo
-        accentOrange: '#f97316',       // Novo: Laranja
-        accentTransparent: 'rgba(56, 189, 248, 0.7)',
-        
+        accentPrimary: '#00C3FF',
+        accentSecondary: '#FFD700',
+        accentGold: '#FFD700',
+        accentGreen: '#00E676',
+        accentPink: '#FF2D78',
+        accentPurple: '#7B2FFF',
+        accentOrange: '#FF6B00',
+        accentRed: '#FF1744',
+        accentTransparent: 'rgba(0, 195, 255, 0.7)',
+
         // === ESTADOS ===
-        success: '#10b981',
-        successDark: '#059669',        // Novo: verde escuro
-        danger: '#ef4444',
-        dangerDark: '#dc2626',         // Novo: vermelho escuro
-        warning: '#facc15',
-        info: '#38bdf8',
-        
-        // === TRANSPARENTES (para overlays e efeitos) ===
-        'accent-orange-transparent': 'rgba(249, 115, 22, 0.18)',
-        'accent-blue-transparent': 'rgba(59, 130, 246, 0.22)',
-        'accent-cyan-transparent': 'rgba(56, 189, 248, 0.15)',
-        'accent-pink-transparent': 'rgba(236, 72, 153, 0.15)',
+        success: '#00E676',
+        successDark: '#00B956',
+        danger: '#FF1744',
+        dangerDark: '#D50000',
+        warning: '#FFD700',
+        info: '#00C3FF',
+
+        // === TRANSPARENTES ===
+        'accent-orange-transparent': 'rgba(255, 107, 0, 0.15)',
+        'accent-blue-transparent': 'rgba(0, 195, 255, 0.12)',
+        'accent-cyan-transparent': 'rgba(0, 195, 255, 0.10)',
+        'accent-pink-transparent': 'rgba(255, 45, 120, 0.12)',
+        'accent-gold-transparent': 'rgba(255, 215, 0, 0.12)',
+        'accent-green-transparent': 'rgba(0, 230, 118, 0.10)',
       },
-      
-      // === GRADIENTES ===
+
       backgroundImage: {
-        // Gradientes principais
-        'gradient-hero': 'linear-gradient(135deg, #38bdf8 0%, #8b5cf6 100%)',       // Azul-Roxo
-        'gradient-gold': 'linear-gradient(135deg, #facc15 0%, #f97316 100%)',       // Amarelo-Laranja
-        'gradient-success': 'linear-gradient(135deg, #10b981 0%, #059669 100%)',    // Verde
-        'gradient-danger': 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',     // Vermelho
-        'gradient-pink': 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)',       // Rosa-Roxo
-        'gradient-cyan': 'linear-gradient(135deg, #06b6d4 0%, #38bdf8 100%)',       // Cyan claro-escuro
-        
-        // Gradientes para fundos (mais suaves)
-        'gradient-surface': 'linear-gradient(135deg, rgba(8, 20, 33, 0.85) 0%, rgba(15, 30, 45, 0.95) 100%)',
-        'gradient-dark': 'linear-gradient(135deg, #030611 0%, #071626 45%, #032116 100%)',
-        
-        // Gradientes radiais (para efeitos de luz)
+        'gradient-game': 'linear-gradient(135deg, #00C3FF 0%, #0070E0 100%)',
+        'gradient-hero': 'linear-gradient(135deg, #00C3FF 0%, #7B2FFF 100%)',
+        'gradient-gold': 'linear-gradient(135deg, #FFD700 0%, #FF6B00 100%)',
+        'gradient-success': 'linear-gradient(135deg, #00E676 0%, #00B956 100%)',
+        'gradient-danger': 'linear-gradient(135deg, #FF1744 0%, #D50000 100%)',
+        'gradient-pink': 'linear-gradient(135deg, #FF2D78 0%, #7B2FFF 100%)',
+        'gradient-cyan': 'linear-gradient(135deg, #00C3FF 0%, #0080FF 100%)',
+        'gradient-chrome': 'linear-gradient(135deg, #E8E8E8 0%, #A0A8B0 30%, #FFFFFF 50%, #8090A0 70%, #E8E8E8 100%)',
+        'gradient-surface': 'linear-gradient(135deg, rgba(6,16,30,0.92) 0%, rgba(10,24,46,0.96) 100%)',
+        'gradient-dark': 'linear-gradient(180deg, #040810 0%, #060E1E 60%, #040A12 100%)',
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
         'gradient-radial-at-t': 'radial-gradient(ellipse at top, var(--tw-gradient-stops))',
         'gradient-radial-at-b': 'radial-gradient(ellipse at bottom, var(--tw-gradient-stops))',
         'gradient-radial-at-c': 'radial-gradient(ellipse at center, var(--tw-gradient-stops))',
-        
-        // Gradiente específico para o fundo do body (mantendo o original)
         'body-gradient': `
-          radial-gradient(circle at 15% 20%, rgba(59, 130, 246, 0.22), transparent 55%),
-          radial-gradient(circle at 85% 10%, rgba(249, 115, 22, 0.18), transparent 52%),
-          linear-gradient(135deg, #030611 0%, #071626 45%, #032116 100%)
+          radial-gradient(ellipse at 15% 0%, rgba(0,195,255,0.14), transparent 50%),
+          radial-gradient(ellipse at 85% 0%, rgba(255,107,0,0.10), transparent 50%),
+          radial-gradient(ellipse at 50% 100%, rgba(0,180,80,0.08), transparent 55%),
+          linear-gradient(180deg, #040810 0%, #060E1E 60%, #040A12 100%)
         `,
       },
-      
-      // === SOMBRAS (com efeito glow) ===
+
       boxShadow: {
-        'glow-cyan': '0 0 20px rgba(56, 189, 248, 0.3), 0 0 40px rgba(56, 189, 248, 0.1)',
-        'glow-gold': '0 0 20px rgba(250, 204, 21, 0.3), 0 0 40px rgba(250, 204, 21, 0.1)',
-        'glow-pink': '0 0 20px rgba(236, 72, 153, 0.3), 0 0 40px rgba(236, 72, 153, 0.1)',
-        'glow-success': '0 0 20px rgba(16, 185, 129, 0.3), 0 0 40px rgba(16, 185, 129, 0.1)',
-        'glow-purple': '0 0 20px rgba(139, 92, 246, 0.3), 0 0 40px rgba(139, 92, 246, 0.1)',
-        'card': '0 4px 20px rgba(0, 0, 0, 0.3)',
-        'card-hover': '0 8px 30px rgba(56, 189, 248, 0.2)',
+        'glow-cyan': '0 0 15px rgba(0,195,255,0.45), 0 0 40px rgba(0,195,255,0.18)',
+        'glow-electric': '0 0 20px rgba(0,195,255,0.6), 0 0 50px rgba(0,195,255,0.25), 0 0 100px rgba(0,195,255,0.08)',
+        'glow-gold': '0 0 15px rgba(255,215,0,0.5), 0 0 40px rgba(255,215,0,0.2)',
+        'glow-green': '0 0 15px rgba(0,230,118,0.5), 0 0 40px rgba(0,230,118,0.2)',
+        'glow-pink': '0 0 15px rgba(255,45,120,0.5), 0 0 40px rgba(255,45,120,0.2)',
+        'glow-purple': '0 0 15px rgba(123,47,255,0.5), 0 0 40px rgba(123,47,255,0.2)',
+        'glow-success': '0 0 15px rgba(0,230,118,0.5), 0 0 40px rgba(0,230,118,0.2)',
+        'card': '0 4px 20px rgba(0,0,0,0.4)',
+        'card-hover': '0 8px 30px rgba(0,0,0,0.5), 0 0 20px rgba(0,195,255,0.12)',
+        'card-game': '0 0 0 1px rgba(0,195,255,0.15), 0 4px 24px rgba(0,0,0,0.5), 0 1px 0 rgba(0,195,255,0.25) inset',
+        'card-gold': '0 0 0 1px rgba(255,215,0,0.2), 0 4px 24px rgba(0,0,0,0.5), 0 1px 0 rgba(255,215,0,0.25) inset',
+        'btn-game': '0 4px 16px rgba(0,195,255,0.35), 0 2px 4px rgba(0,0,0,0.3)',
+        'btn-gold': '0 4px 16px rgba(255,215,0,0.35), 0 2px 4px rgba(0,0,0,0.3)',
       },
-      
-      // === BORDAS ===
+
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
       },
-      
-      // === ANIMAÇÕES ===
+
       keyframes: {
         'accordion-down': {
           from: { height: '0' },
@@ -135,14 +142,58 @@ module.exports = {
           '100%': { transform: 'translateX(0)' },
         },
         'pulse-glow': {
-          '0%, 100%': { boxShadow: '0 0 20px rgba(56, 189, 248, 0.3)' },
-          '50%': { boxShadow: '0 0 40px rgba(56, 189, 248, 0.6)' },
+          '0%, 100%': { boxShadow: '0 0 15px rgba(0,195,255,0.4)' },
+          '50%': { boxShadow: '0 0 35px rgba(0,195,255,0.7), 0 0 60px rgba(0,195,255,0.3)' },
         },
         'shimmer': {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
         },
+        'glitch': {
+          '0%, 85%, 100%': { transform: 'translate(0)', filter: 'none' },
+          '87%': { transform: 'translate(-4px, 1px)', filter: 'hue-rotate(90deg) brightness(1.3)' },
+          '89%': { transform: 'translate(4px, -1px)', filter: 'hue-rotate(-90deg) brightness(1.3)' },
+          '91%': { transform: 'translate(-2px, 0)', filter: 'brightness(1.5)' },
+          '93%': { transform: 'translate(2px, 1px)', filter: 'none' },
+        },
+        'power-on': {
+          '0%': { opacity: '0', filter: 'brightness(3) blur(6px) saturate(0)' },
+          '15%': { opacity: '0.7', filter: 'brightness(2) blur(3px) saturate(0.3)' },
+          '40%': { opacity: '0.9', filter: 'brightness(1.5) blur(1px) saturate(0.7)' },
+          '100%': { opacity: '1', filter: 'brightness(1) blur(0px) saturate(1)' },
+        },
+        'spotlight-l': {
+          '0%, 100%': { transform: 'rotate(-12deg)', opacity: '0.5' },
+          '50%': { transform: 'rotate(-20deg)', opacity: '0.75' },
+        },
+        'spotlight-r': {
+          '0%, 100%': { transform: 'rotate(12deg)', opacity: '0.4' },
+          '50%': { transform: 'rotate(20deg)', opacity: '0.65' },
+        },
+        'orb-blue': {
+          '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+          '50%': { transform: 'translate(-35px, 30px) scale(1.2)' },
+        },
+        'orb-gold': {
+          '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+          '50%': { transform: 'translate(28px, -22px) scale(1.15)' },
+        },
+        'scan': {
+          '0%': { transform: 'translateY(-100vh)', opacity: '0' },
+          '5%': { opacity: '1' },
+          '95%': { opacity: '1' },
+          '100%': { transform: 'translateY(100vh)', opacity: '0' },
+        },
+        'border-flow': {
+          '0%': { backgroundPosition: '0% 50%' },
+          '100%': { backgroundPosition: '200% 50%' },
+        },
+        'nav-select': {
+          '0%': { transform: 'scaleX(0)', opacity: '0' },
+          '100%': { transform: 'scaleX(1)', opacity: '1' },
+        },
       },
+
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
@@ -150,11 +201,18 @@ module.exports = {
         'fade-in-up': 'fade-in-up 0.5s ease-out',
         'slide-in-right': 'slide-in-right 0.3s ease-out',
         'slide-in-left': 'slide-in-left 0.3s ease-out',
-        'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
+        'pulse-glow': 'pulse-glow 2.5s ease-in-out infinite',
         'shimmer': 'shimmer 2s linear infinite',
+        'glitch': 'glitch 7s ease-in-out infinite',
+        'power-on': 'power-on 1.4s ease-out forwards',
+        'spotlight-l': 'spotlight-l 10s ease-in-out infinite',
+        'spotlight-r': 'spotlight-r 12s ease-in-out infinite 2s',
+        'orb-blue': 'orb-blue 14s ease-in-out infinite',
+        'orb-gold': 'orb-gold 18s ease-in-out infinite 4s',
+        'scan': 'scan 12s linear infinite',
+        'border-flow': 'border-flow 3s linear infinite',
       },
-      
-      // === TRANSIÇÕES ===
+
       transitionDuration: {
         '400': '400ms',
       },

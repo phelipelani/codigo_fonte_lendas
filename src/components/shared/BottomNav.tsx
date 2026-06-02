@@ -1,27 +1,22 @@
 // Arquivo: src/components/shared/BottomNav.tsx
-// Navegação inferior mobile estilo app nativo — substitui o hamburguer no mobile
+// Navegação inferior — estilo HUD de videogame FIFA/EA Sports
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-// Ícones customizados
 import icDashboard from '@/assets/icones/dashboard.webp';
 import icCampeonatos from '@/assets/icones/campeonatos.webp';
 import icCartolendas from '@/assets/icones/cartolendas.webp';
 import icPartidas from '@/assets/icones/partidas.webp';
 import icEstatisticas from '@/assets/icones/estatisticas.webp';
 
-const NavIcon = ({ src, alt, size = 20 }: { src: string; alt: string; size?: number }) => (
-  <img src={src} alt={alt} style={{ width: size, height: size }} className="object-contain" />
-);
-
 const tabs = [
-  { to: '/', icon: icDashboard, label: 'Home', end: true },
-  { to: '/campeonatos', icon: icCampeonatos, label: 'Camps' },
-  { to: '/cartolendas', icon: icCartolendas, label: 'Cartola' },
-  { to: '/partidas', icon: icPartidas, label: 'Partidas' },
-  { to: '/analytics', icon: icEstatisticas, label: 'Stats' },
+  { to: '/', icon: icDashboard, label: 'HOME', end: true },
+  { to: '/campeonatos', icon: icCampeonatos, label: 'CAMPS' },
+  { to: '/cartolendas', icon: icCartolendas, label: 'CARTOLA' },
+  { to: '/partidas', icon: icPartidas, label: 'PARTIDAS' },
+  { to: '/analytics', icon: icEstatisticas, label: 'STATS' },
 ];
 
 const BottomNav = React.memo(function BottomNav() {
@@ -31,12 +26,18 @@ const BottomNav = React.memo(function BottomNav() {
     <nav
       className={cn(
         'fixed bottom-0 left-0 right-0 z-[1060] lg:hidden',
-        'border-t border-white/[0.08]',
-        'bg-[#0a1628]/95 backdrop-blur-xl',
         'safe-area-bottom',
       )}
     >
-      <div className="flex items-stretch justify-around h-16 max-w-lg mx-auto px-1">
+      {/* Linha de acento no topo — gradiente FIFA */}
+      <div className="absolute top-0 left-0 right-0 h-[1.5px]"
+        style={{ background: 'linear-gradient(90deg, transparent, rgba(0,195,255,0.6), rgba(255,215,0,0.4), rgba(0,230,118,0.3), transparent)' }}
+      />
+
+      {/* Fundo com vidro escuro */}
+      <div className="absolute inset-0 bg-[#040810]/96 backdrop-blur-2xl" />
+
+      <div className="relative flex items-stretch justify-around h-[62px] max-w-lg mx-auto px-1">
         {tabs.map((tab) => {
           const isActive = tab.end
             ? location.pathname === tab.to
@@ -47,45 +48,72 @@ const BottomNav = React.memo(function BottomNav() {
               key={tab.to}
               to={tab.to}
               end={tab.end}
-              className="relative flex flex-col items-center justify-center flex-1 min-w-0 py-1 group"
+              className="relative flex flex-col items-center justify-center flex-1 min-w-0 gap-0.5 group"
             >
-              {/* Indicador ativo (barra superior) */}
+              {/* Fundo ativo com glow */}
               {isActive && (
                 <motion.div
-                  layoutId="bottomnav-indicator"
-                  className="absolute top-0 left-3 right-3 h-[2.5px] rounded-full bg-gradient-to-r from-cyan-400 to-teal-400"
-                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                  layoutId="bottomnav-bg"
+                  className="absolute inset-x-1 top-1 bottom-1 rounded-xl"
+                  style={{
+                    background: 'linear-gradient(180deg, rgba(0,195,255,0.12) 0%, rgba(0,195,255,0.04) 100%)',
+                    boxShadow: '0 0 16px rgba(0,195,255,0.2) inset',
+                    border: '1px solid rgba(0,195,255,0.2)',
+                  }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 38 }}
                 />
               )}
 
-              {/* Glow de fundo quando ativo */}
+              {/* Barra superior ativa */}
               {isActive && (
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="absolute inset-x-2 top-1 bottom-1 rounded-xl bg-cyan-400/[0.08]"
+                  layoutId="bottomnav-bar"
+                  className="absolute top-0 left-3 right-3 h-[2px] rounded-full"
+                  style={{
+                    background: 'linear-gradient(90deg, transparent, #00C3FF, transparent)',
+                    boxShadow: '0 0 8px rgba(0,195,255,0.8)',
+                  }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 38 }}
                 />
               )}
 
               {/* Ícone */}
               <motion.div
-                whileTap={{ scale: 0.85 }}
+                whileTap={{ scale: 0.82 }}
                 className={cn(
-                  'relative z-10 flex items-center justify-center w-7 h-7 mb-0.5 transition-all duration-200',
-                  isActive ? 'scale-110' : 'opacity-50 group-active:scale-90',
+                  'relative z-10 flex items-center justify-center w-7 h-7 transition-all duration-200',
+                  isActive ? 'scale-110' : 'opacity-40 group-active:opacity-70',
                 )}
               >
-                <NavIcon src={tab.icon} alt={tab.label} size={isActive ? 22 : 20} />
+                <img
+                  src={tab.icon}
+                  alt={tab.label}
+                  className="object-contain"
+                  style={{
+                    width: isActive ? 22 : 20,
+                    height: isActive ? 22 : 20,
+                    filter: isActive
+                      ? 'drop-shadow(0 0 6px rgba(0,195,255,0.7)) brightness(1.2)'
+                      : 'none',
+                  }}
+                />
               </motion.div>
 
-              {/* Label */}
+              {/* Label — Barlow Condensed, game style */}
               <span
                 className={cn(
-                  'relative z-10 text-[9px] font-black uppercase tracking-wider transition-all duration-200 leading-none',
+                  'relative z-10 leading-none transition-all duration-200',
                   isActive
-                    ? 'text-cyan-300'
-                    : 'text-white/30 group-active:text-white/50',
+                    ? 'text-[#00C3FF]'
+                    : 'text-white/25 group-active:text-white/45',
                 )}
+                style={{
+                  fontFamily: "'Barlow Condensed', sans-serif",
+                  fontSize: '8px',
+                  fontWeight: 800,
+                  letterSpacing: '0.14em',
+                  textShadow: isActive ? '0 0 10px rgba(0,195,255,0.6)' : 'none',
+                }}
               >
                 {tab.label}
               </span>
@@ -94,7 +122,6 @@ const BottomNav = React.memo(function BottomNav() {
         })}
       </div>
 
-      {/* Safe area para iPhone (home indicator) */}
       <style>{`
         .safe-area-bottom {
           padding-bottom: env(safe-area-inset-bottom, 0px);

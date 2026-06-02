@@ -1,22 +1,20 @@
-/* Arquivo: src/index.css */
+/* Arquivo: src/index.css — FIFA/EA Sports Game UI */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --color-background-dark: #030611;
-    --color-text-primary: #f8fafc;
-    --color-text-secondary: #ecf3ff;
-    --color-accent-orange-transparent: rgba(249, 115, 22, 0.18);
-    --color-accent-blue-transparent: rgba(59, 130, 246, 0.22);
-    --color-accent-sky-transparent: rgba(56, 189, 248, 0.7);
+    --color-background-dark: #040810;
+    --color-text-primary: #F0F8FF;
+    --color-text-secondary: #B8D4FF;
+    --color-accent-blue-transparent: rgba(0, 195, 255, 0.14);
+    --color-accent-orange-transparent: rgba(255, 107, 0, 0.12);
+    --color-accent-sky-transparent: rgba(0, 195, 255, 0.7);
     --radius: 0.5rem;
   }
 
-  * {
-    @apply m-0 p-0 box-border;
-  }
+  * { @apply m-0 p-0 box-border; }
 
   html {
     @apply scroll-smooth;
@@ -30,14 +28,15 @@
     -moz-osx-font-smoothing: grayscale;
     min-height: -webkit-fill-available;
     background:
-      radial-gradient(circle at 15% 20%, var(--color-accent-blue-transparent), transparent 55%),
-      radial-gradient(circle at 85% 10%, var(--color-accent-orange-transparent), transparent 52%),
-      linear-gradient(135deg, #030611 0%, #071626 45%, #032116 100%);
+      radial-gradient(ellipse at 15% 0%, var(--color-accent-blue-transparent), transparent 50%),
+      radial-gradient(ellipse at 85% 0%, var(--color-accent-orange-transparent), transparent 50%),
+      radial-gradient(ellipse at 50% 100%, rgba(0, 180, 80, 0.08), transparent 55%),
+      linear-gradient(180deg, #040810 0%, #060E1E 60%, #040A12 100%);
     background-attachment: fixed;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-display text-textPrimary font-semibold;
+    @apply font-display text-textPrimary font-bold;
   }
 
   a, button {
@@ -46,94 +45,108 @@
     touch-action: manipulation;
   }
 
-  ::-webkit-scrollbar { width: 10px; }
-  ::-webkit-scrollbar-track { background: var(--color-background-dark); }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: rgba(4, 8, 16, 0.95); }
   ::-webkit-scrollbar-thumb {
-    background-color: rgba(56, 189, 248, 0.3);
-    border-radius: 10px;
-    border: 2px solid var(--color-background-dark);
-    transition: background-color 0.2s;
+    background: linear-gradient(to bottom, rgba(0, 195, 255, 0.5), rgba(255, 215, 0, 0.3));
+    border-radius: 3px;
   }
-  ::-webkit-scrollbar-thumb:hover { background-color: var(--color-accent-sky-transparent); }
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(to bottom, rgba(0, 195, 255, 0.7), rgba(255, 215, 0, 0.5));
+  }
 
-  ::selection { background-color: rgba(56, 189, 248, 0.3); color: var(--color-text-primary); }
-  ::-moz-selection { background-color: rgba(56, 189, 248, 0.3); color: var(--color-text-primary); }
+  ::selection { background-color: rgba(0, 195, 255, 0.25); color: var(--color-text-primary); }
+  ::-moz-selection { background-color: rgba(0, 195, 255, 0.25); color: var(--color-text-primary); }
 }
 
 @layer components {
   .card {
-    @apply bg-surface backdrop-blur-md border border-border rounded-lg p-6;
+    @apply bg-surface backdrop-blur-md border border-border rounded-xl p-6;
     @apply shadow-card transition-all duration-300;
   }
   .card-hover {
     @apply card hover:bg-surfaceHover hover:shadow-card-hover hover:border-borderLight;
     @apply hover:-translate-y-1;
   }
-  .card-gradient {
-    @apply relative overflow-hidden;
-    background: linear-gradient(135deg, rgba(8, 20, 33, 0.85) 0%, rgba(15, 30, 45, 0.95) 100%);
+
+  /* Game card — with accent top border */
+  .card-game {
+    @apply relative overflow-hidden rounded-xl;
+    background: rgba(6, 16, 30, 0.92);
+    border: 1px solid rgba(0, 195, 255, 0.14);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+  }
+  .card-game::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(0, 195, 255, 0.8), rgba(255, 215, 0, 0.6), transparent);
+  }
+  .card-game-gold::before {
+    background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.9), rgba(255, 107, 0, 0.6), transparent);
   }
 
   .btn-primary {
-    @apply bg-gradient-hero text-white font-semibold px-6 py-3 rounded-lg;
-    @apply shadow-glow-cyan transition-all duration-300;
-    @apply hover:shadow-glow-cyan hover:scale-105 active:scale-95;
+    @apply bg-gradient-game text-white font-bold px-6 py-3 rounded-lg;
+    @apply shadow-btn-game transition-all duration-300;
+    @apply hover:shadow-glow-electric hover:scale-[1.03] active:scale-95;
   }
   .btn-secondary {
-    @apply bg-gradient-gold text-background font-semibold px-6 py-3 rounded-lg;
-    @apply shadow-glow-gold transition-all duration-300;
-    @apply hover:shadow-glow-gold hover:scale-105 active:scale-95;
+    @apply bg-gradient-gold text-background font-bold px-6 py-3 rounded-lg;
+    @apply shadow-btn-gold transition-all duration-300;
+    @apply hover:shadow-glow-gold hover:scale-[1.03] active:scale-95;
   }
   .btn-success {
-    @apply bg-gradient-success text-white font-semibold px-6 py-3 rounded-lg;
+    @apply bg-gradient-success text-white font-bold px-6 py-3 rounded-lg;
     @apply shadow-glow-success transition-all duration-300;
-    @apply hover:shadow-glow-success hover:scale-105 active:scale-95;
+    @apply hover:scale-[1.03] active:scale-95;
   }
   .btn-outline {
-    @apply border-2 border-accentPrimary text-accentPrimary font-semibold px-6 py-3 rounded-lg;
+    @apply border-2 border-accentPrimary/50 text-accentPrimary font-bold px-6 py-3 rounded-lg;
     @apply bg-transparent transition-all duration-300;
-    @apply hover:bg-accentPrimary hover:text-background hover:shadow-glow-cyan;
+    @apply hover:bg-accentPrimary/10 hover:border-accentPrimary hover:shadow-glow-cyan active:scale-95;
   }
   .btn-ghost {
-    @apply text-textSecondary font-semibold px-4 py-2 rounded-lg;
+    @apply text-textSecondary font-bold px-4 py-2 rounded-lg;
     @apply bg-transparent transition-all duration-300;
     @apply hover:bg-surface hover:text-textPrimary;
   }
 
   .badge {
-    @apply inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold;
+    @apply inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold;
     @apply border transition-all duration-200;
+    font-family: 'Rajdhani', sans-serif;
+    letter-spacing: 0.06em;
   }
-  .badge-primary { @apply badge bg-accent-cyan-transparent border-accentPrimary text-accentPrimary; }
-  .badge-success { @apply badge bg-success/10 border-success text-success; }
-  .badge-danger  { @apply badge bg-danger/10 border-danger text-danger; }
-  .badge-warning { @apply badge bg-warning/10 border-warning text-warning; }
+  .badge-primary { @apply badge bg-accent-cyan-transparent border-accentPrimary/40 text-accentPrimary; }
+  .badge-success  { @apply badge bg-success/10 border-success/40 text-success; }
+  .badge-danger   { @apply badge bg-danger/10 border-danger/40 text-danger; }
+  .badge-warning  { @apply badge bg-warning/10 border-warning/40 text-warning; }
 
   .input {
     @apply w-full px-4 py-3 rounded-lg;
     @apply bg-surface border border-border text-textPrimary;
     @apply placeholder:text-textMuted;
-    @apply focus:outline-none focus:border-accentPrimary focus:ring-2 focus:ring-accentPrimary/20;
+    @apply focus:outline-none focus:border-accentPrimary/50 focus:ring-2 focus:ring-accentPrimary/15;
     @apply transition-all duration-200;
     font-size: max(16px, 1rem);
   }
   .input:disabled { @apply opacity-50 cursor-not-allowed; }
 
-  .container-main { @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8; }
-  .section-padding { @apply py-12 sm:py-16 lg:py-20; }
+  .container-main   { @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8; }
+  .section-padding  { @apply py-12 sm:py-16 lg:py-20; }
 
-  .heading-gradient { @apply bg-gradient-hero bg-clip-text text-transparent font-display font-bold; }
-  .heading-gold     { @apply bg-gradient-gold bg-clip-text text-transparent font-display font-bold; }
+  .heading-gradient { @apply bg-gradient-hero bg-clip-text text-transparent font-display font-black; }
+  .heading-gold     { @apply bg-gradient-gold bg-clip-text text-transparent font-display font-black; }
+  .heading-game     { @apply font-display font-black uppercase tracking-wide; }
 
-  .divider          { @apply h-px w-full bg-gradient-to-r from-transparent via-border to-transparent; }
+  .divider         { @apply h-px w-full bg-gradient-to-r from-transparent via-border to-transparent; }
+  .divider-gold    { @apply h-px w-full; background: linear-gradient(90deg, transparent, rgba(255,215,0,0.3), transparent); }
   .divider-vertical { @apply w-px h-full bg-gradient-to-b from-transparent via-border to-transparent; }
 
   .glass        { @apply bg-surface/40 backdrop-blur-xl border border-border/50; }
   .glass-strong { @apply bg-surface/70 backdrop-blur-2xl border border-border; }
-
-  .image-hover { @apply overflow-hidden rounded-lg; }
-  .image-hover img { @apply transition-transform duration-500 ease-out; }
-  .image-hover:hover img { @apply scale-110; }
 
   .spinner {
     @apply inline-block w-6 h-6 border-2 border-accentPrimary/30 border-t-accentPrimary rounded-full;
@@ -148,17 +161,33 @@
 
   .grid-responsive   { @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6; }
   .grid-responsive-4 { @apply grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6; }
+
+  /* HUD elements */
+  .hud-label {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    color: rgba(0, 195, 255, 0.6);
+  }
+  .game-stat {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+  }
 }
 
 @layer utilities {
-  .text-gradient-hero { @apply bg-gradient-hero bg-clip-text text-transparent; }
-  .text-gradient-gold { @apply bg-gradient-gold bg-clip-text text-transparent; }
-  .text-gradient-pink { @apply bg-gradient-pink bg-clip-text text-transparent; }
+  .text-gradient-hero  { @apply bg-gradient-hero bg-clip-text text-transparent; }
+  .text-gradient-gold  { @apply bg-gradient-gold bg-clip-text text-transparent; }
+  .text-gradient-pink  { @apply bg-gradient-pink bg-clip-text text-transparent; }
+  .text-gradient-game  { @apply bg-gradient-game bg-clip-text text-transparent; }
 
-  .animate-on-scroll { @apply opacity-0 translate-y-4; animation: fade-in-up 0.6s ease-out forwards; }
-  .animate-delay-100 { animation-delay: 100ms; }
-  .animate-delay-200 { animation-delay: 200ms; }
-  .animate-delay-300 { animation-delay: 300ms; }
+  .animate-on-scroll   { @apply opacity-0 translate-y-4; animation: fade-in-up 0.6s ease-out forwards; }
+  .animate-delay-100   { animation-delay: 100ms; }
+  .animate-delay-200   { animation-delay: 200ms; }
+  .animate-delay-300   { animation-delay: 300ms; }
 
   .overflow-gradient { @apply relative; }
   .overflow-gradient::after {
@@ -167,31 +196,22 @@
     background: linear-gradient(to bottom, transparent, var(--color-background-dark));
   }
 
-  .hover-glow { @apply relative; transition: all 0.3s ease; }
-  .hover-glow::before {
-    content: '';
-    @apply absolute inset-0 rounded-lg opacity-0 transition-opacity duration-300;
-    background: radial-gradient(circle at center, rgba(56, 189, 248, 0.15), transparent 70%);
-  }
-  .hover-glow:hover::before { @apply opacity-100; }
-
   /* Safe area iOS */
   .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
   .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
   .pl-safe { padding-left: env(safe-area-inset-left, 0px); }
   .pr-safe { padding-right: env(safe-area-inset-right, 0px); }
 
-  /* Scroll momentum nativo iOS */
-  .scroll-touch { -webkit-overflow-scrolling: touch; }
-
-  /* Remove seleção de texto em UI */
-  .no-select { user-select: none; -webkit-user-select: none; }
-
-  /* Esconde scrollbar mas mantém scroll funcional */
+  .scroll-touch  { -webkit-overflow-scrolling: touch; }
+  .no-select     { user-select: none; -webkit-user-select: none; }
   .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
   .scrollbar-hide::-webkit-scrollbar { display: none; }
 
-  /* Fade in up */
+  /* Clip corners — game style */
+  .clip-game-corner {
+    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%);
+  }
+
   .animate-fade-in-up { animation: fade-in-up 0.4s ease-out forwards; }
   @keyframes fade-in-up {
     from { opacity: 0; transform: translateY(16px); }

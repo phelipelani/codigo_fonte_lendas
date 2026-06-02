@@ -33,7 +33,7 @@ export const AppLayout = () => {
 
   return (
     <div className="relative flex h-screen w-full overflow-hidden">
-      <AnimatedBackground showWaves showCircles showTriangles intensity="medium" />
+      <AnimatedBackground showWaves showCircles intensity="medium" />
 
       {/* Mobile Header — logo + notificações + perfil */}
       <MobileHeader />
@@ -76,15 +76,17 @@ export const AppLayout = () => {
         </main>
 
         {/* Footer — só aparece no desktop */}
-        <footer className="mt-auto border-t border-cyan-500/10 bg-[#0a1628]/40 backdrop-blur-md py-4 px-4 sm:px-6 lg:px-8 hidden lg:block">
-          <div className="mx-auto w-full max-w-[1600px] flex items-center justify-between text-xs text-cyan-100/40">
-            <p className="flex items-center gap-2">
-              <span className="font-semibold text-cyan-400">FUTLENDAS</span>
-              <span>•</span>
-              <span>Sistema de Gestão de Futebol Amador</span>
+        <footer className="mt-auto py-3 px-4 sm:px-6 lg:px-8 hidden lg:block"
+          style={{ borderTop: '1px solid rgba(0,195,255,0.08)', background: 'rgba(4,8,16,0.6)', backdropFilter: 'blur(16px)' }}>
+          <div className="mx-auto w-full max-w-[1600px] flex items-center justify-between">
+            <p className="flex items-center gap-2"
+              style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: '11px', letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+              <span style={{ color: '#00C3FF' }}>FUTLENDAS</span>
+              <span style={{ color: 'rgba(0,195,255,0.2)' }}>|</span>
+              <span style={{ color: 'rgba(184,212,255,0.25)' }}>ARENA DE FUTEBOL AMADOR</span>
             </p>
-            <p className="flex items-center gap-1">
-              Feito Por Lani <span className="text-cyan-400 animate-pulse">❤️</span>
+            <p style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: '10px', fontWeight: 500, color: 'rgba(184,212,255,0.2)', letterSpacing: '0.12em' }}>
+              FEITO COM ♥ POR LANI
             </p>
           </div>
         </footer>
