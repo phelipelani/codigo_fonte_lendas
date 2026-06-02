@@ -724,10 +724,10 @@ export const CampeonatoPartidaLivePage = () => {
                   "flex items-center justify-between p-2 mb-2 rounded-lg bg-[#0a1628]/80 border border-cyan-500/10 shadow-sm",
                   !store.isRunning && "opacity-70"
                 )}>
-                  <button 
+                  <button
                     onClick={() => handleJogadorClick(j, 'A')}
                     className={cn(
-                      "text-xs font-bold truncate max-w-[65px] sm:max-w-[100px] text-left transition-colors",
+                      "text-sm font-bold truncate max-w-[90px] sm:max-w-[130px] text-left transition-colors leading-tight",
                       !store.isRunning ? "text-amber-400 hover:text-amber-300 cursor-pointer" : "text-white cursor-default"
                     )}
                     title={!store.isRunning ? "Clique para substituir" : ""}
