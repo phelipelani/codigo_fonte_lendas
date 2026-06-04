@@ -370,38 +370,26 @@ try {
         AuthMiddleware::isAdmin();
         $rc = new RodadaController();
         $rodadaId = (int)$m[1];
-        try {
-            $ref = new ReflectionMethod($rc, 'salvarPremiosRodada');
-            $ref->setAccessible(true);
-            $ref->invoke($rc, $rodadaId);
-            jsonResponse(['success' => true, 'message' => "Prêmios da rodada {$rodadaId} recalculados com sucesso."]);
-        } catch (Throwable $e) {
-            jsonResponse(['error' => true, 'message' => $e->getMessage()], 500);
-        }
+        $rc->salvarPremiosRodada($rodadaId);
+        jsonResponse(['success' => true, 'message' => "Prêmios da rodada {$rodadaId} recalculados com sucesso."]);
     }
 
     // Recalcular prêmios de TODAS as rodadas finalizadas (fix geral) — admin
     if ($path === '/rodadas/recalcular-todos-premios' && $method === 'POST') {
         AuthMiddleware::isAdmin();
-        try {
-            $pdo = Database::getInstance()->getConnection();
-            $rodadas = $pdo->query("SELECT id, data FROM rodadas WHERE status = 'finalizada' ORDER BY data ASC")->fetchAll(PDO::FETCH_ASSOC);
-            $rc = new RodadaController();
-            $ref = new ReflectionMethod($rc, 'salvarPremiosRodada');
-            $ref->setAccessible(true);
-            $resultados = [];
-            foreach ($rodadas as $r) {
-                try {
-                    $ref->invoke($rc, (int)$r['id']);
-                    $resultados[] = ['rodada_id' => (int)$r['id'], 'data' => $r['data'], 'status' => 'ok'];
-                } catch (Throwable $ex) {
-                    $resultados[] = ['rodada_id' => (int)$r['id'], 'data' => $r['data'], 'status' => 'erro', 'message' => $ex->getMessage()];
-                }
+        $pdo = Database::getInstance()->getConnection();
+        $rodadas = $pdo->query("SELECT id, data FROM rodadas WHERE status = 'finalizada' ORDER BY data ASC")->fetchAll(PDO::FETCH_ASSOC);
+        $rc = new RodadaController();
+        $resultados = [];
+        foreach ($rodadas as $r) {
+            try {
+                $rc->salvarPremiosRodada((int)$r['id']);
+                $resultados[] = ['rodada_id' => (int)$r['id'], 'data' => $r['data'], 'status' => 'ok'];
+            } catch (Throwable $ex) {
+                $resultados[] = ['rodada_id' => (int)$r['id'], 'data' => $r['data'], 'status' => 'erro', 'message' => $ex->getMessage()];
             }
-            jsonResponse(['success' => true, 'total' => count($rodadas), 'resultados' => $resultados]);
-        } catch (Throwable $e) {
-            jsonResponse(['error' => true, 'message' => $e->getMessage()], 500);
         }
+        jsonResponse(['success' => true, 'total' => count($rodadas), 'resultados' => $resultados]);
     }
 
     // Recalcular Cartolendas completo (pontos, preços, patrimônio) — admin
@@ -693,6 +681,13 @@ try {
         exit;
     }
 
+    // CAMPEONATOS — REPARO BRACKET (corrige final ausente)
+    if (preg_match('#^/campeonatos/(\d+)/mata-mata/reparar$#', $path, $m) && $method === 'POST') {
+        AuthMiddleware::isAdmin();
+        (new RodadaController())->repararBracket((int)$m[1]);
+        exit;
+    }
+
     // =========================================================
     // CAMPEONATOS — SORTEIO
     // =========================================================
@@ -743,21 +738,20 @@ try {
     // =========================================================
     if ($path === '/estatisticas/dashboard' && $method === 'GET') {
         AuthMiddleware::handle();
-        try {
-            $pdo = Database::getInstance()->getConnection();
-            $gols      = (int) $pdo->query("SELECT COALESCE(SUM(gols),0) FROM campeonato_estatisticas_partida")->fetchColumn();
-            $assists   = (int) $pdo->query("SELECT COALESCE(SUM(assistencias),0) FROM campeonato_estatisticas_partida")->fetchColumn();
-            $jogadores = (int) $pdo->query("SELECT COUNT(*) FROM jogadores")->fetchColumn();
-            $jogos     = (int) $pdo->query("SELECT COUNT(*) FROM campeonato_partidas WHERE status = 'finalizada'")->fetchColumn();
-            jsonResponse([
-                'total_gols'         => $gols,
-                'total_assistencias' => $assists,
-                'total_jogadores'    => $jogadores,
-                'total_jogos'        => $jogos,
-            ]);
-        } catch (Exception $e) {
-            jsonResponse(['total_gols' => 0, 'total_assistencias' => 0, 'total_jogadores' => 0, 'total_jogos' => 0, 'debug' => $e->getMessage()]);
-        }
+        $pdo = Database::getInstance()->getConnection();
+        $row = $pdo->query("
+            SELECT
+                (SELECT COALESCE(SUM(gols), 0)          FROM campeonato_estatisticas_partida) AS total_gols,
+                (SELECT COALESCE(SUM(assistencias), 0)  FROM campeonato_estatisticas_partida) AS total_assistencias,
+                (SELECT COUNT(*)                         FROM jogadores)                       AS total_jogadores,
+                (SELECT COUNT(*)                         FROM campeonato_partidas WHERE status = 'finalizada') AS total_jogos
+        ")->fetch(PDO::FETCH_ASSOC);
+        jsonResponse([
+            'total_gols'         => (int)$row['total_gols'],
+            'total_assistencias' => (int)$row['total_assistencias'],
+            'total_jogadores'    => (int)$row['total_jogadores'],
+            'total_jogos'        => (int)$row['total_jogos'],
+        ]);
     }
 
     // =========================================================
@@ -765,252 +759,37 @@ try {
     // =========================================================
     if ($path === '/stats/destaques-rodada' && $method === 'GET') {
         AuthMiddleware::handle();
-        try {
-            $pdo = Database::getInstance()->getConnection();
+        $pdo = Database::getInstance()->getConnection();
 
-            // Primeira: descobre a rodada mais recente que tem prêmios
-            $ultimaRodada = $pdo->query("
-                SELECT r.id, r.data, r.status, r.campeonato_id
-                FROM rodadas r
-                WHERE r.id IN (SELECT DISTINCT rodada_id FROM premios_rodada)
-                ORDER BY r.data DESC, r.id DESC
-                LIMIT 1
-            ")->fetch(PDO::FETCH_ASSOC) ?: null;
+        $rid = (int)($pdo->query("
+            SELECT COALESCE(MAX(rodada_id), 0)
+            FROM premios_rodada pr
+            JOIN rodadas r ON r.id = pr.rodada_id
+            ORDER BY r.data DESC, r.id DESC
+        ")->fetchColumn());
 
-            $rid = $ultimaRodada['id'] ?? 0;
-
-            // MVP: busca TODOS os empatados (pode haver mais de 1)
+        $rows = [];
+        if ($rid > 0) {
             $stmt = $pdo->prepare("
                 SELECT j.nome, j.foto_url, pr.pontuacao AS total, pr.tipo_premio,
                        r.data AS rodada_data, r.id AS rodada_id
                 FROM premios_rodada pr
                 JOIN jogadores j ON j.id = pr.jogador_id
-                JOIN rodadas r ON r.id = pr.rodada_id
-                WHERE pr.tipo_premio = 'mvp_rodada'
-                  AND pr.rodada_id = ?
+                JOIN rodadas r   ON r.id = pr.rodada_id
+                WHERE pr.rodada_id = ?
+                  AND pr.tipo_premio IN ('mvp_rodada', 'pe_de_rato_rodada')
             ");
             $stmt->execute([$rid]);
-            $mvpAll = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            // Pé de Rato: busca TODOS os empatados
-            $stmt2 = $pdo->prepare("
-                SELECT j.nome, j.foto_url, pr.pontuacao AS total, pr.tipo_premio,
-                       r.data AS rodada_data, r.id AS rodada_id
-                FROM premios_rodada pr
-                JOIN jogadores j ON j.id = pr.jogador_id
-                JOIN rodadas r ON r.id = pr.rodada_id
-                WHERE pr.tipo_premio = 'pe_de_rato_rodada'
-                  AND pr.rodada_id = ?
-            ");
-            $stmt2->execute([$rid]);
-            $peDeRatoAll = $stmt2->fetchAll(PDO::FETCH_ASSOC);
-
-            // Retorna arrays (frontend já suporta via mvpList/peDeRatoList)
-            jsonResponse([
-                'mvp'      => $mvpAll ?: null,
-                'peDeRato' => $peDeRatoAll ?: null,
-            ]);
-        } catch (Exception $e) {
-            jsonResponse(['mvp' => null, 'peDeRato' => null, '_debug_error' => $e->getMessage()]);
-        }
-    }
-
-    // =========================================================
-    // STATS — Debug temporário (REMOVER DEPOIS)
-    // =========================================================
-    if ($path === '/stats/debug-db' && $method === 'GET') {
-        AuthMiddleware::isAdmin();
-        try {
-            $pdo = Database::getInstance()->getConnection();
-            $tables = [];
-            $checkTables = [
-                'campeonato_estatisticas_partida',
-                'campeonato_partidas',
-                'campeonato_vencedores',
-                'campeonato_premios',
-                'campeonato_eventos_partida',
-                'premios_rodada',
-                'rodadas',
-                'jogadores',
-                'times',
-                'campeonatos'
-            ];
-            foreach ($checkTables as $tbl) {
-                try {
-                    $cnt = $pdo->query("SELECT COUNT(*) AS n FROM `{$tbl}`")->fetch(PDO::FETCH_ASSOC);
-                    $tables[$tbl] = (int)($cnt['n'] ?? 0);
-                } catch (Exception $ex) {
-                    $tables[$tbl] = 'TABELA NÃO EXISTE: ' . $ex->getMessage();
-                }
-            }
-            // Partidas finalizadas
-            try {
-                $fin = $pdo->query("SELECT COUNT(*) AS n FROM campeonato_partidas WHERE status = 'finalizada'")->fetch(PDO::FETCH_ASSOC);
-                $tables['partidas_finalizadas'] = (int)($fin['n'] ?? 0);
-            } catch (Exception $ex) {
-                $tables['partidas_finalizadas'] = $ex->getMessage();
-            }
-            // Últimas rodadas
-            try {
-                $ult = $pdo->query("SELECT id, data, status FROM rodadas ORDER BY data DESC, id DESC LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
-                $tables['ultimas_rodadas'] = $ult;
-            } catch (Exception $ex) {
-                $tables['ultimas_rodadas'] = $ex->getMessage();
-            }
-            // Últimos premios
-            try {
-                $prm = $pdo->query("
-                    SELECT pr.id, pr.rodada_id, pr.tipo_premio, pr.pontuacao, j.nome, r.data AS rodada_data, r.status AS rodada_status
-                    FROM premios_rodada pr
-                    JOIN jogadores j ON j.id = pr.jogador_id
-                    JOIN rodadas r ON r.id = pr.rodada_id
-                    ORDER BY r.data DESC, pr.id DESC
-                    LIMIT 10
-                ")->fetchAll(PDO::FETCH_ASSOC);
-                $tables['ultimos_premios'] = $prm;
-            } catch (Exception $ex) {
-                $tables['ultimos_premios'] = $ex->getMessage();
-            }
-            // Cartolendas ligas existentes
-            try {
-                $ligas = $pdo->query("SELECT id, nome, criador_id, campeonato_id, tipo, ativa, codigo_convite FROM cartolendas_ligas ORDER BY id DESC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
-                $tables['cartolendas_ligas'] = $ligas;
-            } catch (Exception $ex) {
-                $tables['cartolendas_ligas'] = 'ERRO: ' . $ex->getMessage();
-            }
-
-            // Indexes/constraints da tabela cartolendas_ligas
-            try {
-                $indexes = $pdo->query("SHOW INDEX FROM cartolendas_ligas")->fetchAll(PDO::FETCH_ASSOC);
-                $tables['cartolendas_ligas_indexes'] = $indexes;
-            } catch (Exception $ex) {
-                $tables['cartolendas_ligas_indexes'] = $ex->getMessage();
-            }
-
-            // === VERIFICAÇÃO DE VERSÃO DOS ARQUIVOS ===
-            $statsFile = __DIR__ . '/../src/controllers/StatsController.php';
-            $cartoFile = __DIR__ . '/../src/controllers/CartolendaLigaController.php';
-            $campFile  = __DIR__ . '/../src/controllers/CampeonatoController.php';
-            $pontosFile = __DIR__ . '/../src/utils/Pontos.php';
-
-            $tables['_versao_arquivos'] = [
-                'index.php' => 'v2-debug-cartolendas ✅',
-                'StatsController.php' => [
-                    'existe' => file_exists($statsFile),
-                    'tamanho' => file_exists($statsFile) ? filesize($statsFile) : 0,
-                    'modificado' => file_exists($statsFile) ? date('Y-m-d H:i:s', filemtime($statsFile)) : null,
-                    'tem_GOL_HISTORICO' => file_exists($statsFile) && strpos(file_get_contents($statsFile), 'GOL_HISTORICO') !== false,
-                ],
-                'CartolendaLigaController.php' => [
-                    'existe' => file_exists($cartoFile),
-                    'tamanho' => file_exists($cartoFile) ? filesize($cartoFile) : 0,
-                    'modificado' => file_exists($cartoFile) ? date('Y-m-d H:i:s', filemtime($cartoFile)) : null,
-                    'tem_validacao_campeonato' => file_exists($cartoFile) && strpos(file_get_contents($cartoFile), 'Campeonato ID') !== false,
-                ],
-                'CampeonatoController.php' => [
-                    'existe' => file_exists($campFile),
-                    'tamanho' => file_exists($campFile) ? filesize($campFile) : 0,
-                    'tem_Pontos_require' => file_exists($campFile) && strpos(file_get_contents($campFile), 'Pontos.php') !== false,
-                ],
-                'Pontos.php' => [
-                    'existe' => file_exists($pontosFile),
-                    'tamanho' => file_exists($pontosFile) ? filesize($pontosFile) : 0,
-                ],
-            ];
-
-            jsonResponse($tables);
-        } catch (Exception $e) {
-            jsonResponse(['error' => $e->getMessage()]);
-        }
-    }
-
-    // =========================================================
-    // DEBUG — Teste direto de criação de liga (REMOVER DEPOIS)
-    // =========================================================
-    if ($path === '/stats/debug-criar-liga' && $method === 'GET') {
-        AuthMiddleware::isAdmin();
-        // Limpa OPCache para garantir código atualizado
-        if (function_exists('opcache_reset')) {
-            opcache_reset();
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
-        $result = ['opcache_reset' => function_exists('opcache_reset') ? 'executado' : 'não disponível'];
+        $mvp      = array_values(array_filter($rows, fn($r) => $r['tipo_premio'] === 'mvp_rodada'));
+        $peDeRato = array_values(array_filter($rows, fn($r) => $r['tipo_premio'] === 'pe_de_rato_rodada'));
 
-        try {
-            $pdo = Database::getInstance()->getConnection();
-
-            // 1. Verifica se tabela existe e colunas
-            $cols = $pdo->query("DESCRIBE cartolendas_ligas")->fetchAll(PDO::FETCH_ASSOC);
-            $result['colunas_cartolendas_ligas'] = array_column($cols, 'Field');
-
-            // 2. Verifica FKs
-            $fks = $pdo->query("
-                SELECT CONSTRAINT_NAME, COLUMN_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME
-                FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
-                WHERE TABLE_NAME = 'cartolendas_ligas'
-                  AND REFERENCED_TABLE_NAME IS NOT NULL
-                  AND TABLE_SCHEMA = DATABASE()
-            ")->fetchAll(PDO::FETCH_ASSOC);
-            $result['foreign_keys'] = $fks;
-
-            // 3. Tenta INSERT de teste com dados válidos e depois faz rollback
-            $pdo->beginTransaction();
-            try {
-                // Pega um campeonato e um usuario que existem
-                $camp = $pdo->query("SELECT id, nome FROM campeonatos LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-                $user = $pdo->query("SELECT id, username FROM usuarios LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-
-                $result['campeonato_teste'] = $camp;
-                $result['usuario_teste'] = $user;
-
-                if ($camp && $user) {
-                    $st = $pdo->prepare("
-                        INSERT INTO cartolendas_ligas (nome, descricao, tipo, codigo_convite, criador_id, campeonato_id, max_membros)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
-                    ");
-                    $st->execute(['__TESTE_DEBUG__', '', 'privada', 'ZZZZTEST', (int)$user['id'], (int)$camp['id'], 20]);
-                    $result['insert_teste'] = 'SUCESSO — liga seria criada com user=' . $user['id'] . ' camp=' . $camp['id'];
-                }
-            } catch (Throwable $ex) {
-                $result['insert_teste'] = 'FALHOU: [' . $ex->getCode() . '] ' . $ex->getMessage();
-            }
-            $pdo->rollBack(); // Sempre desfaz o teste
-            $result['rollback'] = 'feito — nada foi criado no banco';
-
-            // 4. Verifica TODAS as tabelas do Cartolendas
-            $cartolendaTables = [
-                'cartolendas_ligas',
-                'cartolendas_liga_membros',
-                'cartolendas_ranking',
-                'cartolendas_times',
-                'cartolendas_escalacao',
-                'cartolendas_precos',
-                'cartolendas_capitao',
-                'cartolendas_draft',
-                'cartolendas_chat',
-                'cartolendas_transferencias',
-            ];
-            $result['tabelas_cartolendas'] = [];
-            foreach ($cartolendaTables as $tbl) {
-                try {
-                    $colsT = $pdo->query("DESCRIBE {$tbl}")->fetchAll(PDO::FETCH_ASSOC);
-                    $result['tabelas_cartolendas'][$tbl] = [
-                        'existe' => true,
-                        'colunas' => array_column($colsT, 'Field'),
-                    ];
-                } catch (Throwable $ex) {
-                    $result['tabelas_cartolendas'][$tbl] = [
-                        'existe' => false,
-                        'erro' => $ex->getMessage(),
-                    ];
-                }
-            }
-
-        } catch (Throwable $e) {
-            $result['erro_geral'] = $e->getMessage();
-        }
-
-        jsonResponse($result);
+        jsonResponse([
+            'mvp'      => $mvp      ?: null,
+            'peDeRato' => $peDeRato ?: null,
+        ]);
     }
 
     // =========================================================

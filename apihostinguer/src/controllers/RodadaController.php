@@ -254,7 +254,7 @@ class RodadaController
      * Melhor Goleiro, Melhor Zagueiro) na tabela premios_rodada.
      * Usa Pontos.php como source of truth para cálculo de pontuação.
      */
-    private function salvarPremiosRodada(int $rodadaId): void
+    public function salvarPremiosRodada(int $rodadaId): void
     {
         // Remove prêmios anteriores desta rodada (caso re-finalize)
         $this->db->execute(
@@ -2038,7 +2038,22 @@ class RodadaController
                 [$campeonatoId]
             );
 
-            if ($final) {
+            if (!$final) {
+                // A partida da final não existe (provavelmente timeA/B eram NOT NULL no schema).
+                // Cria agora com o vencedor no timeA_id.
+                $proximaOrdem = (int)($this->db->fetchOne(
+                    "SELECT MAX(ordem_confronto) AS max_ordem FROM campeonato_partidas
+                     WHERE campeonato_id = ? AND fase = 'mata_mata'",
+                    [$campeonatoId]
+                )['max_ordem'] ?? 0) + 1;
+
+                $this->db->execute(
+                    "INSERT INTO campeonato_partidas
+                        (campeonato_id, timeA_id, timeB_id, fase, fase_mata_mata, bracket, ordem_confronto, status)
+                     VALUES (?, ?, NULL, 'mata_mata', 'final', 'upper', ?, 'pendente')",
+                    [$campeonatoId, $vencedorId, $proximaOrdem]
+                );
+            } else {
                 $slot = empty($final['timeA_id']) ? 'timeA_id' : 'timeB_id';
                 $this->db->execute(
                     "UPDATE campeonato_partidas SET {$slot} = ? WHERE id = ?",
@@ -2064,6 +2079,93 @@ class RodadaController
             }
         }
         // final / terceiro_lugar: sem avanço necessário
+    }
+
+    // =========================================================
+    // POST /campeonatos/:id/mata-mata/reparar
+    // Corrige bracket quando a partida final não foi criada
+    // (ocorre quando timeA_id/timeB_id eram NOT NULL no schema)
+    // =========================================================
+    public function repararBracket(int $campeonatoId): void
+    {
+        $camp = $this->db->fetchOne("SELECT tem_terceiro_lugar FROM campeonatos WHERE id = ?", [$campeonatoId]);
+        if (!$camp) { http_response_code(404); echo json_encode(['error' => 'Campeonato não encontrado']); return; }
+
+        // Busca todas as semis finalizadas
+        $semis = $this->db->fetchAll(
+            "SELECT * FROM campeonato_partidas
+             WHERE campeonato_id = ? AND fase = 'mata_mata' AND fase_mata_mata = 'semifinal' AND status = 'finalizada'
+             ORDER BY ordem_confronto ASC",
+            [$campeonatoId]
+        );
+
+        // Busca a final atual
+        $final = $this->db->fetchOne(
+            "SELECT id, timeA_id, timeB_id FROM campeonato_partidas
+             WHERE campeonato_id = ? AND fase = 'mata_mata' AND fase_mata_mata = 'final'
+             ORDER BY ordem_confronto ASC LIMIT 1",
+            [$campeonatoId]
+        );
+
+        $reparos = 0;
+
+        foreach ($semis as $semi) {
+            $placarA = (int)$semi['placar_timeA'];
+            $placarB = (int)$semi['placar_timeB'];
+            $penA    = $semi['placar_penaltis_timeA'] !== null ? (int)$semi['placar_penaltis_timeA'] : null;
+            $penB    = $semi['placar_penaltis_timeB'] !== null ? (int)$semi['placar_penaltis_timeB'] : null;
+            $timeAId = (int)$semi['timeA_id'];
+            $timeBId = (int)$semi['timeB_id'];
+
+            if ($placarA > $placarB) {
+                $vencedorId = $timeAId;
+            } elseif ($placarB > $placarA) {
+                $vencedorId = $timeBId;
+            } elseif ($penA !== null && $penB !== null && $penA > $penB) {
+                $vencedorId = $timeAId;
+            } elseif ($penA !== null && $penB !== null && $penB > $penA) {
+                $vencedorId = $timeBId;
+            } else {
+                continue; // empate sem pênaltis — pula
+            }
+
+            if (!$final) {
+                // Cria a final com o primeiro vencedor
+                $proximaOrdem = (int)($this->db->fetchOne(
+                    "SELECT COALESCE(MAX(ordem_confronto), 0) AS m FROM campeonato_partidas WHERE campeonato_id = ? AND fase = 'mata_mata'",
+                    [$campeonatoId]
+                )['m'] ?? 0) + 1;
+
+                $this->db->execute(
+                    "INSERT INTO campeonato_partidas (campeonato_id, timeA_id, timeB_id, fase, fase_mata_mata, bracket, ordem_confronto, status)
+                     VALUES (?, ?, NULL, 'mata_mata', 'final', 'upper', ?, 'pendente')",
+                    [$campeonatoId, $vencedorId, $proximaOrdem]
+                );
+
+                $final = $this->db->fetchOne(
+                    "SELECT id, timeA_id, timeB_id FROM campeonato_partidas
+                     WHERE campeonato_id = ? AND fase = 'mata_mata' AND fase_mata_mata = 'final'
+                     ORDER BY id DESC LIMIT 1",
+                    [$campeonatoId]
+                );
+                $reparos++;
+            } else {
+                // A final existe mas pode ter slot vazio
+                $slot = empty($final['timeA_id']) ? 'timeA_id' : (empty($final['timeB_id']) ? 'timeB_id' : null);
+                if ($slot && $final[$slot] != $vencedorId) {
+                    $this->db->execute(
+                        "UPDATE campeonato_partidas SET {$slot} = ? WHERE id = ?",
+                        [$vencedorId, (int)$final['id']]
+                    );
+                    // Refresh final
+                    $final[$slot] = $vencedorId;
+                    $reparos++;
+                }
+            }
+        }
+
+        http_response_code(200);
+        echo json_encode(['success' => true, 'reparos' => $reparos, 'message' => "Bracket reparado ({$reparos} correções aplicadas)"]);
     }
 
     /**
