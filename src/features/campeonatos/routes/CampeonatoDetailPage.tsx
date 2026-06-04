@@ -17,7 +17,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/DropdownMenu';
-import { ArrowLeft, Trophy, Calendar, BarChart3, Users, Plus, AlertTriangle, Play, History as HistoryIcon, Trash2, Flag, MoreVertical, Edit2, Camera, Filter, Swords, Shuffle, Crown, UserPlus, ChevronDown, ChevronUp, Search, X } from 'lucide-react';
+import { ArrowLeft, Trophy, Calendar, BarChart3, Users, Plus, AlertTriangle, Play, History as HistoryIcon, Trash2, Flag, MoreVertical, Edit2, Camera, Filter, Swords, Shuffle, Crown, UserPlus, ChevronDown, ChevronUp, Search, X, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn, formatDate } from '@/lib/utils';
 import { useState, useMemo, useCallback, memo } from 'react';
@@ -28,6 +28,7 @@ import { StatsTab } from '../components/StatsTab';
 import { RivalidadesTab } from '../components/RivalidadesTab';
 import { CampeonatoFinalizarModal } from '../components/CampeonatoFinalizarModal';
 import { FaseGruposPartidas } from '../components/FaseGruposPartidas';
+import { BracketMataAMata } from '../components/BracketMataAMata';
 import { useJogadores } from '@/features/jogadores/api/useJogadores';
 import AnimatedTabs, { type TabItem } from '@/components/shared/AnimatedTabs';
 
@@ -448,15 +449,108 @@ const LigaInterface = memo(({ campeonatoId, isFinalizado }: { campeonatoId: numb
 });
 
 // ============================================================================
+// COMPONENTE: BRACKET TAB — com botões de atualizar e reparar
+// ============================================================================
+
+const BracketTab = memo(({ campeonatoId, campeonato, bracket, bracketFetching, refetchBracket, navigate }: any) => {
+  const queryClient = useQueryClient();
+  const { isAdmin } = useAuth();
+  const [repairing, setRepairing] = useState(false);
+
+  const handleReparar = async () => {
+    setRepairing(true);
+    try {
+      const res = await api.post(`/campeonatos/${campeonatoId}/mata-mata/reparar`);
+      toast.success(res.data?.message || 'Bracket reparado!');
+      queryClient.invalidateQueries({ queryKey: ['campeonato', campeonatoId, 'bracket'] });
+      refetchBracket();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Erro ao reparar bracket');
+    } finally {
+      setRepairing(false);
+    }
+  };
+
+  // Detecta se a final está faltando (semis finalizadas mas sem final com dois times)
+  const semisFinalizadas = bracket?.semifinais?.filter((s: any) => s.status === 'finalizada') ?? [];
+  const finalIncompleta = semisFinalizadas.length >= 1 && (!bracket?.final || !bracket?.final?.timeA_id || !bracket?.final?.timeB_id);
+
+  return (
+    <div>
+      {/* Barra de ações */}
+      <div className="flex items-center justify-between mb-3 gap-2">
+        {/* Botão reparar — só aparece quando a final está incompleta */}
+        {isAdmin && finalIncompleta && (
+          <button
+            onClick={handleReparar}
+            disabled={repairing}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black text-amber-400 border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 transition-all disabled:opacity-40 animate-pulse"
+          >
+            <Swords size={12} />
+            {repairing ? 'Reparando...' : '⚠ Reparar Bracket'}
+          </button>
+        )}
+        <div className="ml-auto">
+          <button
+            onClick={() => refetchBracket()}
+            disabled={bracketFetching}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-cyan-400/70 border border-cyan-500/20 hover:border-cyan-500/40 hover:text-cyan-400 transition-all disabled:opacity-40"
+          >
+            <RefreshCw size={12} className={bracketFetching ? 'animate-spin' : ''} />
+            {bracketFetching ? 'Atualizando...' : 'Atualizar'}
+          </button>
+        </div>
+      </div>
+
+      {bracket ? (
+        <BracketMataAMata
+          bracket={bracket}
+          onPartidaClick={(partida: any) => {
+            if (partida.status === 'finalizada') return;
+            if (!partida.timeA_id || !partida.timeB_id) {
+              toast.error('Times ainda não definidos. Clique em "⚠ Reparar Bracket".');
+              return;
+            }
+            navigate(`/campeonatos/${campeonatoId}/partida/${partida.id}`);
+          }}
+          campeaoId={campeonato.time_campeao_id ?? null}
+          temTerceiroLugar={campeonato.tem_terceiro_lugar ?? false}
+        />
+      ) : (
+        <div className="flex flex-col items-center justify-center py-16 text-center rounded-xl border border-dashed border-purple-500/20">
+          <Crown className="w-16 h-16 mx-auto text-purple-400/30 mb-4" />
+          <h3 className="text-xl font-bold text-textPrimary mb-2">Chaveamento Mata-Mata</h3>
+          <p className="text-textMuted">Finalize a fase de grupos para gerar o bracket.</p>
+        </div>
+      )}
+    </div>
+  );
+});
+
+// ============================================================================
 // COMPONENTE: INTERFACE COPA (FASE DE GRUPOS + MATA-MATA)
 // ============================================================================
 
 const CopaInterface = memo(({ campeonatoId, campeonato, isFinalizado }: { campeonatoId: number; campeonato: any; isFinalizado: boolean }) => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('partidas');
   const isFaseGrupos = campeonato.fase_atual === 'fase_de_grupos';
   const isMataAMata = campeonato.fase_atual === 'mata_mata';
-  const { data: bracket } = useQuery({ queryKey: ['campeonato', campeonatoId, 'bracket'], queryFn: async () => (await api.get(`/campeonatos/${campeonatoId}/mata-mata/bracket`)).data, enabled: isMataAMata || isFinalizado });
+  const { data: bracket, isFetching: bracketFetching, refetch: refetchBracket } = useQuery({
+    queryKey: ['campeonato', campeonatoId, 'bracket'],
+    queryFn: async () => {
+      const response = (await api.get(`/campeonatos/${campeonatoId}/mata-mata/bracket`)).data;
+      return {
+        semifinais: response.bracket?.upper?.semifinal ?? [],
+        final: response.bracket?.grand_final ?? null,
+        terceiro_lugar: response.bracket?.terceiro_lugar ?? null,
+      };
+    },
+    enabled: isMataAMata || isFinalizado,
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
 
   const handleFaseGruposFinalizada = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['campeonatos', campeonatoId] });
@@ -490,11 +584,14 @@ const CopaInterface = memo(({ campeonatoId, campeonato, isFinalizado }: { campeo
       )}
       {activeTab === 'tabela' && <TabelaClassificacao campeonatoId={campeonatoId} showFilter={false} />}
       {activeTab === 'bracket' && (
-        <div className="rounded-xl border border-purple-500/30 bg-surface/50 p-6 text-center">
-          <Crown className="w-16 h-16 mx-auto text-purple-400 mb-4" />
-          <h3 className="text-xl font-bold text-textPrimary mb-2">Chaveamento Mata-Mata</h3>
-          {bracket ? <pre className="text-xs bg-surfaceElevated p-4 rounded-lg overflow-auto max-h-64 text-left">{JSON.stringify(bracket, null, 2)}</pre> : <p className="text-textMuted">Finalize a fase de grupos primeiro.</p>}
-        </div>
+        <BracketTab
+          campeonatoId={campeonatoId}
+          campeonato={campeonato}
+          bracket={bracket}
+          bracketFetching={bracketFetching}
+          refetchBracket={refetchBracket}
+          navigate={navigate}
+        />
       )}
       {activeTab === 'stats' && <StatsTab campeonatoId={campeonatoId} />}
       {activeTab === 'rivalidades' && <RivalidadesTab campeonatoId={campeonatoId} />}

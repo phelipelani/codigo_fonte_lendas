@@ -47,6 +47,187 @@ const ModalAssistencia = ({ isOpen, onClose, jogadoresTime, autorGolId, onConfir
   );
 };
 
+// ─── modal pênaltis ───────────────────────────────────────────────────────────
+interface PenaltiAttempt {
+  id: string;
+  jogadorId: number;
+  jogadorNome: string;
+  timeId: number;
+  resultado: 'acertou' | 'errou';
+}
+
+const ModalPenaltis = ({ isOpen, onClose, onConfirm, timeA, timeB }: any) => {
+  const [history, setHistory] = React.useState<PenaltiAttempt[]>([]);
+  const historyRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => { if (isOpen) setHistory([]); }, [isOpen]);
+
+  // Scroll do histórico para o fim ao adicionar
+  React.useEffect(() => {
+    if (historyRef.current) historyRef.current.scrollTop = historyRef.current.scrollHeight;
+  }, [history]);
+
+  if (!isOpen) return null;
+
+  const scoreA = history.filter(p => p.timeId === timeA?.id && p.resultado === 'acertou').length;
+  const scoreB = history.filter(p => p.timeId === timeB?.id && p.resultado === 'acertou').length;
+  const podeConfirmar = scoreA !== scoreB && history.length > 0;
+
+  const addAttempt = (jogador: JogadorSimples, timeId: number, resultado: 'acertou' | 'errou') => {
+    setHistory(prev => [...prev, {
+      id: Math.random().toString(36),
+      jogadorId: jogador.id,
+      jogadorNome: jogador.nome,
+      timeId,
+      resultado,
+    }]);
+  };
+
+  const removeLastAttempt = () => setHistory(prev => prev.slice(0, -1));
+
+  const LogoTime = ({ logo, nome }: { logo: string | null; nome: string }) => (
+    <div className="w-10 h-10 rounded-full bg-[#0d1f35] border-2 border-cyan-500/30 flex items-center justify-center overflow-hidden flex-shrink-0">
+      {logo ? <img src={logo} className="w-full h-full object-cover" /> : <span className="font-bold text-cyan-400 text-xs">{nome?.substring(0, 2)}</span>}
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-[#060f1e]">
+      {/* ── Header placar ── */}
+      <div className="bg-[#0a1628] border-b border-amber-500/20 px-4 py-3 flex-shrink-0">
+        <div className="flex items-center justify-between max-w-md mx-auto">
+          {/* Time A */}
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <LogoTime logo={timeA?.logo} nome={timeA?.nome ?? 'A'} />
+            <span className="font-bold text-sm text-white truncate">{timeA?.nome}</span>
+          </div>
+
+          {/* Placar central */}
+          <div className="flex items-center gap-3 flex-shrink-0 px-3">
+            <motion.span key={scoreA} initial={{ scale: 1.4 }} animate={{ scale: 1 }}
+              className={`text-4xl font-black tabular-nums ${scoreA > scoreB ? 'text-emerald-400' : scoreA < scoreB ? 'text-red-400' : 'text-white'}`}>
+              {scoreA}
+            </motion.span>
+            <div className="flex flex-col items-center">
+              <span className="text-[10px] font-black text-amber-400 uppercase tracking-wider">Pên.</span>
+              <span className="text-white font-black text-lg leading-none">×</span>
+            </div>
+            <motion.span key={scoreB} initial={{ scale: 1.4 }} animate={{ scale: 1 }}
+              className={`text-4xl font-black tabular-nums ${scoreB > scoreA ? 'text-emerald-400' : scoreB < scoreA ? 'text-red-400' : 'text-white'}`}>
+              {scoreB}
+            </motion.span>
+          </div>
+
+          {/* Time B */}
+          <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
+            <span className="font-bold text-sm text-white truncate text-right">{timeB?.nome}</span>
+            <LogoTime logo={timeB?.logo} nome={timeB?.nome ?? 'B'} />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Listas de jogadores ── */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="grid grid-cols-2 gap-2 p-3 max-w-md mx-auto">
+          {/* Time A */}
+          <div className="space-y-2">
+            <p className="text-[10px] font-black uppercase tracking-wider text-cyan-400 text-center pb-1 border-b border-cyan-500/20">{timeA?.nome}</p>
+            {(timeA?.jogadores ?? []).map((j: JogadorSimples) => (
+              <div key={j.id} className="bg-[#0d1f35]/80 rounded-xl p-2 border border-cyan-500/10">
+                <p className="text-xs font-bold text-white mb-2 truncate">{j.nome}</p>
+                <div className="grid grid-cols-2 gap-1">
+                  <button
+                    onClick={() => addAttempt(j, timeA.id, 'acertou')}
+                    className="flex items-center justify-center gap-1 py-2 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-black hover:bg-emerald-500/25 active:scale-95 transition-all">
+                    <CheckCircle size={12} /> GOL
+                  </button>
+                  <button
+                    onClick={() => addAttempt(j, timeA.id, 'errou')}
+                    className="flex items-center justify-center gap-1 py-2 rounded-lg bg-red-500/15 border border-red-500/30 text-red-400 text-[11px] font-black hover:bg-red-500/25 active:scale-95 transition-all">
+                    <X size={12} /> ERRO
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Time B */}
+          <div className="space-y-2">
+            <p className="text-[10px] font-black uppercase tracking-wider text-cyan-400 text-center pb-1 border-b border-cyan-500/20">{timeB?.nome}</p>
+            {(timeB?.jogadores ?? []).map((j: JogadorSimples) => (
+              <div key={j.id} className="bg-[#0d1f35]/80 rounded-xl p-2 border border-cyan-500/10">
+                <p className="text-xs font-bold text-white mb-2 truncate">{j.nome}</p>
+                <div className="grid grid-cols-2 gap-1">
+                  <button
+                    onClick={() => addAttempt(j, timeB.id, 'acertou')}
+                    className="flex items-center justify-center gap-1 py-2 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-black hover:bg-emerald-500/25 active:scale-95 transition-all">
+                    <CheckCircle size={12} /> GOL
+                  </button>
+                  <button
+                    onClick={() => addAttempt(j, timeB.id, 'errou')}
+                    className="flex items-center justify-center gap-1 py-2 rounded-lg bg-red-500/15 border border-red-500/30 text-red-400 text-[11px] font-black hover:bg-red-500/25 active:scale-95 transition-all">
+                    <X size={12} /> ERRO
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Histórico visual ── */}
+        {history.length > 0 && (
+          <div className="px-3 pb-3 max-w-md mx-auto">
+            <div ref={historyRef} className="bg-[#0a1628]/80 rounded-xl border border-cyan-500/10 p-3 max-h-36 overflow-y-auto space-y-1.5">
+              <p className="text-[10px] font-black text-cyan-400/60 uppercase tracking-wider mb-2">Histórico</p>
+              {history.map((a, i) => {
+                const isTimeA = a.timeId === timeA?.id;
+                return (
+                  <div key={a.id} className="flex items-center gap-2 text-xs">
+                    <span className="text-cyan-100/30 font-mono w-5 flex-shrink-0">{i + 1}.</span>
+                    <span className={`font-black text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 ${isTimeA ? 'bg-cyan-500/15 text-cyan-400' : 'bg-purple-500/15 text-purple-400'}`}>
+                      {isTimeA ? timeA?.nome : timeB?.nome}
+                    </span>
+                    <span className="text-white/70 flex-1 truncate">{a.jogadorNome}</span>
+                    <span className={`font-black text-[11px] flex-shrink-0 ${a.resultado === 'acertou' ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {a.resultado === 'acertou' ? '⚽ GOL' : '✗ ERRO'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Rodapé fixo ── */}
+      <div className="bg-[#0a1628] border-t border-cyan-500/10 p-3 flex-shrink-0 safe-area-bottom">
+        <div className="flex gap-2 max-w-md mx-auto">
+          {history.length > 0 && (
+            <button onClick={removeLastAttempt}
+              className="px-3 py-3 rounded-xl border border-cyan-500/20 text-cyan-100/50 hover:border-red-500/40 hover:text-red-400 transition-all flex-shrink-0">
+              <Trash2 size={16} />
+            </button>
+          )}
+          <Button onClick={onClose} variant="outline" className="flex-1 border-cyan-500/30 text-cyan-100/70 hover:bg-cyan-500/10">
+            Cancelar
+          </Button>
+          <Button
+            onClick={() => onConfirm(scoreA, scoreB)}
+            disabled={!podeConfirmar}
+            className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black disabled:opacity-40">
+            <Flag size={15} className="mr-1.5" /> Finalizar Pênaltis
+          </Button>
+        </div>
+        {!podeConfirmar && history.length > 0 && (
+          <p className="text-center text-amber-400/70 text-[11px] mt-2">
+            {scoreA === scoreB ? 'Deve haver um vencedor nos pênaltis' : ''}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // ─── modal confirmação ────────────────────────────────────────────────────────
 const ModalConfirmacao = ({ isOpen, onClose, onConfirm, titulo, mensagem }: any) => {
   if (!isOpen) return null;
@@ -195,6 +376,7 @@ export function CampeonatoPartidaCopaPage() {
   const [modalGolContra, setModalGolContra] = React.useState<{ slot: 'A' | 'B' } | null>(null);
   const [modalSub, setModalSub] = React.useState<{ jogadorSaindo: JogadorSimples; slot: 'A' | 'B' } | null>(null);
   const [showConfirm, setShowConfirm] = React.useState(false);
+  const [showPenaltis, setShowPenaltis] = React.useState(false);
 
   // ── queries ──
   const { data: partida, isLoading: loadingPartida } = useQuery<any>({
@@ -308,22 +490,38 @@ export function CampeonatoPartidaCopaPage() {
 
   // ── finalizar ──
   const finalizarMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (pens?: { a: number; b: number }) => {
       await api.put(`/partidas/${pId}/finalizar`, {
         placar_timeA: placarA,
         placar_timeB: placarB,
         timeA_id: partida?.timeA_id,
         timeB_id: partida?.timeB_id,
+        ...(pens ? { placar_penaltis_timeA: pens.a, placar_penaltis_timeB: pens.b } : {}),
       });
     },
     onSuccess: () => {
       toast.success('Partida finalizada!');
       queryClient.invalidateQueries({ queryKey: ['campeonato', campeonatoId] });
       queryClient.invalidateQueries({ queryKey: ['campeonatos', campeonatoId] });
+      queryClient.invalidateQueries({ queryKey: ['campeonato', campeonatoId, 'bracket'] });
       navigate(`/campeonatos/${campeonatoId}`);
     },
     onError: (e: any) => toast.error(e?.response?.data?.message || 'Erro ao finalizar'),
   });
+
+  const handleTentarEncerrar = () => {
+    const isMataAMata = !!partida?.fase_mata_mata;
+    if (isMataAMata && placarA === placarB) {
+      setShowPenaltis(true);
+    } else {
+      setShowConfirm(true);
+    }
+  };
+
+  const confirmarPenaltis = (penA: number, penB: number) => {
+    setShowPenaltis(false);
+    finalizarMutation.mutate({ a: penA, b: penB });
+  };
 
   const handlePlayPause = () => {
     if (isRunning) { pause(); return; }
@@ -400,7 +598,7 @@ export function CampeonatoPartidaCopaPage() {
           <div className="flex flex-col items-center">
             <span className="text-2xl font-black text-cyan-500">×</span>
             <Button variant="destructive" size="sm" className="mt-4 bg-red-600 hover:bg-red-700"
-              onClick={() => setShowConfirm(true)} disabled={isRunning || !timeA || !timeB}>
+              onClick={handleTentarEncerrar} disabled={isRunning || !timeA || !timeB}>
               <CheckCircle size={14} className="mr-1" /> Encerrar
             </Button>
           </div>
@@ -524,9 +722,16 @@ export function CampeonatoPartidaCopaPage() {
       <ModalConfirmacao
         isOpen={showConfirm}
         onClose={() => setShowConfirm(false)}
-        onConfirm={() => { setShowConfirm(false); finalizarMutation.mutate(); }}
+        onConfirm={() => { setShowConfirm(false); finalizarMutation.mutate(undefined); }}
         titulo="Encerrar Partida?"
         mensagem={`Resultado: ${timeA?.nome ?? 'Time A'} ${placarA} × ${placarB} ${timeB?.nome ?? 'Time B'}. Confirmar?`}
+      />
+      <ModalPenaltis
+        isOpen={showPenaltis}
+        onClose={() => setShowPenaltis(false)}
+        onConfirm={confirmarPenaltis}
+        timeA={timeA}
+        timeB={timeB}
       />
       <ModalSubstituicao
         isOpen={!!modalSub}

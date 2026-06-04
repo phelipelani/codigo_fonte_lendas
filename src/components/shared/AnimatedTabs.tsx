@@ -1,7 +1,7 @@
 // Arquivo: src/components/shared/AnimatedTabs.tsx
 // Tabs com animação de slide horizontal + indicator animado
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 export interface TabItem {
@@ -127,21 +127,16 @@ const AnimatedTabs = React.memo(function AnimatedTabs({
         })}
       </div>
 
-      {/* Tab content com slide animation */}
+      {/* Tab content — apenas enter animation, sem AnimatePresence para evitar travamento */}
       <div className="relative overflow-hidden">
-        <AnimatePresence mode="wait" custom={direction}>
-          <motion.div
-            key={activeTab}
-            custom={direction}
-            variants={tabContentVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
-          >
-            {children}
-          </motion.div>
-        </AnimatePresence>
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, x: direction > 0 ? 24 : -24 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
+        >
+          {children}
+        </motion.div>
       </div>
     </div>
   );

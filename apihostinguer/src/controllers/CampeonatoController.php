@@ -258,20 +258,59 @@ class CampeonatoController
     // =========================================================
     public function finalizar(int $id): void
     {
-        $this->getCampeonatoOr404($id);
-        $classificacao = $this->calcularClassificacao($id);
-        $campeaoId     = $classificacao[0]['time_id'] ?? null;
+        $camp = $this->getCampeonatoOr404($id);
+
+        // Para Copa (mata-mata): campeão vem da partida final
+        $campeaoId = null;
+        $formato   = $camp['formato'] ?? '';
+        $ehCopa    = str_starts_with($formato, 'copa_') || in_array($formato, ['grupos', 'mata-mata', 'mata_mata']);
+
+        if ($ehCopa) {
+            // Busca vencedor da partida final do mata-mata
+            $final = $this->db->fetchOne("
+                SELECT placar_timeA, placar_timeB, placar_penaltis_timeA, placar_penaltis_timeB,
+                       timeA_id, timeB_id
+                FROM campeonato_partidas
+                WHERE campeonato_id = ? AND fase = 'mata_mata' AND fase_mata_mata = 'final' AND status = 'finalizada'
+                ORDER BY id DESC LIMIT 1
+            ", [$id]);
+
+            if ($final) {
+                $pA = (int)$final['placar_timeA'];
+                $pB = (int)$final['placar_timeB'];
+                $penA = $final['placar_penaltis_timeA'] !== null ? (int)$final['placar_penaltis_timeA'] : null;
+                $penB = $final['placar_penaltis_timeB'] !== null ? (int)$final['placar_penaltis_timeB'] : null;
+
+                if ($pA > $pB || ($pA === $pB && $penA !== null && $penA > $penB)) {
+                    $campeaoId = (int)$final['timeA_id'];
+                } elseif ($pB > $pA || ($pA === $pB && $penB !== null && $penB > $penA)) {
+                    $campeaoId = (int)$final['timeB_id'];
+                }
+            }
+        }
+
+        // Para Liga ou fallback: usa classificação de pontos
+        if (!$campeaoId) {
+            $classificacao = $this->calcularClassificacao($id);
+            $campeaoId     = $classificacao[0]['time_id'] ?? null;
+        }
 
         $this->db->execute(
             "UPDATE campeonatos SET fase_atual = 'finalizada', status = 'finalizado', time_campeao_id = ? WHERE id = ?",
             [$campeaoId, $id]
         );
 
+        // Registra na tabela de vencedores (tenta; se colunas não existirem ainda, não bloqueia)
         if ($campeaoId) {
-            $this->db->execute(
-                "INSERT IGNORE INTO campeonato_vencedores (campeonato_id, time_id, posicao) VALUES (?, ?, 1)",
-                [$id, $campeaoId]
-            );
+            try {
+                $this->db->execute(
+                    "INSERT IGNORE INTO campeonato_vencedores (campeonato_id, time_id, posicao) VALUES (?, ?, 1)",
+                    [$id, $campeaoId]
+                );
+            } catch (\Exception $e) {
+                // Tabela pode não ter time_id ainda — rode a migration 006
+                // O campeão já foi salvo em campeonatos.time_campeao_id
+            }
         }
 
         http_response_code(200);

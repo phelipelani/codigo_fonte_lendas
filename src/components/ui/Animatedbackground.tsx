@@ -1,13 +1,12 @@
 // Arquivo: src/components/ui/AnimatedBackground.tsx
-// OTIMIZADO: CSS animations ao invés de Framer Motion
-// Remove partículas com Math.random() que causavam re-renders
-// Reduz elementos animados de 11 para 4 no mobile
+// Atmosfera de videogame estilo FIFA/EA Sports
+// CSS puro — zero JS runtime, alto desempenho mobile
 
 interface AnimatedBackgroundProps {
   variant?: 'default' | 'auth' | 'dark';
-  showWaves?: boolean;
-  showCircles?: boolean;
-  showTriangles?: boolean;
+  showWaves?: boolean;      // reaproveitado: controla spotlights
+  showCircles?: boolean;    // reaproveitado: controla orbs
+  showTriangles?: boolean;  // ignorado (mantido por compatibilidade)
   showRadar?: boolean;
   intensity?: 'low' | 'medium' | 'high';
 }
@@ -16,169 +15,153 @@ export function AnimatedBackground({
   intensity = 'medium',
   showWaves = true,
   showCircles = true,
-  showTriangles = true,
-  showRadar = false,
 }: AnimatedBackgroundProps) {
-
-  const opacityMap = { low: 0.3, medium: 0.5, high: 0.7 };
-  const o = opacityMap[intensity];
+  const o = intensity === 'low' ? 0.5 : intensity === 'high' ? 1 : 0.75;
 
   return (
     <div className="fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
-      {/* Base gradient — CSS puro, zero JS */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#0a1628] via-[#0d1f35] to-[#0a1628]" />
 
-      {/* Ondas — CSS keyframes, não Framer Motion */}
+      {/* ── BASE: fundo escuro stadium night ─────────────────────────────── */}
+      <div className="absolute inset-0" style={{
+        background: 'linear-gradient(180deg, #040810 0%, #060E1E 55%, #040C16 80%, #030A10 100%)',
+      }} />
+
+      {/* ── SCAN LINES: textura CRT sutil (estático, zero re-paint) ──────── */}
+      <div className="absolute inset-0 pointer-events-none game-scanlines" />
+
+      {/* ── SPOTLIGHTS: feixes de luz de estádio ─────────────────────────── */}
       {showWaves && (
         <>
-          <div className="animated-bg-wave wave1" style={{ opacity: o * 0.6 }}>
-            <svg viewBox="0 0 1440 320" className="w-full h-full" preserveAspectRatio="none">
-              <defs>
-                <linearGradient id="wg1" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%"   stopColor="#0891b2" stopOpacity="0.3" />
-                  <stop offset="50%"  stopColor="#06b6d4" stopOpacity="0.5" />
-                  <stop offset="100%" stopColor="#0891b2" stopOpacity="0.3" />
-                </linearGradient>
-              </defs>
-              <path fill="url(#wg1)" d="M0,160L48,176C96,192,192,224,288,213.3C384,203,480,149,576,149.3C672,149,768,203,864,208C960,213,1056,171,1152,144C1248,117,1344,107,1392,101.3L1440,96L1440,320L0,320Z"/>
-            </svg>
-          </div>
-          <div className="animated-bg-wave wave2" style={{ opacity: o * 0.35 }}>
-            <svg viewBox="0 0 1440 320" className="w-full h-full" preserveAspectRatio="none">
-              <defs>
-                <linearGradient id="wg2" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%"   stopColor="#14b8a6" stopOpacity="0.2" />
-                  <stop offset="50%"  stopColor="#2dd4bf" stopOpacity="0.35" />
-                  <stop offset="100%" stopColor="#14b8a6" stopOpacity="0.2" />
-                </linearGradient>
-              </defs>
-              <path fill="url(#wg2)" d="M0,64L48,80C96,96,192,128,288,128C384,128,480,96,576,90.7C672,85,768,107,864,128C960,149,1056,171,1152,165.3C1248,160,1344,128,1392,112L1440,96L1440,320L0,320Z"/>
-            </svg>
-          </div>
+          <div className="game-spotlight-l" style={{ opacity: o * 0.6 }} />
+          <div className="game-spotlight-r" style={{ opacity: o * 0.5 }} />
         </>
       )}
 
-      {/* Círculos glow — só 2, CSS animation */}
+      {/* ── ORBS: efeito de luz ambiente ─────────────────────────────────── */}
       {showCircles && (
         <>
-          <div className="animated-bg-orb orb1" style={{
-            background: 'radial-gradient(circle, rgba(6,182,212,0.13) 0%, transparent 70%)',
-            filter: 'blur(40px)',
-          }}/>
-          <div className="animated-bg-orb orb2" style={{
-            background: 'radial-gradient(circle, rgba(20,184,166,0.10) 0%, transparent 70%)',
-            filter: 'blur(50px)',
-          }}/>
+          {/* Azul elétrico — canto superior direito */}
+          <div className="game-orb orb-electric" style={{ opacity: o * 0.9 }} />
+          {/* Dourado FIFA — canto inferior esquerdo */}
+          <div className="game-orb orb-gold" style={{ opacity: o * 0.7 }} />
+          {/* Verde EA Sports — centro inferior (só desktop) */}
+          <div className="game-orb orb-green hidden lg:block" style={{ opacity: o * 0.55 }} />
         </>
       )}
 
-      {/* Triângulos — só 2, mobile recebe `reduced` via CSS media query */}
-      {showTriangles && (
-        <>
-          <div className="animated-bg-tri tri1"/>
-          <div className="animated-bg-tri tri2"/>
-        </>
-      )}
+      {/* ── FIELD GLOW: grama de estádio na base ─────────────────────────── */}
+      <div className="absolute bottom-0 left-0 right-0 h-40 pointer-events-none" style={{
+        background: 'radial-gradient(ellipse at 50% 110%, rgba(0,200,80,0.14) 0%, rgba(0,180,60,0.06) 40%, transparent 70%)',
+      }} />
 
-      {/* Vinheta — estático, zero custo */}
-      <div className="absolute inset-0 pointer-events-none"
-        style={{ background: 'radial-gradient(ellipse at center, transparent 50%, rgba(10,22,40,0.5) 100%)' }}/>
+      {/* ── VIGNETTE ─────────────────────────────────────────────────────── */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        background: 'radial-gradient(ellipse at center, transparent 35%, rgba(4,8,16,0.55) 100%)',
+      }} />
 
       <style>{`
-        /* ── WAVES ─────────────────────────────────────────── */
-        .animated-bg-wave {
+        /* ── SCAN LINES ─────────────────────────────────────── */
+        .game-scanlines {
+          background-image: repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 3px,
+            rgba(0, 0, 0, 0.04) 3px,
+            rgba(0, 0, 0, 0.04) 4px
+          );
+          pointer-events: none;
+        }
+
+        /* ── SPOTLIGHTS ─────────────────────────────────────── */
+        .game-spotlight-l,
+        .game-spotlight-r {
           position: absolute;
-          width: 200%;
-          height: 600px;
-          left: -50%;
-          will-change: transform;
+          top: 0;
+          width: 100%;
+          height: 75%;
+          pointer-events: none;
+          will-change: transform, opacity;
         }
-        .wave1 {
-          top: -300px;
-          animation: waveMove1 20s ease-in-out infinite;
+        .game-spotlight-l {
+          background: linear-gradient(
+            155deg,
+            rgba(0, 195, 255, 0.09) 0%,
+            rgba(0, 195, 255, 0.04) 25%,
+            transparent 55%
+          );
+          animation: spotlightL 10s ease-in-out infinite;
         }
-        .wave2 {
-          top: 20%;
-          height: 500px;
-          animation: waveMove2 15s ease-in-out infinite 2s;
+        .game-spotlight-r {
+          background: linear-gradient(
+            205deg,
+            rgba(255, 215, 0, 0.07) 0%,
+            rgba(255, 165, 0, 0.03) 25%,
+            transparent 55%
+          );
+          animation: spotlightR 13s ease-in-out infinite 2s;
         }
-        @keyframes waveMove1 {
-          0%, 100% { transform: translate(0, 0); }
-          50%       { transform: translate(100px, 30px); }
+        @keyframes spotlightL {
+          0%, 100% { transform: rotate(0deg) scaleX(1);   opacity: 0.6; }
+          50%       { transform: rotate(-6deg) scaleX(1.1); opacity: 0.85; }
         }
-        @keyframes waveMove2 {
-          0%, 100% { transform: translate(0, 0); }
-          50%       { transform: translate(-80px, 20px); }
+        @keyframes spotlightR {
+          0%, 100% { transform: rotate(0deg) scaleX(1);   opacity: 0.5; }
+          50%       { transform: rotate(6deg) scaleX(1.1); opacity: 0.7; }
         }
 
         /* ── ORBS ──────────────────────────────────────────── */
-        .animated-bg-orb {
+        .game-orb {
           position: absolute;
           border-radius: 50%;
-          will-change: transform, opacity;
+          pointer-events: none;
+          will-change: transform;
         }
-        .orb1 {
-          width: 400px; height: 400px;
-          top: -80px; right: -80px;
-          animation: orbFloat1 12s ease-in-out infinite;
+        .orb-electric {
+          width: 520px; height: 520px;
+          top: -130px; right: -100px;
+          background: radial-gradient(circle, rgba(0,195,255,0.18) 0%, rgba(0,100,255,0.08) 40%, transparent 70%);
+          filter: blur(55px);
+          animation: orbBlue 15s ease-in-out infinite;
         }
-        .orb2 {
-          width: 500px; height: 500px;
-          bottom: -120px; left: -120px;
-          animation: orbFloat2 15s ease-in-out infinite 3s;
+        .orb-gold {
+          width: 420px; height: 420px;
+          bottom: -100px; left: -80px;
+          background: radial-gradient(circle, rgba(255,215,0,0.14) 0%, rgba(255,100,0,0.06) 40%, transparent 70%);
+          filter: blur(60px);
+          animation: orbGold 19s ease-in-out infinite 5s;
         }
-        @keyframes orbFloat1 {
-          0%, 100% { transform: translate(0, 0) scale(1);   opacity: 0.5; }
-          50%       { transform: translate(30px, 20px) scale(1.2); opacity: 0.7; }
+        .orb-green {
+          width: 380px; height: 380px;
+          bottom: -60px; right: 25%;
+          background: radial-gradient(circle, rgba(0,230,118,0.10) 0%, transparent 65%);
+          filter: blur(65px);
+          animation: orbGreen 17s ease-in-out infinite 9s;
         }
-        @keyframes orbFloat2 {
-          0%, 100% { transform: translate(0, 0) scale(1);    opacity: 0.4; }
-          50%       { transform: translate(-20px, -30px) scale(1.15); opacity: 0.55; }
+        @keyframes orbBlue {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50%       { transform: translate(-40px, 35px) scale(1.2); }
         }
-
-        /* ── TRIÂNGULOS ────────────────────────────────────── */
-        .animated-bg-tri {
-          position: absolute;
-          width: 0; height: 0;
-          filter: blur(1px);
-          will-change: transform, opacity;
+        @keyframes orbGold {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50%       { transform: translate(32px, -25px) scale(1.15); }
         }
-        .tri1 {
-          top: 15%; left: 10%;
-          border-left: 30px solid transparent;
-          border-right: 30px solid transparent;
-          border-bottom: 52px solid rgba(6,182,212,0.15);
-          animation: triFloat1 8s ease-in-out infinite;
-        }
-        .tri2 {
-          bottom: 25%; right: 15%;
-          border-left: 25px solid transparent;
-          border-right: 25px solid transparent;
-          border-bottom: 43px solid rgba(20,184,166,0.12);
-          animation: triFloat2 10s ease-in-out infinite 2s;
-        }
-        @keyframes triFloat1 {
-          0%, 100% { transform: translate(0, 0) rotate(0deg);   opacity: 0.4; }
-          50%       { transform: translate(0, -30px) rotate(15deg); opacity: 0.7; }
-        }
-        @keyframes triFloat2 {
-          0%, 100% { transform: translate(0, 0) rotate(0deg);   opacity: 0.3; }
-          50%       { transform: translate(0, 25px) rotate(-20deg); opacity: 0.6; }
+        @keyframes orbGreen {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50%       { transform: translate(-22px, -28px) scale(1.12); }
         }
 
-        /* ── MOBILE: reduz animações pesadas ───────────────── */
+        /* ── MOBILE: reduz para performance ─────────────────── */
         @media (max-width: 1023px) {
-          .wave2        { display: none; }
-          .orb2         { display: none; }
-          .tri1, .tri2  { display: none; }
-          .orb1         { width: 250px; height: 250px; }
+          .game-spotlight-l, .game-spotlight-r { display: none; }
+          .orb-electric { width: 280px; height: 280px; filter: blur(45px); }
+          .orb-gold     { width: 220px; height: 220px; filter: blur(50px); }
         }
 
-        /* ── PREFERS REDUCED MOTION ────────────────────────── */
+        /* ── REDUCED MOTION ─────────────────────────────────── */
         @media (prefers-reduced-motion: reduce) {
-          .animated-bg-wave,
-          .animated-bg-orb,
-          .animated-bg-tri { animation: none !important; }
+          .game-spotlight-l,
+          .game-spotlight-r,
+          .game-orb { animation: none !important; }
         }
       `}</style>
     </div>
