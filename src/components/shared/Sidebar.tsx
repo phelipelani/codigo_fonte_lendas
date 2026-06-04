@@ -47,7 +47,7 @@ const navLinks = [
   { to: '/hall-da-fama', icon: <NavIcon src={icHallDaFama} alt="Hall da Fama" />, label: 'Hall da Fama', highlight: 'gold' as const },
   { to: '/times', icon: <NavIcon src={icTimes} alt="Times" />, label: 'Times' },
   { to: '/jogadores', icon: <NavIcon src={icJogadores} alt="Jogadores" />, label: 'Jogadores' },
-  { to: '/analytics', icon: <NavIcon src={icEstatisticas} alt="Analytics" />, label: 'Analytics' },
+  { to: '/analytics', icon: <NavIcon src={icEstatisticas} alt="Estatísticas" />, label: 'Estatísticas' },
   { to: '/racha', icon: <ClipboardList size={22} />, label: 'Racha' },
   { to: '/album', icon: <Images size={22} />, label: 'Álbum', highlight: 'pink' as const },
 ];

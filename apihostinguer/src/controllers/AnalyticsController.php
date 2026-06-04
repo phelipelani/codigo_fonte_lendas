@@ -195,7 +195,25 @@ class AnalyticsController
             FROM campeonato_partidas WHERE status = 'finalizada'
         ");
 
-        // ── 6. Ranking geral de pontuação — via StatsService (getScoreLendario)
+        // ── 6. Ranking de prêmios de rodada (MVP, pé de rato, artilheiro, garçom...)
+        $rankingPremios = $this->db->fetchAll("
+            SELECT
+                j.id, j.nome, j.foto_url,
+                SUM(CASE WHEN pr.tipo_premio = 'mvp_rodada'             THEN 1 ELSE 0 END) AS mvp,
+                SUM(CASE WHEN pr.tipo_premio = 'artilheiro_rodada'      THEN 1 ELSE 0 END) AS artilheiro,
+                SUM(CASE WHEN pr.tipo_premio = 'garcom_rodada'          THEN 1 ELSE 0 END) AS garcom,
+                SUM(CASE WHEN pr.tipo_premio = 'melhor_goleiro_rodada'  THEN 1 ELSE 0 END) AS melhor_goleiro,
+                SUM(CASE WHEN pr.tipo_premio = 'melhor_zagueiro_rodada' THEN 1 ELSE 0 END) AS melhor_zagueiro,
+                SUM(CASE WHEN pr.tipo_premio = 'pe_de_rato_rodada'      THEN 1 ELSE 0 END) AS pe_de_rato,
+                COUNT(*)                                                                    AS total_premios
+            FROM premios_rodada pr
+            JOIN jogadores j ON j.id = pr.jogador_id
+            GROUP BY j.id, j.nome, j.foto_url
+            HAVING total_premios > 0
+            ORDER BY mvp DESC, artilheiro DESC, garcom DESC
+        ");
+
+        // ── 7. Ranking geral de pontuação — via StatsService (getScoreLendario)
         $scoreLendarioRaw = $this->stats->getScoreLendario(50);
         $rankingPontuacao = array_map(function ($row) {
             return [
@@ -211,7 +229,7 @@ class AnalyticsController
                 'derrotas'     => (int)($row['derrotas'] ?? 0),
                 'clean_sheets' => (int)($row['clean_sheets'] ?? 0),
                 'titulos'      => (int)($row['qtd_titulos'] ?? 0),
-                'mvps'         => 0,
+                'mvps'         => (int)($row['qtd_mvps'] ?? 0),
                 'pontos'       => (float)($row['score_lendario'] ?? 0),
             ];
         }, $scoreLendarioRaw);
@@ -289,6 +307,7 @@ class AnalyticsController
                 'mais_gols_jogo' => (int)$this->safeGet($maisGolsJogo, 'mais_gols_jogo', 0),
             ],
             'rankingPontuacao' => $rankingPontuacao,
+            'rankingPremios'   => $rankingPremios,
             'destaqueRodada'   => $destaqueRodada,
             'peDeRatoRodada'   => $peDeRatoRodada,
         ], JSON_UNESCAPED_UNICODE);

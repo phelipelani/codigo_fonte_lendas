@@ -613,7 +613,9 @@ class StatsService
                 {$sqlBonusRod}  AS pts_premios_rodada,
                 {$sqlBonusCamp} AS pts_premios_camp,
                 (SELECT COUNT(*) FROM campeonato_vencedores cv
-                 WHERE cv.jogador_id = ep.jogador_id) AS qtd_titulos
+                 WHERE cv.jogador_id = ep.jogador_id) AS qtd_titulos,
+                (SELECT COUNT(*) FROM premios_rodada pr
+                 WHERE pr.jogador_id = ep.jogador_id AND pr.tipo_premio = 'mvp_rodada') AS qtd_mvps
             FROM campeonato_estatisticas_partida ep
             JOIN campeonato_partidas part ON part.id = ep.partida_id AND part.status = 'finalizada'
             JOIN jogadores j ON j.id = ep.jogador_id
@@ -650,6 +652,7 @@ class StatsService
             $row['total_gols']      = $gols;
             $row['total_assists']   = $assists;
             $row['qtd_titulos']     = (int)$row['qtd_titulos'];
+            $row['qtd_mvps']        = (int)($row['qtd_mvps'] ?? 0);
         }
         unset($row);
 

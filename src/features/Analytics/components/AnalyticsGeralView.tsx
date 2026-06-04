@@ -394,6 +394,111 @@ const RankingPontuacaoTable = memo(({ data }: { data: any[] }) => {
 });
 
 
+// ── Ranking de Prêmios Semanais ───────────────────────────────────────────────
+const PREMIOS_COLS = [
+  { key: 'mvp',            label: '⭐ MVP',         color: '#c084fc' },
+  { key: 'artilheiro',     label: '⚽ Artilheiro',  color: '#34d399' },
+  { key: 'garcom',         label: '🎯 Garçom',       color: '#22d3ee' },
+  { key: 'melhor_goleiro', label: '🧤 Goleiro',      color: '#f59e0b' },
+  { key: 'melhor_zagueiro',label: '🛡️ Zagueiro',     color: '#2dd4bf' },
+  { key: 'pe_de_rato',     label: '🐀 Pé de Rato',  color: '#f87171' },
+];
+
+const RankingPremiosTable = memo(({ data }: { data: any[] }) => {
+  const [sortKey, setSortKey] = useState('mvp');
+  const [expanded, setExpanded] = useState(false);
+
+  const sorted = useMemo(() =>
+    [...data].sort((a, b) => Number(b[sortKey] ?? 0) - Number(a[sortKey] ?? 0)),
+    [data, sortKey]
+  );
+  const display = expanded ? sorted : sorted.slice(0, 8);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+      className="rounded-2xl overflow-hidden"
+      style={{ background: 'linear-gradient(135deg,rgba(10,22,40,.95),rgba(6,15,30,.98))', boxShadow: '0 0 0 1px rgba(192,132,252,.15),0 24px 80px rgba(0,0,0,.5)' }}
+    >
+      <div className="px-5 pt-5 pb-4 flex items-center gap-3 border-b border-purple-500/10">
+        <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg,#a855f7,#7c3aed)', boxShadow: '0 4px 20px rgba(168,85,247,.35)' }}>
+          <Star size={22} className="text-white" fill="currentColor" />
+        </div>
+        <div>
+          <h3 className="text-lg font-black text-white tracking-tight">Ranking de Prêmios Semanais</h3>
+          <p className="text-[11px] text-slate-400 mt-0.5">Clique na coluna para ordenar · todas as rodadas</p>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr>
+              <th className="pl-5 pr-2 py-3 text-left w-10"><span className="text-[9px] font-bold text-slate-500 uppercase">#</span></th>
+              <th className="px-2 py-3 text-left"><span className="text-[9px] font-bold text-slate-500 uppercase">Jogador</span></th>
+              {PREMIOS_COLS.map(c => (
+                <th key={c.key} className="px-2 py-3 text-center">
+                  <button onClick={() => setSortKey(c.key)}
+                    className="flex flex-col items-center gap-0.5 mx-auto transition-all hover:scale-105">
+                    <span className="text-[11px] font-black transition-colors"
+                      style={{ color: sortKey === c.key ? c.color : '#64748b' }}>
+                      {c.label}
+                    </span>
+                    {sortKey === c.key && <span className="text-[8px]" style={{ color: c.color }}>▼</span>}
+                  </button>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {display.map((item: any, i: number) => (
+              <tr key={item.id} className="hover:bg-white/5 transition-colors">
+                <td className="pl-5 pr-2 py-2.5">
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black"
+                    style={{ background: i === 0 ? 'rgba(192,132,252,.2)' : 'rgba(255,255,255,.04)', color: i === 0 ? '#c084fc' : '#475569' }}>
+                    {i + 1}
+                  </div>
+                </td>
+                <td className="px-2 py-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-white/10">
+                      {item.foto_url
+                        ? <img src={item.foto_url} className="w-full h-full object-cover" />
+                        : <div className="w-full h-full flex items-center justify-center text-[10px] font-bold bg-white/5 text-slate-400">{item.nome?.substring(0,2).toUpperCase()}</div>}
+                    </div>
+                    <span className="font-semibold text-white text-sm truncate max-w-[110px]">{item.nome}</span>
+                  </div>
+                </td>
+                {PREMIOS_COLS.map(c => {
+                  const val = Number(item[c.key] ?? 0);
+                  const isActive = sortKey === c.key;
+                  return (
+                    <td key={c.key} className="px-2 py-2.5 text-center">
+                      {val > 0
+                        ? <span className="font-black text-sm" style={{ color: isActive ? c.color : '#94a3b8' }}>{val}</span>
+                        : <span className="text-slate-700 text-xs">—</span>}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+            {data.length === 0 && (
+              <tr><td colSpan={8} className="py-10 text-center text-slate-500 text-sm">Nenhum prêmio registrado ainda</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {data.length > 8 && (
+        <button onClick={() => setExpanded(!expanded)}
+          className="w-full py-3 text-xs font-bold flex items-center justify-center gap-2 border-t border-purple-500/10 text-purple-400 hover:bg-purple-500/5 transition-colors">
+          {expanded ? <><ChevronUp size={14} /> Mostrar menos</> : <><ChevronDown size={14} /> Ver todos ({data.length})</>}
+        </button>
+      )}
+    </motion.div>
+  );
+});
+
 export function AnalyticsGeralView() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['analytics', 'geral'],
@@ -407,6 +512,7 @@ export function AnalyticsGeralView() {
           recordes: response.data.recordes || [],
           melhorDupla: response.data.melhorDupla || null,
           rankingPontuacao: response.data.rankingPontuacao || [],
+          rankingPremios: response.data.rankingPremios || [],
         };
       } catch (err) {
         console.error("Erro ao buscar analytics:", err);
@@ -425,7 +531,7 @@ export function AnalyticsGeralView() {
     </motion.div>
   );
 
-  const { totais, rankings, evolucao, recordes, melhorDupla, rankingPontuacao } = data;
+  const { totais, rankings, evolucao, recordes, melhorDupla, rankingPontuacao, rankingPremios } = data;
   const mediaGols = totais?.total_jogos > 0 ? (totais.total_gols / totais.total_jogos).toFixed(1) : '0.0';
 
   return (
@@ -444,6 +550,10 @@ export function AnalyticsGeralView() {
 
       {rankingPontuacao && rankingPontuacao.length > 0 && (
         <RankingPontuacaoTable data={rankingPontuacao} />
+      )}
+
+      {rankingPremios && rankingPremios.length > 0 && (
+        <RankingPremiosTable data={rankingPremios} />
       )}
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="rounded-xl border border-border bg-surface/50 backdrop-blur-md p-4 md:p-6">
