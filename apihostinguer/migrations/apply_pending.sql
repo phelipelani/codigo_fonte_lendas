@@ -1,23 +1,48 @@
 -- ============================================================================
 -- SCRIPT: Aplica todas as migrations pendentes (002 a 006)
 -- Execute uma vez no banco de produção/dev.
--- Todas as operações usam IF NOT EXISTS / IF EXISTS para ser idempotentes.
+-- 100% idempotente: pode rodar quantas vezes quiser sem erro.
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
 -- 002: Renomeia dados_json → meta em notificacoes
--- (NotificacoesController usa 'meta', mas a tabela tinha 'dados_json')
+-- Usa prepared statement pois CHANGE COLUMN não suporta IF EXISTS no MySQL
 -- ----------------------------------------------------------------------------
-ALTER TABLE notificacoes CHANGE COLUMN dados_json meta TEXT NULL DEFAULT NULL;
+SET @col002 = (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME   = 'notificacoes'
+      AND COLUMN_NAME  = 'dados_json'
+);
+SET @sql002 = IF(
+    @col002 > 0,
+    'ALTER TABLE notificacoes CHANGE COLUMN dados_json meta TEXT NULL DEFAULT NULL',
+    'SELECT "002: dados_json já foi renomeada para meta, pulando." AS status'
+);
+PREPARE stmt002 FROM @sql002;
+EXECUTE stmt002;
+DEALLOCATE PREPARE stmt002;
 
 -- ----------------------------------------------------------------------------
--- 003: Adiciona coluna whatsapp em usuarios
+-- 003: Adiciona coluna whatsapp em usuarios (ADD COLUMN IF NOT EXISTS — MySQL 8+)
 -- ----------------------------------------------------------------------------
-ALTER TABLE usuarios
-  ADD COLUMN IF NOT EXISTS whatsapp VARCHAR(20) NULL DEFAULT NULL AFTER email;
+SET @col003 = (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME   = 'usuarios'
+      AND COLUMN_NAME  = 'whatsapp'
+);
+SET @sql003 = IF(
+    @col003 = 0,
+    'ALTER TABLE usuarios ADD COLUMN whatsapp VARCHAR(20) NULL DEFAULT NULL AFTER email',
+    'SELECT "003: coluna whatsapp já existe, pulando." AS status'
+);
+PREPARE stmt003 FROM @sql003;
+EXECUTE stmt003;
+DEALLOCATE PREPARE stmt003;
 
 -- ----------------------------------------------------------------------------
--- 004: Album de Figurinhas — 5 tabelas
+-- 004: Album de Figurinhas — 5 tabelas (CREATE TABLE IF NOT EXISTS é seguro)
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS album_paginas (
     id              INT AUTO_INCREMENT PRIMARY KEY,
@@ -97,6 +122,7 @@ CREATE TABLE IF NOT EXISTS album_pacote_figurinhas (
 
 -- ----------------------------------------------------------------------------
 -- 005: Permite NULL em timeA_id / timeB_id (mata-mata com slots vazios)
+-- MODIFY COLUMN é idempotente — pode rodar várias vezes sem problema
 -- ----------------------------------------------------------------------------
 ALTER TABLE campeonato_partidas
   MODIFY COLUMN timeA_id INT(11) DEFAULT NULL,
@@ -105,6 +131,42 @@ ALTER TABLE campeonato_partidas
 -- ----------------------------------------------------------------------------
 -- 006: Adiciona time_id e posicao em campeonato_vencedores
 -- ----------------------------------------------------------------------------
-ALTER TABLE campeonato_vencedores
-  ADD COLUMN IF NOT EXISTS time_id INT(11) DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS posicao INT(11) DEFAULT 1;
+SET @col006a = (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME   = 'campeonato_vencedores'
+      AND COLUMN_NAME  = 'time_id'
+);
+SET @sql006a = IF(
+    @col006a = 0,
+    'ALTER TABLE campeonato_vencedores ADD COLUMN time_id INT(11) DEFAULT NULL',
+    'SELECT "006a: time_id já existe, pulando." AS status'
+);
+PREPARE stmt006a FROM @sql006a;
+EXECUTE stmt006a;
+DEALLOCATE PREPARE stmt006a;
+
+SET @col006b = (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME   = 'campeonato_vencedores'
+      AND COLUMN_NAME  = 'posicao'
+);
+SET @sql006b = IF(
+    @col006b = 0,
+    'ALTER TABLE campeonato_vencedores ADD COLUMN posicao INT(11) DEFAULT 1',
+    'SELECT "006b: posicao já existe, pulando." AS status'
+);
+PREPARE stmt006b FROM @sql006b;
+EXECUTE stmt006b;
+DEALLOCATE PREPARE stmt006b;
+
+-- ============================================================================
+-- FIM — Verifique abaixo se tudo foi aplicado:
+-- ============================================================================
+SELECT
+    (SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='notificacoes'       AND COLUMN_NAME IN ('meta','dados_json') LIMIT 1) AS notificacoes_coluna,
+    (SELECT COUNT(*)    FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='usuarios'           AND COLUMN_NAME='whatsapp')                          AS usuarios_tem_whatsapp,
+    (SELECT COUNT(*)    FROM INFORMATION_SCHEMA.TABLES  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='album_figurinhas')                                                        AS album_criado,
+    (SELECT IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='campeonato_partidas' AND COLUMN_NAME='timeA_id')                         AS partidas_timeA_nullable,
+    (SELECT COUNT(*)    FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='campeonato_vencedores' AND COLUMN_NAME='time_id')                         AS vencedores_tem_time_id;
