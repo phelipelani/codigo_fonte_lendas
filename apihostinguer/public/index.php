@@ -702,6 +702,33 @@ try {
         exit;
     }
 
+    // POST /campeonatos/:id/recalcular-premios — recalcula MVP, artilheiro, garçom, etc. de um campeonato
+    if (preg_match('#^/campeonatos/(\d+)/recalcular-premios$#', $path, $m) && $method === 'POST') {
+        AuthMiddleware::isAdmin();
+        $campId  = (int)$m[1];
+        $cc      = new CampeonatoController();
+        $premios = $cc->salvarPremiosCampeonato($campId);
+        jsonResponse(['success' => true, 'campeonato_id' => $campId, 'premios' => $premios]);
+    }
+
+    // POST /campeonatos/recalcular-todos-premios — recalcula todos os campeonatos finalizados
+    if ($path === '/campeonatos/recalcular-todos-premios' && $method === 'POST') {
+        AuthMiddleware::isAdmin();
+        $pdo   = Database::getInstance()->getConnection();
+        $camps = $pdo->query("SELECT id, nome FROM campeonatos WHERE status = 'finalizado' ORDER BY data ASC")->fetchAll(PDO::FETCH_ASSOC);
+        $cc    = new CampeonatoController();
+        $resultado = [];
+        foreach ($camps as $c) {
+            try {
+                $premios = $cc->salvarPremiosCampeonato((int)$c['id']);
+                $resultado[] = ['campeonato_id' => (int)$c['id'], 'nome' => $c['nome'], 'status' => 'ok', 'premios' => count($premios)];
+            } catch (Throwable $ex) {
+                $resultado[] = ['campeonato_id' => (int)$c['id'], 'nome' => $c['nome'], 'status' => 'erro', 'message' => $ex->getMessage()];
+            }
+        }
+        jsonResponse(['success' => true, 'total' => count($camps), 'resultado' => $resultado]);
+    }
+
     // POST /campeonatos/:id/registrar-vencedores — corrige campeonatos antigos que
     // foram finalizados antes do fix (não tinham jogador_id em campeonato_vencedores)
     if (preg_match('#^/campeonatos/(\d+)/registrar-vencedores$#', $path, $m) && $method === 'POST') {

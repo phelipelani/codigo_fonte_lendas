@@ -327,12 +327,132 @@ class CampeonatoController
             }
         }
 
+        // 3. Calcula e salva prêmios individuais do campeonato
+        $premios = $this->salvarPremiosCampeonato($id);
+
         http_response_code(200);
         echo json_encode([
-            'success'        => true,
-            'time_campeao_id'=> $campeaoId,
+            'success'             => true,
+            'time_campeao_id'     => $campeaoId,
             'jogadores_registrados' => isset($jogadoresCampeoes) ? count($jogadoresCampeoes) : 0,
+            'premios_calculados'  => $premios,
         ]);
+    }
+
+    // =========================================================
+    // Calcula e salva os prêmios individuais do campeonato:
+    // MVP, Artilheiro, Garçom, Melhor Goleiro, Melhor Zagueiro, Pé de Rato
+    // Pode ser chamado diretamente para recálculo retroativo.
+    // =========================================================
+    public function salvarPremiosCampeonato(int $campId): array
+    {
+        // Remove prêmios anteriores (idempotente — pode rodar várias vezes)
+        $this->db->execute("DELETE FROM campeonato_premios WHERE campeonato_id = ?", [$campId]);
+
+        // Busca todos os jogadores que participaram do campeonato com seus totais
+        $jogadores = $this->db->fetchAll("
+            SELECT
+                ep.jogador_id,
+                j.nome,
+                j.joga_recuado,
+                SUM(ep.gols)         AS gols,
+                SUM(ep.assistencias) AS assists,
+                SUM(ep.clean_sheet)  AS clean_sheets,
+                SUM(CASE WHEN (ep.time_id = cp.timeA_id AND cp.placar_timeA > cp.placar_timeB)
+                              OR (ep.time_id = cp.timeB_id AND cp.placar_timeB > cp.placar_timeA)
+                         THEN 1 ELSE 0 END) AS vitorias,
+                SUM(CASE WHEN cp.placar_timeA = cp.placar_timeB THEN 1 ELSE 0 END) AS empates,
+                SUM(CASE WHEN (ep.time_id = cp.timeA_id AND cp.placar_timeA < cp.placar_timeB)
+                              OR (ep.time_id = cp.timeB_id AND cp.placar_timeB < cp.placar_timeA)
+                         THEN 1 ELSE 0 END) AS derrotas,
+                COUNT(DISTINCT ep.partida_id) AS jogos,
+                MAX(CASE WHEN cp.goleiro_timeA_id = ep.jogador_id
+                           OR cp.goleiro_timeB_id = ep.jogador_id THEN 1 ELSE 0 END) AS is_goleiro
+            FROM campeonato_estatisticas_partida ep
+            JOIN campeonato_partidas cp ON cp.id = ep.partida_id
+                AND cp.campeonato_id = ?
+                AND cp.status = 'finalizada'
+            JOIN jogadores j ON j.id = ep.jogador_id
+            GROUP BY ep.jogador_id, j.nome, j.joga_recuado
+        ", [$campId]);
+
+        if (empty($jogadores)) return [];
+
+        // Calcula pontuação total de cada jogador no campeonato
+        $pontuados = [];
+        foreach ($jogadores as $j) {
+            $gols    = (int)$j['gols'];
+            $assists = (int)$j['assists'];
+            $cs      = (int)$j['clean_sheets'];
+            $v       = (int)$j['vitorias'];
+            $e       = (int)$j['empates'];
+            $d       = (int)$j['derrotas'];
+            $isRec   = (int)$j['joga_recuado'] === 1;
+            $isGol   = (int)$j['is_goleiro'] > 0;
+
+            if ($isGol || $isRec) {
+                $pts = Pontos::calcularJogadorRecuado($cs, $v, $e, $d);
+            } else {
+                $pts = Pontos::calcularJogadorLinha($gols, $assists, 0, $v, $e, $d);
+            }
+
+            $pontuados[] = [
+                'jogador_id' => (int)$j['jogador_id'],
+                'nome'       => $j['nome'],
+                'pts'        => $pts,
+                'gols'       => $gols,
+                'assists'    => $assists,
+                'cs'         => $cs,
+                'jogos'      => (int)$j['jogos'],
+                'is_goleiro' => $isGol,
+                'is_recuado' => $isRec,
+            ];
+        }
+
+        $inseridos = [];
+
+        // Helper: insere prêmio para o(s) melhor(es) empatados no topo
+        $insertTied = function (array $lista, string $tipo, string $campo, bool $asc = false) use ($campId, &$inseridos) {
+            if (empty($lista)) return;
+            usort($lista, fn($a, $b) => $asc ? ($a[$campo] <=> $b[$campo]) : ($b[$campo] <=> $a[$campo]));
+            $topVal = $lista[0][$campo];
+            foreach ($lista as $p) {
+                if ($p[$campo] != $topVal) break;
+                $this->db->execute(
+                    "INSERT IGNORE INTO campeonato_premios (campeonato_id, jogador_id, tipo_premio, valor) VALUES (?, ?, ?, ?)",
+                    [$campId, $p['jogador_id'], $tipo, $p[$campo]]
+                );
+                $inseridos[] = ['tipo' => $tipo, 'jogador' => $p['nome'], 'valor' => $p[$campo]];
+            }
+        };
+
+        // ── MVP do Campeonato (maior pontuação — jogadores de linha) ──
+        $linha = array_values(array_filter($pontuados, fn($p) => !$p['is_goleiro']));
+        $insertTied($linha, 'mvp', 'pts');
+
+        // ── Artilheiro do Campeonato ──
+        $artilheiros = array_values(array_filter($pontuados, fn($p) => $p['gols'] > 0));
+        $insertTied($artilheiros, 'artilheiro', 'gols');
+
+        // ── Garçom do Campeonato ──
+        $garcons = array_values(array_filter($pontuados, fn($p) => $p['assists'] > 0));
+        $insertTied($garcons, 'garcom', 'assists');
+
+        // ── Melhor Goleiro do Campeonato ──
+        $goleiros = array_values(array_filter($pontuados, fn($p) => $p['is_goleiro']));
+        $insertTied($goleiros, 'melhor_goleiro', 'pts');
+
+        // ── Melhor Zagueiro do Campeonato ──
+        $recuados = array_values(array_filter($pontuados, fn($p) => $p['is_recuado'] && !$p['is_goleiro']));
+        $insertTied($recuados, 'melhor_zagueiro', 'pts');
+
+        // ── Pé de Rato do Campeonato (menor pontuação entre jogadores de linha, mín. 2 jogos) ──
+        $linhaMin2 = array_values(array_filter($linha, fn($p) => !$p['is_recuado'] && $p['jogos'] >= 2));
+        if (count($linhaMin2) > 1) {
+            $insertTied($linhaMin2, 'pe_de_rato', 'pts', true); // asc = menor pts
+        }
+
+        return $inseridos;
     }
 
     // =========================================================
