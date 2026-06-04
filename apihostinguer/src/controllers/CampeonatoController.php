@@ -300,21 +300,39 @@ class CampeonatoController
             [$campeaoId, $id]
         );
 
-        // Registra na tabela de vencedores (tenta; se colunas não existirem ainda, não bloqueia)
+        // Registra o time campeão + todos os jogadores que participaram
         if ($campeaoId) {
-            try {
+            // 1. Registra o time
+            $this->db->execute(
+                "INSERT IGNORE INTO campeonato_vencedores (campeonato_id, time_id, posicao) VALUES (?, ?, 1)",
+                [$id, $campeaoId]
+            );
+
+            // 2. Registra cada jogador do time campeão que jogou ao menos 1 partida
+            //    (usado por analytics/jogador e getScoreLendario para contar títulos)
+            $jogadoresCampeoes = $this->db->fetchAll("
+                SELECT DISTINCT ep.jogador_id
+                FROM campeonato_estatisticas_partida ep
+                JOIN campeonato_partidas cp ON cp.id = ep.partida_id
+                    AND cp.campeonato_id = ?
+                    AND cp.status = 'finalizada'
+                WHERE ep.time_id = ?
+            ", [$id, $campeaoId]);
+
+            foreach ($jogadoresCampeoes as $jog) {
                 $this->db->execute(
-                    "INSERT IGNORE INTO campeonato_vencedores (campeonato_id, time_id, posicao) VALUES (?, ?, 1)",
-                    [$id, $campeaoId]
+                    "INSERT IGNORE INTO campeonato_vencedores (campeonato_id, jogador_id, time_id, posicao) VALUES (?, ?, ?, 1)",
+                    [$id, (int)$jog['jogador_id'], $campeaoId]
                 );
-            } catch (\Exception $e) {
-                // Tabela pode não ter time_id ainda — rode a migration 006
-                // O campeão já foi salvo em campeonatos.time_campeao_id
             }
         }
 
         http_response_code(200);
-        echo json_encode(['success' => true, 'time_campeao_id' => $campeaoId]);
+        echo json_encode([
+            'success'        => true,
+            'time_campeao_id'=> $campeaoId,
+            'jogadores_registrados' => isset($jogadoresCampeoes) ? count($jogadoresCampeoes) : 0,
+        ]);
     }
 
     // =========================================================

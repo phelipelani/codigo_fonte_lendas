@@ -702,6 +702,52 @@ try {
         exit;
     }
 
+    // POST /campeonatos/:id/registrar-vencedores — corrige campeonatos antigos que
+    // foram finalizados antes do fix (não tinham jogador_id em campeonato_vencedores)
+    if (preg_match('#^/campeonatos/(\d+)/registrar-vencedores$#', $path, $m) && $method === 'POST') {
+        AuthMiddleware::isAdmin();
+        $campId = (int)$m[1];
+        $pdo    = Database::getInstance()->getConnection();
+
+        $camp = $pdo->prepare("SELECT id, time_campeao_id FROM campeonatos WHERE id = ?");
+        $camp->execute([$campId]);
+        $camp = $camp->fetch(PDO::FETCH_ASSOC);
+
+        if (!$camp || !$camp['time_campeao_id']) {
+            throw new HttpError('Campeonato não encontrado ou sem campeão definido.', 404);
+        }
+
+        $campeaoId = (int)$camp['time_campeao_id'];
+
+        // Garante registro do time
+        $pdo->prepare("INSERT IGNORE INTO campeonato_vencedores (campeonato_id, time_id, posicao) VALUES (?, ?, 1)")
+            ->execute([$campId, $campeaoId]);
+
+        // Busca jogadores que jogaram pelo time campeão neste campeonato
+        $stmt = $pdo->prepare("
+            SELECT DISTINCT ep.jogador_id
+            FROM campeonato_estatisticas_partida ep
+            JOIN campeonato_partidas cp ON cp.id = ep.partida_id
+                AND cp.campeonato_id = ?
+                AND cp.status = 'finalizada'
+            WHERE ep.time_id = ?
+        ");
+        $stmt->execute([$campId, $campeaoId]);
+        $jogadores = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $ins = $pdo->prepare("INSERT IGNORE INTO campeonato_vencedores (campeonato_id, jogador_id, time_id, posicao) VALUES (?, ?, ?, 1)");
+        foreach ($jogadores as $jog) {
+            $ins->execute([$campId, (int)$jog['jogador_id'], $campeaoId]);
+        }
+
+        jsonResponse([
+            'success'   => true,
+            'campeonato_id' => $campId,
+            'time_campeao_id' => $campeaoId,
+            'jogadores_registrados' => count($jogadores),
+        ]);
+    }
+
     // =========================================================
     // UPLOAD DE FOTO — AWS S3
     // =========================================================
