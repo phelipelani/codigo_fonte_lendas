@@ -45,7 +45,7 @@ export function AnalyticsPage() {
     <div className="min-h-screen pb-24">
       <PageTitle
         icon={icEstatisticas}
-        title="Analytics"
+        title="Estatísticas"
         subtitle="Mergulhe nos dados e descubra as lendas."
       />
 

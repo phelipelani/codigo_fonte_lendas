@@ -68,15 +68,26 @@ class AnalyticsController
         // ── 2. Evolução de gols (últimos 12 meses) ── via StatsService
         $evolucaoRaw = $this->stats->getEvolucaoGols();
         // StatsService retorna por campeonato; frontend espera por mês — manter query direta
+        // Usa COALESCE: fim_em (quando setado) > data da rodada > criado_em
+        // Isso evita array vazio quando fim_em é NULL em partidas antigas
         $evolucao = $this->db->fetchAll("
             SELECT
-                DATE_FORMAT(cp.fim_em, '%m/%Y')          AS mes_ano,
-                DATE_FORMAT(cp.fim_em, '%Y-%m')          AS mes_order,
-                SUM(cp.placar_timeA + cp.placar_timeB)   AS total_gols,
-                COUNT(*)                                  AS total_jogos
-            FROM campeonato_partidas cp
-            WHERE cp.status = 'finalizada'
-              AND cp.fim_em >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+                DATE_FORMAT(data_ref, '%m/%Y')         AS mes_ano,
+                DATE_FORMAT(data_ref, '%Y-%m')         AS mes_order,
+                SUM(cp.placar_timeA + cp.placar_timeB) AS total_gols,
+                COUNT(*)                               AS total_jogos
+            FROM (
+                SELECT
+                    cp.id,
+                    cp.placar_timeA,
+                    cp.placar_timeB,
+                    COALESCE(cp.fim_em, r.data, cp.criado_em) AS data_ref
+                FROM campeonato_partidas cp
+                LEFT JOIN rodadas r ON r.id = cp.rodada_id
+                WHERE cp.status = 'finalizada'
+            ) AS cp
+            WHERE data_ref >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+              AND data_ref IS NOT NULL
             GROUP BY mes_ano, mes_order
             ORDER BY mes_order ASC
         ");
