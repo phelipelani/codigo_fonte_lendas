@@ -8,10 +8,22 @@ error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 
-// Headers CORS
-header('Access-Control-Allow-Origin: *');
+// Headers CORS — restringe ao domínio do frontend configurado no .env
+$allowedOrigins = array_filter(array_map('trim', explode(',',
+    ($_ENV['FRONTEND_URL'] ?? 'http://localhost:5173') . ',' .
+    ($_ENV['FRONTEND_URL_EXTRA'] ?? '')   // opcional: segundo domínio (ex: www.)
+)));
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if (in_array($origin, $allowedOrigins, true)) {
+    header("Access-Control-Allow-Origin: {$origin}");
+} elseif (empty($origin)) {
+    // Requisição sem Origin (ex: curl, Postman, scripts server-side) — permite
+    header('Access-Control-Allow-Origin: ' . ($allowedOrigins[0] ?? '*'));
+}
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+header('Access-Control-Allow-Credentials: true');
+header('Vary: Origin');
 
 // Não força JSON em rotas OAuth (que fazem redirect: Google e Mercado Pago)
 $requestUri    = $_SERVER['REQUEST_URI'] ?? '';
@@ -30,6 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 require_once __DIR__ . '/../config/env.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../src/utils/HttpError.php';
+require_once __DIR__ . '/../src/utils/RateLimiter.php';
 require_once __DIR__ . '/../src/utils/JWT.php';
 require_once __DIR__ . '/../src/middleware/AuthMiddleware.php';
 require_once __DIR__ . '/../src/controllers/AuthController.php';
@@ -128,6 +141,8 @@ try {
     // AUTH — Públicas
     // =========================================================
     if ($path === '/auth/login' && $method === 'POST') {
+        // 10 tentativas por IP em 60 segundos
+        RateLimiter::check('login', $_SERVER['REMOTE_ADDR'] ?? 'unknown', 10, 60);
         (new AuthController())->login(); exit;
     }
 
@@ -140,6 +155,8 @@ try {
     }
 
     if ($path === '/auth/forgot-password' && $method === 'POST') {
+        // 3 tentativas por IP em 5 minutos (evita spam de email)
+        RateLimiter::check('forgot_password', $_SERVER['REMOTE_ADDR'] ?? 'unknown', 3, 300);
         (new AuthController())->forgotPassword(); exit;
     }
 
