@@ -5,12 +5,12 @@
  */
 
 define('CLI_MODE', true);
-require_once __DIR__ . '/config/env.php';
-require_once __DIR__ . '/config/database.php';
-require_once __DIR__ . '/src/utils/HttpError.php';
-require_once __DIR__ . '/src/utils/Pontos.php';
-require_once __DIR__ . '/src/controllers/RodadaController.php';
-require_once __DIR__ . '/src/controllers/CampeonatoController.php';
+require_once __DIR__ . '/../config/env.php';
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../src/utils/HttpError.php';
+require_once __DIR__ . '/../src/utils/Pontos.php';
+require_once __DIR__ . '/../src/controllers/RodadaController.php';
+require_once __DIR__ . '/../src/controllers/CampeonatoController.php';
 
 // Proteção por token
 $token = $_GET['token'] ?? '';
