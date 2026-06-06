@@ -136,6 +136,62 @@ try {
         jsonResponse(['status' => 'ok', 'message' => 'FutLendas API On!']);
     }
 
+    // =========================================================
+    // RECÁLCULO RETROATIVO — REMOVER APÓS RODAR EM PRODUÇÃO
+    // GET /recalcular?token=fl-migrate-2024
+    // =========================================================
+    if ($path === '/recalcular' && $method === 'GET') {
+        if (($_GET['token'] ?? '') !== 'fl-migrate-2024') {
+            http_response_code(403); echo json_encode(['error' => 'Token inválido']); exit;
+        }
+        require_once __DIR__ . '/../src/utils/Pontos.php';
+        require_once __DIR__ . '/../src/controllers/RodadaController.php';
+        require_once __DIR__ . '/../src/controllers/CampeonatoController.php';
+
+        $pdo = Database::getInstance()->getConnection();
+        $resultado = ['rodadas' => [], 'campeonatos' => []];
+
+        // Prêmios de rodada
+        $rodadas = $pdo->query("SELECT id, data FROM rodadas WHERE status = 'finalizada' ORDER BY data ASC")->fetchAll(PDO::FETCH_ASSOC);
+        $rc = new RodadaController();
+        foreach ($rodadas as $r) {
+            try {
+                $rc->salvarPremiosRodada((int)$r['id']);
+                $resultado['rodadas'][] = ['id' => $r['id'], 'data' => $r['data'], 'status' => 'ok'];
+            } catch (Throwable $e) {
+                $resultado['rodadas'][] = ['id' => $r['id'], 'data' => $r['data'], 'status' => 'erro', 'msg' => $e->getMessage()];
+            }
+        }
+
+        // Prêmios + vencedores de campeonato
+        $camps = $pdo->query("SELECT id, nome FROM campeonatos WHERE status = 'finalizado' ORDER BY data ASC")->fetchAll(PDO::FETCH_ASSOC);
+        $cc = new CampeonatoController();
+        foreach ($camps as $c) {
+            $campId = (int)$c['id'];
+            try {
+                $premios = $cc->salvarPremiosCampeonato($campId);
+
+                // Registra jogadores campeões
+                $campeaoId = (int)($pdo->query("SELECT time_campeao_id FROM campeonatos WHERE id = $campId")->fetchColumn() ?: 0);
+                $jogadores = 0;
+                if ($campeaoId) {
+                    $pdo->prepare("INSERT IGNORE INTO campeonato_vencedores (campeonato_id, time_id, posicao) VALUES (?, ?, 1)")->execute([$campId, $campeaoId]);
+                    $stmt = $pdo->prepare("SELECT DISTINCT ep.jogador_id FROM campeonato_estatisticas_partida ep JOIN campeonato_partidas cp ON cp.id = ep.partida_id AND cp.campeonato_id = ? AND cp.status = 'finalizada' WHERE ep.time_id = ?");
+                    $stmt->execute([$campId, $campeaoId]);
+                    $jogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    $ins = $pdo->prepare("INSERT IGNORE INTO campeonato_vencedores (campeonato_id, jogador_id, time_id, posicao) VALUES (?, ?, ?, 1)");
+                    foreach ($jogs as $jog) $ins->execute([$campId, (int)$jog['jogador_id'], $campeaoId]);
+                    $jogadores = count($jogs);
+                }
+                $resultado['campeonatos'][] = ['id' => $campId, 'nome' => $c['nome'], 'status' => 'ok', 'premios' => count($premios), 'jogadores' => $jogadores];
+            } catch (Throwable $e) {
+                $resultado['campeonatos'][] = ['id' => $campId, 'nome' => $c['nome'], 'status' => 'erro', 'msg' => $e->getMessage()];
+            }
+        }
+
+        jsonResponse(['success' => true, 'aviso' => 'REMOVA a rota /recalcular do index.php após confirmar os dados!', 'resultado' => $resultado]);
+    }
+
 
     // =========================================================
     // AUTH — Públicas
