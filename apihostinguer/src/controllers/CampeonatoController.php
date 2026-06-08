@@ -308,16 +308,9 @@ class CampeonatoController
                 [$id, $campeaoId]
             );
 
-            // 2. Registra cada jogador do time campeão que jogou ao menos 1 partida
-            //    (usado por analytics/jogador e getScoreLendario para contar títulos)
-            $jogadoresCampeoes = $this->db->fetchAll("
-                SELECT DISTINCT ep.jogador_id
-                FROM campeonato_estatisticas_partida ep
-                JOIN campeonato_partidas cp ON cp.id = ep.partida_id
-                    AND cp.campeonato_id = ?
-                    AND cp.status = 'finalizada'
-                WHERE ep.time_id = ?
-            ", [$id, $campeaoId]);
+            // 2. Registra cada jogador cujo time de maior frequência no camp é o campeão.
+            //    Isso evita dar título a goleiros rotativos que jogaram mais pelo time rival.
+            $jogadoresCampeoes = $this->getJogadoresCampeoes($id, $campeaoId);
 
             foreach ($jogadoresCampeoes as $jog) {
                 $this->db->execute(
@@ -342,6 +335,40 @@ class CampeonatoController
     // =========================================================
     // Calcula e salva os prêmios individuais do campeonato:
     // MVP, Artilheiro, Garçom, Melhor Goleiro, Melhor Zagueiro, Pé de Rato
+    // =========================================================
+    // Retorna os jogadores que devem receber o título:
+    // somente quem jogou mais pelo time campeão do que por qualquer outro time.
+    // Resolve o caso de goleiros rotativos (Alexandre, Gogo, Alex) que não são
+    // fixos — cada um defende mais um time específico ao longo do camp.
+    // =========================================================
+    public function getJogadoresCampeoes(int $campId, int $campeaoId): array
+    {
+        return $this->db->fetchAll("
+            SELECT a.jogador_id
+            FROM (
+                SELECT ep.jogador_id, ep.time_id, COUNT(*) AS jogos
+                FROM campeonato_estatisticas_partida ep
+                JOIN campeonato_partidas cp ON cp.id = ep.partida_id
+                    AND cp.campeonato_id = ?
+                    AND cp.status = 'finalizada'
+                GROUP BY ep.jogador_id, ep.time_id
+            ) a
+            WHERE a.time_id = ?
+              AND a.jogos = (
+                  SELECT MAX(b.jogos)
+                  FROM (
+                      SELECT ep2.jogador_id, ep2.time_id, COUNT(*) AS jogos
+                      FROM campeonato_estatisticas_partida ep2
+                      JOIN campeonato_partidas cp2 ON cp2.id = ep2.partida_id
+                          AND cp2.campeonato_id = ?
+                          AND cp2.status = 'finalizada'
+                      GROUP BY ep2.jogador_id, ep2.time_id
+                  ) b
+                  WHERE b.jogador_id = a.jogador_id
+              )
+        ", [$campId, $campeaoId, $campId]);
+    }
+
     // Pode ser chamado diretamente para recálculo retroativo.
     // =========================================================
     public function salvarPremiosCampeonato(int $campId): array

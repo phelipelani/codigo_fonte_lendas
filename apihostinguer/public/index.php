@@ -169,14 +169,13 @@ try {
             try {
                 $premios = $cc->salvarPremiosCampeonato($campId);
 
-                // Registra jogadores campeões
+                // Registra jogadores campeões — usa getJogadoresCampeoes() para
+                // só dar título a quem jogou MAIS pelo time campeão (resolve goleiros rotativos)
                 $campeaoId = (int)($pdo->query("SELECT time_campeao_id FROM campeonatos WHERE id = $campId")->fetchColumn() ?: 0);
                 $jogadores = 0;
                 if ($campeaoId) {
                     $pdo->prepare("INSERT IGNORE INTO campeonato_vencedores (campeonato_id, time_id, posicao) VALUES (?, ?, 1)")->execute([$campId, $campeaoId]);
-                    $stmt = $pdo->prepare("SELECT DISTINCT ep.jogador_id FROM campeonato_estatisticas_partida ep JOIN campeonato_partidas cp ON cp.id = ep.partida_id AND cp.campeonato_id = ? AND cp.status = 'finalizada' WHERE ep.time_id = ?");
-                    $stmt->execute([$campId, $campeaoId]);
-                    $jogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    $jogs = $cc->getJogadoresCampeoes($campId, $campeaoId);
                     $ins = $pdo->prepare("INSERT IGNORE INTO campeonato_vencedores (campeonato_id, jogador_id, time_id, posicao) VALUES (?, ?, ?, 1)");
                     foreach ($jogs as $jog) $ins->execute([$campId, (int)$jog['jogador_id'], $campeaoId]);
                     $jogadores = count($jogs);
