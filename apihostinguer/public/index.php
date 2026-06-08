@@ -137,6 +137,60 @@ try {
     }
 
     // =========================================================
+    // RECÁLCULO RETROATIVO v2 — REMOVER APÓS RODAR EM PRODUÇÃO
+    // GET /recalcular?token=fl-migrate-2024
+    // Usa time_campeao_id IS NOT NULL para pegar todos os camps com campeão
+    // =========================================================
+    if ($path === '/recalcular' && $method === 'GET') {
+        if (($_GET['token'] ?? '') !== 'fl-migrate-2024') {
+            http_response_code(403); echo json_encode(['error' => 'Token inválido']); exit;
+        }
+
+        $pdo = Database::getInstance()->getConnection();
+        $resultado = ['rodadas' => [], 'campeonatos' => []];
+
+        // Prêmios de rodada (todas as finalizadas)
+        $rodadas = $pdo->query("SELECT id, data FROM rodadas WHERE status = 'finalizada' ORDER BY data ASC")->fetchAll(PDO::FETCH_ASSOC);
+        $rc = new RodadaController();
+        foreach ($rodadas as $r) {
+            try {
+                $rc->salvarPremiosRodada((int)$r['id']);
+                $resultado['rodadas'][] = ['id' => $r['id'], 'data' => $r['data'], 'status' => 'ok'];
+            } catch (Throwable $e) {
+                $resultado['rodadas'][] = ['id' => $r['id'], 'data' => $r['data'], 'status' => 'erro', 'msg' => $e->getMessage()];
+            }
+        }
+
+        // Todos os campeonatos com campeão definido (independente do status)
+        $camps = $pdo->query("SELECT id, nome, status FROM campeonatos WHERE time_campeao_id IS NOT NULL ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+        $cc = new CampeonatoController();
+        foreach ($camps as $c) {
+            $campId = (int)$c['id'];
+            try {
+                $premios = $cc->salvarPremiosCampeonato($campId);
+
+                // Registra jogadores campeões
+                $campeaoId = (int)($pdo->query("SELECT time_campeao_id FROM campeonatos WHERE id = $campId")->fetchColumn() ?: 0);
+                $jogadores = 0;
+                if ($campeaoId) {
+                    $pdo->prepare("INSERT IGNORE INTO campeonato_vencedores (campeonato_id, time_id, posicao) VALUES (?, ?, 1)")->execute([$campId, $campeaoId]);
+                    $stmt = $pdo->prepare("SELECT DISTINCT ep.jogador_id FROM campeonato_estatisticas_partida ep JOIN campeonato_partidas cp ON cp.id = ep.partida_id AND cp.campeonato_id = ? AND cp.status = 'finalizada' WHERE ep.time_id = ?");
+                    $stmt->execute([$campId, $campeaoId]);
+                    $jogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    $ins = $pdo->prepare("INSERT IGNORE INTO campeonato_vencedores (campeonato_id, jogador_id, time_id, posicao) VALUES (?, ?, ?, 1)");
+                    foreach ($jogs as $jog) $ins->execute([$campId, (int)$jog['jogador_id'], $campeaoId]);
+                    $jogadores = count($jogs);
+                }
+                $resultado['campeonatos'][] = ['id' => $campId, 'nome' => $c['nome'], 'status_camp' => $c['status'], 'status' => 'ok', 'premios' => count($premios), 'jogadores' => $jogadores];
+            } catch (Throwable $e) {
+                $resultado['campeonatos'][] = ['id' => $campId, 'nome' => $c['nome'], 'status_camp' => $c['status'], 'status' => 'erro', 'msg' => $e->getMessage()];
+            }
+        }
+
+        jsonResponse(['success' => true, 'aviso' => 'REMOVA a rota /recalcular do index.php após confirmar!', 'resultado' => $resultado]);
+    }
+
+    // =========================================================
     // AUTH — Públicas
     // =========================================================
     if ($path === '/auth/login' && $method === 'POST') {
