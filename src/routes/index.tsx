@@ -36,6 +36,7 @@ const PartidaDetalhePage = lazy(() => import("@/features/partidas/routes/Partida
 const RachaPage = lazy(() => import("@/features/presenca/routes/RachaPage").then(m => ({ default: m.RachaPage })));
 const AlbumPage = lazy(() => import("@/features/album/routes/AlbumPage").then(m => ({ default: m.AlbumPage })));
 const AlbumAdminPage = lazy(() => import("@/features/album/routes/AlbumAdminPage").then(m => ({ default: m.AlbumAdminPage })));
+const MuralPage = lazy(() => import("@/features/album/routes/MuralPage").then(m => ({ default: m.MuralPage })));
 
 export const AppRoutes = () => {
   return (
@@ -83,6 +84,7 @@ export const AppRoutes = () => {
 
           {/* Álbum de Figurinhas */}
           <Route path="/album" element={<AlbumPage />} />
+          <Route path="/album/mural" element={<MuralPage />} />
         </Route>
       </Route>
 

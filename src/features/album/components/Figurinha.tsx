@@ -10,6 +10,11 @@ const RARIDADE_STYLE: Record<Raridade, { borda: string; glow: string; faixa: str
     glow: '',
     faixa: 'bg-cyan-500/20 text-cyan-200',
   },
+  rara: {
+    borda: 'border-violet-400/70',
+    glow: 'shadow-[0_0_14px_-4px_rgba(167,139,250,0.55)]',
+    faixa: 'bg-violet-500/25 text-violet-200',
+  },
   lendaria: {
     borda: 'border-amber-400/70',
     glow: 'shadow-[0_0_18px_-4px_rgba(251,191,36,0.55)]',
@@ -23,7 +28,7 @@ type FigurinhaProps = {
   vazio?: boolean;
   /** Força exibir como obtida mesmo sem dados de inventário (ex: abrir pacote) */
   forcarObtida?: boolean;
-  tamanho?: 'sm' | 'md' | 'lg';
+  tamanho?: 'sm' | 'md' | 'lg' | 'album' | 'fluid' | 'cell';
   onClick?: () => void;
   className?: string;
 };
@@ -32,6 +37,13 @@ const TAMANHO_CLASSES = {
   sm: 'w-16 h-[88px] text-[9px]',
   md: 'w-24 h-[132px] text-[11px]',
   lg: 'w-36 h-[200px] text-sm',
+  // Padrao do album: 114x155 no desktop, escala proporcional em telas menores
+  album:
+    'w-[78px] h-[106px] sm:w-[96px] sm:h-[130px] lg:w-[114px] lg:h-[155px] text-[9px] sm:text-[10px]',
+  // Fluido: preenche a largura da celula mantendo a proporcao 114:155
+  fluid: 'w-full aspect-[114/155] text-[8px] sm:text-[9px] lg:text-[10px]',
+  // Celula: preenche 100% da celula do grid (largura E altura)
+  cell: 'w-full h-full text-[8px] sm:text-[9px] lg:text-[10px]',
 };
 
 export const Figurinha: React.FC<FigurinhaProps> = ({
@@ -47,13 +59,12 @@ export const Figurinha: React.FC<FigurinhaProps> = ({
     return (
       <div
         className={cn(
-          'rounded-lg border border-dashed border-white/10 flex items-center justify-center',
+          'rounded-lg border border-dashed border-white/10 bg-white/[0.03] flex items-center justify-center',
           TAMANHO_CLASSES[tamanho],
           className
         )}
-        style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(0,0,0,0.2) 100%)' }}
       >
-        <span className="text-white/10 text-2xl font-black" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>?</span>
+        <span className="text-white/15 text-2xl font-black">?</span>
       </div>
     );
   }
@@ -88,44 +99,21 @@ export const Figurinha: React.FC<FigurinhaProps> = ({
               loading="lazy"
             />
           ) : (
-            // Placeholder FIFA-style sem imagem
+            // Placeholder visual enquanto não há imagem real
             <div
-              className="absolute inset-0 flex flex-col items-center justify-center gap-0.5 p-1.5"
-              style={{
-                background: figurinha.raridade === 'lendaria'
-                  ? 'linear-gradient(160deg, #1A1200 0%, #3D2E00 50%, #1A1200 100%)'
-                  : 'linear-gradient(160deg, #061428 0%, #0d1f35 50%, #061428 100%)',
-              }}
-            >
-              {/* Shimmer overlay lendária */}
-              {figurinha.raridade === 'lendaria' && (
-                <div className="absolute inset-0 opacity-20"
-                  style={{ background: 'linear-gradient(135deg, transparent 30%, rgba(255,215,0,0.4) 50%, transparent 70%)', backgroundSize: '200% 200%' }}
-                />
+              className={cn(
+                'absolute inset-0 flex flex-col items-center justify-center gap-1 p-1',
+                figurinha.raridade === 'lendaria'
+                  ? 'bg-gradient-to-br from-amber-900/40 to-[#0d1f35]'
+                  : figurinha.raridade === 'rara'
+                    ? 'bg-gradient-to-br from-violet-900/40 to-[#0d1f35]'
+                    : 'bg-gradient-to-br from-cyan-900/40 to-[#0d1f35]'
               )}
-              <span
-                className="font-black leading-none relative z-10"
-                style={{
-                  fontFamily: "'Barlow Condensed', sans-serif",
-                  fontSize: tamanho === 'sm' ? '22px' : tamanho === 'lg' ? '38px' : '28px',
-                  color: figurinha.raridade === 'lendaria' ? '#FFD700' : '#00C3FF',
-                  textShadow: figurinha.raridade === 'lendaria' ? '0 0 12px rgba(255,215,0,0.6)' : '0 0 10px rgba(0,195,255,0.5)',
-                  opacity: 0.9,
-                }}
-              >
+            >
+              <span className="font-black text-white/30 text-2xl leading-none">
                 #{figurinha.numero}
               </span>
-              <span
-                className="text-center leading-tight relative z-10 truncate w-full"
-                style={{
-                  fontFamily: "'Barlow Condensed', sans-serif",
-                  fontWeight: 700,
-                  fontSize: tamanho === 'sm' ? '7px' : '9px',
-                  color: figurinha.raridade === 'lendaria' ? 'rgba(255,215,0,0.8)' : 'rgba(255,255,255,0.7)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                }}
-              >
+              <span className="font-bold text-white text-center leading-tight px-0.5">
                 {figurinha.nome}
               </span>
             </div>
@@ -137,9 +125,12 @@ export const Figurinha: React.FC<FigurinhaProps> = ({
               'absolute bottom-0 inset-x-0 px-1 py-0.5 text-center font-bold uppercase tracking-wide',
               estilo.faixa
             )}
-            style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: '8px', letterSpacing: '0.12em' }}
           >
-            {figurinha.raridade === 'lendaria' ? '★ LENDÁRIA' : 'COMUM'}
+            {figurinha.raridade === 'lendaria'
+              ? '★ Lendária'
+              : figurinha.raridade === 'rara'
+                ? '◆ Rara'
+                : 'Comum'}
           </span>
 
           {/* Badge de repetidas */}
@@ -150,31 +141,10 @@ export const Figurinha: React.FC<FigurinhaProps> = ({
           )}
         </>
       ) : (
-        // Não obtida — mystery card com padrão hexagonal sutil
-        <div
-          className="absolute inset-0 flex flex-col items-center justify-center gap-0.5"
-          style={{
-            background: 'linear-gradient(160deg, #060E1A 0%, #0A1628 50%, #060E1A 100%)',
-            backgroundImage: `linear-gradient(160deg, #060E1A 0%, #0A1628 50%, #060E1A 100%), repeating-linear-gradient(60deg, rgba(255,255,255,0.01) 0px, rgba(255,255,255,0.01) 1px, transparent 1px, transparent 12px)`,
-          }}
-        >
-          <span
-            className="font-black leading-none"
-            style={{
-              fontFamily: "'Barlow Condensed', sans-serif",
-              fontSize: tamanho === 'sm' ? '24px' : '30px',
-              color: 'rgba(255,255,255,0.08)',
-            }}
-          >?</span>
-          <span
-            style={{
-              fontFamily: "'Rajdhani', sans-serif",
-              fontWeight: 700,
-              fontSize: '8px',
-              color: 'rgba(255,255,255,0.15)',
-              letterSpacing: '0.1em',
-            }}
-          >#{figurinha.numero}</span>
+        // Não obtida — silhueta
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
+          <span className="text-white/15 text-3xl font-black">?</span>
+          <span className="text-white/25 font-bold">#{figurinha.numero}</span>
         </div>
       )}
     </button>
