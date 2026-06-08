@@ -343,6 +343,10 @@ class CampeonatoController
     // =========================================================
     public function getJogadoresCampeoes(int $campId, int $campeaoId): array
     {
+        // Lógica: o jogador só recebe o título se jogou MAIS partidas pelo time campeão
+        // do que por qualquer outro time no campeonato.
+        // Em caso de empate (ex: 4 jogos p/ Time A e 4 p/ Time B) → NÃO dá título.
+        // Isso resolve goleiros rotativos sem time fixo.
         return $this->db->fetchAll("
             SELECT a.jogador_id
             FROM (
@@ -354,7 +358,7 @@ class CampeonatoController
                 GROUP BY ep.jogador_id, ep.time_id
             ) a
             WHERE a.time_id = ?
-              AND a.jogos = (
+              AND a.jogos > COALESCE((
                   SELECT MAX(b.jogos)
                   FROM (
                       SELECT ep2.jogador_id, ep2.time_id, COUNT(*) AS jogos
@@ -365,8 +369,9 @@ class CampeonatoController
                       GROUP BY ep2.jogador_id, ep2.time_id
                   ) b
                   WHERE b.jogador_id = a.jogador_id
-              )
-        ", [$campId, $campeaoId, $campId]);
+                    AND b.time_id != ?
+              ), 0)
+        ", [$campId, $campeaoId, $campId, $campeaoId]);
     }
 
     // Pode ser chamado diretamente para recálculo retroativo.
