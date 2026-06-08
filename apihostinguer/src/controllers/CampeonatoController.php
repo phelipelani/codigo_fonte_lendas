@@ -343,11 +343,26 @@ class CampeonatoController
     // =========================================================
     public function getJogadoresCampeoes(int $campId, int $campeaoId): array
     {
-        // Lógica: o jogador só recebe o título se jogou MAIS partidas pelo time campeão
-        // do que por qualquer outro time no campeonato.
-        // Em caso de empate (ex: 4 jogos p/ Time A e 4 p/ Time B) → NÃO dá título.
-        // Isso resolve goleiros rotativos sem time fixo.
-        return $this->db->fetchAll("
+        // ── 1. Identifica goleiros do campeonato via campeonato_partidas ────────────
+        // Fonte mais confiável: goleiro_timeA_id / goleiro_timeB_id são explícitos.
+        $goleiros   = $this->db->fetchAll("
+            SELECT DISTINCT goleiro_id FROM (
+                SELECT goleiro_timeA_id AS goleiro_id FROM campeonato_partidas
+                WHERE campeonato_id = ? AND status = 'finalizada' AND goleiro_timeA_id IS NOT NULL
+                UNION
+                SELECT goleiro_timeB_id AS goleiro_id FROM campeonato_partidas
+                WHERE campeonato_id = ? AND status = 'finalizada' AND goleiro_timeB_id IS NOT NULL
+            ) g
+        ", [$campId, $campId]);
+        $goleiroIds = array_map('intval', array_column($goleiros, 'goleiro_id'));
+
+        // ── 2. Jogadores de linha (excluindo goleiros): usa campeonato_estatisticas_partida ──
+        // Jogadores de linha são fixos por time — ep.time_id é confiável para eles.
+        $excl = empty($goleiroIds)
+            ? ''
+            : 'AND ep.jogador_id NOT IN (' . implode(',', $goleiroIds) . ')'; // IDs vindos do próprio BD — seguro
+
+        $jogadoresLinha = $this->db->fetchAll("
             SELECT a.jogador_id
             FROM (
                 SELECT ep.jogador_id, ep.time_id, COUNT(*) AS jogos
@@ -355,6 +370,7 @@ class CampeonatoController
                 JOIN campeonato_partidas cp ON cp.id = ep.partida_id
                     AND cp.campeonato_id = ?
                     AND cp.status = 'finalizada'
+                {$excl}
                 GROUP BY ep.jogador_id, ep.time_id
             ) a
             WHERE a.time_id = ?
@@ -368,10 +384,39 @@ class CampeonatoController
                           AND cp2.status = 'finalizada'
                       GROUP BY ep2.jogador_id, ep2.time_id
                   ) b
-                  WHERE b.jogador_id = a.jogador_id
-                    AND b.time_id != ?
+                  WHERE b.jogador_id = a.jogador_id AND b.time_id != ?
               ), 0)
         ", [$campId, $campeaoId, $campId, $campeaoId]);
+
+        // ── 3. Goleiros: conta quantas partidas defendeu cada time (via campeonato_partidas) ──
+        // goleiro_timeA_id = quem defende o time A → time dele é timeA_id
+        // goleiro_timeB_id = quem defende o time B → time dele é timeB_id
+        $jogadoresGoleiro = [];
+        foreach ($goleiroIds as $gkId) {
+            $counts = $this->db->fetchAll("
+                SELECT team_id, COUNT(*) AS jogos FROM (
+                    SELECT timeA_id AS team_id FROM campeonato_partidas
+                    WHERE campeonato_id = ? AND status = 'finalizada' AND goleiro_timeA_id = ?
+                    UNION ALL
+                    SELECT timeB_id AS team_id FROM campeonato_partidas
+                    WHERE campeonato_id = ? AND status = 'finalizada' AND goleiro_timeB_id = ?
+                ) t
+                GROUP BY team_id ORDER BY jogos DESC
+            ", [$campId, $gkId, $campId, $gkId]);
+
+            if (empty($counts)) continue;
+
+            $maxJogos = (int)$counts[0]['jogos'];
+            $topTeam  = (int)$counts[0]['team_id'];
+            $hasTie   = isset($counts[1]) && (int)$counts[1]['jogos'] === $maxJogos;
+
+            // Só dá título se jogou MAIS para o campeão sem empate
+            if (!$hasTie && $topTeam === $campeaoId) {
+                $jogadoresGoleiro[] = ['jogador_id' => $gkId];
+            }
+        }
+
+        return array_merge($jogadoresLinha, $jogadoresGoleiro);
     }
 
     // Pode ser chamado diretamente para recálculo retroativo.
