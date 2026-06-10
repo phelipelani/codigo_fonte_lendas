@@ -388,31 +388,30 @@ class CampeonatoController
               ), 0)
         ", [$campId, $campeaoId, $campId, $campeaoId]);
 
-        // ── 3. Goleiros: conta quantas partidas defendeu cada time (via campeonato_partidas) ──
-        // goleiro_timeA_id = quem defende o time A → time dele é timeA_id
-        // goleiro_timeB_id = quem defende o time B → time dele é timeB_id
+        // ── 3. Goleiros: só ganham título se defenderam MAIS DE 50% das partidas do campeão ──
+        // Goleiros são rotativos (não fixos por time). Regra: se o time campeão jogou N
+        // partidas e o goleiro defendeu mais da metade delas, o título é dele também.
+        // Ex.: campeão jogou 30, goleiro defendeu 16 (53%) → ganha. Defendeu 14 (47%) → não.
+        $totalJogosCampeao = (int)$this->db->fetchOne("
+            SELECT COUNT(*) AS total FROM campeonato_partidas
+            WHERE campeonato_id = ? AND status = 'finalizada'
+              AND (timeA_id = ? OR timeB_id = ?)
+        ", [$campId, $campeaoId, $campeaoId])['total'];
+
         $jogadoresGoleiro = [];
-        foreach ($goleiroIds as $gkId) {
-            $counts = $this->db->fetchAll("
-                SELECT team_id, COUNT(*) AS jogos FROM (
-                    SELECT timeA_id AS team_id FROM campeonato_partidas
-                    WHERE campeonato_id = ? AND status = 'finalizada' AND goleiro_timeA_id = ?
-                    UNION ALL
-                    SELECT timeB_id AS team_id FROM campeonato_partidas
-                    WHERE campeonato_id = ? AND status = 'finalizada' AND goleiro_timeB_id = ?
-                ) t
-                GROUP BY team_id ORDER BY jogos DESC
-            ", [$campId, $gkId, $campId, $gkId]);
+        if ($totalJogosCampeao > 0) {
+            foreach ($goleiroIds as $gkId) {
+                $jogosDefendidos = (int)$this->db->fetchOne("
+                    SELECT COUNT(*) AS total FROM campeonato_partidas
+                    WHERE campeonato_id = ? AND status = 'finalizada'
+                      AND ((timeA_id = ? AND goleiro_timeA_id = ?)
+                        OR (timeB_id = ? AND goleiro_timeB_id = ?))
+                ", [$campId, $campeaoId, $gkId, $campeaoId, $gkId])['total'];
 
-            if (empty($counts)) continue;
-
-            $maxJogos = (int)$counts[0]['jogos'];
-            $topTeam  = (int)$counts[0]['team_id'];
-            $hasTie   = isset($counts[1]) && (int)$counts[1]['jogos'] === $maxJogos;
-
-            // Só dá título se jogou MAIS para o campeão sem empate
-            if (!$hasTie && $topTeam === $campeaoId) {
-                $jogadoresGoleiro[] = ['jogador_id' => $gkId];
+                // Estritamente mais da metade (16 de 30 sim, 15 de 30 não)
+                if ($jogosDefendidos * 2 > $totalJogosCampeao) {
+                    $jogadoresGoleiro[] = ['jogador_id' => $gkId];
+                }
             }
         }
 

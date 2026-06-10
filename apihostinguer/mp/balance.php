@@ -1,11 +1,11 @@
-<?php
+﻿<?php
 // ====================================================
-// MP Balance — Saldo da conta conectada
+// MP Balance â€” Saldo da conta conectada
 // GET /mp/balance   (admin)
 // ====================================================
 
 $authUser = $_REQUEST['authUser'];
-$userId   = (int)($authUser['id'] ?? 0);
+$userId   = (int)($authUser['userId'] ?? 0);
 
 try {
     $pdo  = Database::getInstance()->getConnection();
@@ -15,7 +15,7 @@ try {
 
     if (!$conta) {
         http_response_code(404);
-        exit(json_encode(['ok' => false, 'msg' => 'Conta MP não conectada']));
+        exit(json_encode(['ok' => false, 'msg' => 'Conta MP nÃ£o conectada']));
     }
 
     $accessToken = $conta['access_token'];

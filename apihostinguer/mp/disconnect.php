@@ -1,11 +1,11 @@
-<?php
+﻿<?php
 // ====================================================
-// MP Disconnect — Remove conta MP do banco
+// MP Disconnect â€” Remove conta MP do banco
 // POST /mp/disconnect   (admin)
 // ====================================================
 
 $authUser = $_REQUEST['authUser'];
-$userId   = (int)($authUser['id'] ?? 0);
+$userId   = (int)($authUser['userId'] ?? 0);
 
 try {
     $pdo  = Database::getInstance()->getConnection();

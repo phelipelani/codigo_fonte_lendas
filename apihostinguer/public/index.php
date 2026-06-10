@@ -169,11 +169,14 @@ try {
             try {
                 $premios = $cc->salvarPremiosCampeonato($campId);
 
-                // Registra jogadores campeões — usa getJogadoresCampeoes() para
-                // só dar título a quem jogou MAIS pelo time campeão (resolve goleiros rotativos)
+                // Registra jogadores campeões — usa getJogadoresCampeoes():
+                // linha = quem jogou MAIS pelo campeão; goleiro = defendeu >50% das partidas dele.
+                // Apaga os registros de jogador antes de reinserir para REMOVER títulos
+                // dados errado a goleiros rotativos em recálculos anteriores.
                 $campeaoId = (int)($pdo->query("SELECT time_campeao_id FROM campeonatos WHERE id = $campId")->fetchColumn() ?: 0);
                 $jogadores = 0;
                 if ($campeaoId) {
+                    $pdo->prepare("DELETE FROM campeonato_vencedores WHERE campeonato_id = ? AND jogador_id IS NOT NULL")->execute([$campId]);
                     $pdo->prepare("INSERT IGNORE INTO campeonato_vencedores (campeonato_id, time_id, posicao) VALUES (?, ?, 1)")->execute([$campId, $campeaoId]);
                     $jogs = $cc->getJogadoresCampeoes($campId, $campeaoId);
                     $ins = $pdo->prepare("INSERT IGNORE INTO campeonato_vencedores (campeonato_id, jogador_id, time_id, posicao) VALUES (?, ?, ?, 1)");
@@ -982,6 +985,12 @@ try {
             require $mpRoot . '/status.php'; exit;
         }
 
+        // GET /mp/resumo — entradas e saídas do mês atual e anterior
+        if ($path === '/mp/resumo' && $method === 'GET') {
+            AuthMiddleware::isAdmin();
+            require $mpRoot . '/resumo.php'; exit;
+        }
+
         // POST /mp/disconnect — desconecta conta MP
         if ($path === '/mp/disconnect' && $method === 'POST') {
             AuthMiddleware::isAdmin();
@@ -1172,6 +1181,126 @@ try {
     if ($path === '/album/admin/distribuir' && $method === 'POST') {
         AuthMiddleware::isAdmin();
         (new AlbumController())->distribuirPacotes(); exit;
+    }
+
+    // =========================================================
+    // MODULO /campo — Analista de Campo (login proprio: campo_usuarios)
+    // =========================================================
+    if (str_starts_with($path, '/campo')) {
+        require_once __DIR__ . '/../config/campo_database.php';
+        require_once __DIR__ . '/../src/middleware/CampoMiddleware.php';
+        require_once __DIR__ . '/../src/controllers/CampoAuthController.php';
+        require_once __DIR__ . '/../src/controllers/CampoJogadorController.php';
+        require_once __DIR__ . '/../src/controllers/CampoAdversarioController.php';
+        require_once __DIR__ . '/../src/controllers/CampoPartidaController.php';
+
+        // GET /campo/setup — cria tabelas + seed (rodar 1x). Protegido por env CAMPO_SETUP_KEY.
+        if ($path === '/campo/setup' && $method === 'GET') {
+            $expected = $_ENV['CAMPO_SETUP_KEY'] ?? '';
+            $key      = $_GET['key'] ?? '';
+            if ($expected === '' || !hash_equals($expected, $key)) {
+                throw new HttpError('Setup bloqueado. Configure CAMPO_SETUP_KEY no .env e informe ?key= correta.', 403);
+            }
+            header('Content-Type: text/html; charset=utf-8');
+            require __DIR__ . '/../campo/setup.php';
+            exit;
+        }
+
+        // POST /campo/auth/login — publico
+        if ($path === '/campo/auth/login' && $method === 'POST') {
+            (new CampoAuthController())->login();
+            exit;
+        }
+
+        // GET /campo/auth/me — protegida (qualquer papel do campo)
+        if ($path === '/campo/auth/me' && $method === 'GET') {
+            CampoMiddleware::auth();
+            (new CampoAuthController())->me();
+            exit;
+        }
+
+        // ---------- ELENCO ----------
+        // GET /campo/jogadores — lista (qualquer papel do campo)
+        if ($path === '/campo/jogadores' && $method === 'GET') {
+            CampoMiddleware::auth();
+            (new CampoJogadorController())->index();
+            exit;
+        }
+        // POST /campo/jogadores — criar (tecnico/diretor)
+        if ($path === '/campo/jogadores' && $method === 'POST') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoJogadorController())->store();
+            exit;
+        }
+        // PUT /campo/jogadores/{id} — editar (tecnico/diretor)
+        if (preg_match('#^/campo/jogadores/(\d+)$#', $path, $m) && $method === 'PUT') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoJogadorController())->update((int) $m[1]);
+            exit;
+        }
+        // DELETE /campo/jogadores/{id} — remover (tecnico/diretor)
+        if (preg_match('#^/campo/jogadores/(\d+)$#', $path, $m) && $method === 'DELETE') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoJogadorController())->destroy((int) $m[1]);
+            exit;
+        }
+        // POST /campo/upload — foto do jogador / escudo (tecnico/diretor)
+        if ($path === '/campo/upload' && $method === 'POST') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoJogadorController())->uploadFoto();
+            exit;
+        }
+
+        // ---------- ADVERSARIOS ----------
+        if ($path === '/campo/adversarios' && $method === 'GET') {
+            CampoMiddleware::auth();
+            (new CampoAdversarioController())->index();
+            exit;
+        }
+        if ($path === '/campo/adversarios' && $method === 'POST') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoAdversarioController())->store();
+            exit;
+        }
+        if (preg_match('#^/campo/adversarios/(\d+)$#', $path, $m) && $method === 'PUT') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoAdversarioController())->update((int) $m[1]);
+            exit;
+        }
+        if (preg_match('#^/campo/adversarios/(\d+)$#', $path, $m) && $method === 'DELETE') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoAdversarioController())->destroy((int) $m[1]);
+            exit;
+        }
+
+        // ---------- PARTIDAS ----------
+        if ($path === '/campo/partidas' && $method === 'GET') {
+            CampoMiddleware::auth();
+            (new CampoPartidaController())->index();
+            exit;
+        }
+        if ($path === '/campo/partidas' && $method === 'POST') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoPartidaController())->store();
+            exit;
+        }
+        if (preg_match('#^/campo/partidas/(\d+)$#', $path, $m) && $method === 'GET') {
+            CampoMiddleware::auth();
+            (new CampoPartidaController())->show((int) $m[1]);
+            exit;
+        }
+        if (preg_match('#^/campo/partidas/(\d+)$#', $path, $m) && $method === 'PUT') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoPartidaController())->update((int) $m[1]);
+            exit;
+        }
+        if (preg_match('#^/campo/partidas/(\d+)$#', $path, $m) && $method === 'DELETE') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoPartidaController())->destroy((int) $m[1]);
+            exit;
+        }
+
+        throw new HttpError("Rota /campo não encontrada: [{$method}] {$path}", 404);
     }
 
     // =========================================================

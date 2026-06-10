@@ -6,7 +6,7 @@
 // ====================================================
 
 $authUser = $_REQUEST['authUser'];
-$userId   = (int)($authUser['id'] ?? 0);
+$userId   = (int)($authUser['userId'] ?? 0);
 
 try {
     $pdo  = Database::getInstance()->getConnection();

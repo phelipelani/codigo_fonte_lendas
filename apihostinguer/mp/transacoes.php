@@ -1,11 +1,11 @@
-<?php
+﻿<?php
 // ====================================================
-// MP Transações — Pagamentos recentes
+// MP TransaÃ§Ãµes â€” Pagamentos recentes
 // GET /mp/transacoes?limite=20&offset=0   (admin)
 // ====================================================
 
 $authUser = $_REQUEST['authUser'];
-$userId   = (int)($authUser['id'] ?? 0);
+$userId   = (int)($authUser['userId'] ?? 0);
 $limite   = min((int)($_GET['limite'] ?? 20), 100);
 $offset   = (int)($_GET['offset'] ?? 0);
 
@@ -17,7 +17,7 @@ try {
 
     if (!$conta) {
         http_response_code(404);
-        exit(json_encode(['ok' => false, 'msg' => 'Conta MP não conectada']));
+        exit(json_encode(['ok' => false, 'msg' => 'Conta MP nÃ£o conectada']));
     }
 
     $accessToken = $conta['access_token'];
@@ -46,14 +46,14 @@ try {
     if ($httpCode !== 200) {
         $err = json_decode($resp, true);
         http_response_code($httpCode);
-        exit(json_encode(['ok' => false, 'msg' => $err['message'] ?? 'Erro ao buscar transações']));
+        exit(json_encode(['ok' => false, 'msg' => $err['message'] ?? 'Erro ao buscar transaÃ§Ãµes']));
     }
 
     $data     = json_decode($resp, true);
     $results  = $data['results'] ?? [];
     $total    = $data['paging']['total'] ?? 0;
 
-    // Formata para exibição
+    // Formata para exibiÃ§Ã£o
     $transacoes = array_map(function ($p) {
         return [
             'id'          => $p['id'],
