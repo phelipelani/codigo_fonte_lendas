@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+    color: #eaf6f3;
+    background: linear-gradient(140deg, #0c4a44, #0a3a3f 45%, #08272e);
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-bold transition active:scale-95 disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-campo-accent text-[#06231f] hover:brightness-105;
+  }
+  .btn-ghost {
+    @apply btn bg-white/10 text-white hover:bg-white/15;
+  }
+  .field {
+    @apply w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 text-white placeholder-white/40 outline-none focus:border-campo-accent;
+  }
+  .card {
+    @apply rounded-2xl border border-white/10 bg-white/5 backdrop-blur;
+  }
+}

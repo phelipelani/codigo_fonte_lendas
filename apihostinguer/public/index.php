@@ -96,7 +96,10 @@ function jsonResponse(mixed $data, int $code = 200): void
 }
 
 try {
-    $db     = Database::getInstance();
+    // Rotas /campo usam banco proprio (CampoDatabase, localhost). Evita abrir a
+    // conexao REMOTA do Futlendas (srv791) a toa em cada request do /campo.
+    $isCampoReq = strpos($_SERVER['REQUEST_URI'] ?? '', '/campo') !== false;
+    $db     = $isCampoReq ? null : Database::getInstance();
     $method = $_SERVER['REQUEST_METHOD'];
     $uri    = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
@@ -1308,6 +1311,119 @@ try {
     if ($path === '/album/admin/distribuir' && $method === 'POST') {
         AuthMiddleware::isAdmin();
         (new AlbumController())->distribuirPacotes(); exit;
+    }
+
+    // =========================================================
+    // MODULO /campo — Analista de Campo (login proprio: campo_usuarios)
+    // =========================================================
+    if (str_starts_with($path, '/campo')) {
+        require_once __DIR__ . '/../config/campo_database.php';
+        require_once __DIR__ . '/../src/middleware/CampoMiddleware.php';
+        require_once __DIR__ . '/../src/controllers/CampoAuthController.php';
+        require_once __DIR__ . '/../src/controllers/CampoJogadorController.php';
+        require_once __DIR__ . '/../src/controllers/CampoAdversarioController.php';
+        require_once __DIR__ . '/../src/controllers/CampoPartidaController.php';
+
+        // GET /campo/setup — cria tabelas + seed (rodar 1x). Protegido por env CAMPO_SETUP_KEY.
+        if ($path === '/campo/setup' && $method === 'GET') {
+            $expected = $_ENV['CAMPO_SETUP_KEY'] ?? '';
+            $key      = $_GET['key'] ?? '';
+            if ($expected === '' || !hash_equals($expected, $key)) {
+                throw new HttpError('Setup bloqueado. Configure CAMPO_SETUP_KEY no .env e informe ?key= correta.', 403);
+            }
+            header('Content-Type: text/html; charset=utf-8');
+            require __DIR__ . '/../campo/setup.php';
+            exit;
+        }
+
+        // AUTH
+        if ($path === '/campo/auth/login' && $method === 'POST') {
+            (new CampoAuthController())->login();
+            exit;
+        }
+        if ($path === '/campo/auth/me' && $method === 'GET') {
+            CampoMiddleware::auth();
+            (new CampoAuthController())->me();
+            exit;
+        }
+
+        // ELENCO
+        if ($path === '/campo/jogadores' && $method === 'GET') {
+            CampoMiddleware::auth();
+            (new CampoJogadorController())->index();
+            exit;
+        }
+        if ($path === '/campo/jogadores' && $method === 'POST') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoJogadorController())->store();
+            exit;
+        }
+        if (preg_match('#^/campo/jogadores/(\d+)$#', $path, $m) && $method === 'PUT') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoJogadorController())->update((int) $m[1]);
+            exit;
+        }
+        if (preg_match('#^/campo/jogadores/(\d+)$#', $path, $m) && $method === 'DELETE') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoJogadorController())->destroy((int) $m[1]);
+            exit;
+        }
+        if ($path === '/campo/upload' && $method === 'POST') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoJogadorController())->uploadFoto();
+            exit;
+        }
+
+        // ADVERSARIOS
+        if ($path === '/campo/adversarios' && $method === 'GET') {
+            CampoMiddleware::auth();
+            (new CampoAdversarioController())->index();
+            exit;
+        }
+        if ($path === '/campo/adversarios' && $method === 'POST') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoAdversarioController())->store();
+            exit;
+        }
+        if (preg_match('#^/campo/adversarios/(\d+)$#', $path, $m) && $method === 'PUT') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoAdversarioController())->update((int) $m[1]);
+            exit;
+        }
+        if (preg_match('#^/campo/adversarios/(\d+)$#', $path, $m) && $method === 'DELETE') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoAdversarioController())->destroy((int) $m[1]);
+            exit;
+        }
+
+        // PARTIDAS
+        if ($path === '/campo/partidas' && $method === 'GET') {
+            CampoMiddleware::auth();
+            (new CampoPartidaController())->index();
+            exit;
+        }
+        if ($path === '/campo/partidas' && $method === 'POST') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoPartidaController())->store();
+            exit;
+        }
+        if (preg_match('#^/campo/partidas/(\d+)$#', $path, $m) && $method === 'GET') {
+            CampoMiddleware::auth();
+            (new CampoPartidaController())->show((int) $m[1]);
+            exit;
+        }
+        if (preg_match('#^/campo/partidas/(\d+)$#', $path, $m) && $method === 'PUT') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoPartidaController())->update((int) $m[1]);
+            exit;
+        }
+        if (preg_match('#^/campo/partidas/(\d+)$#', $path, $m) && $method === 'DELETE') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoPartidaController())->destroy((int) $m[1]);
+            exit;
+        }
+
+        throw new HttpError("Rota /campo não encontrada: [{$method}] {$path}", 404);
     }
 
     // =========================================================
