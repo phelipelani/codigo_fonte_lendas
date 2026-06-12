@@ -2,6 +2,7 @@
 // Splash screen épica — estilo FIFA / EA Sports
 import { motion } from 'framer-motion'
 import { LoginForm } from '../components/LoginForm'
+import { BeamsBackground } from '@/components/ui/BeamsBackground'
 import logoLendas from '@/assets/Logo.webp'
 
 export function LoginPage() {
@@ -14,6 +15,9 @@ export function LoginPage() {
         <div className="absolute inset-0" style={{
           background: 'linear-gradient(180deg, #020608 0%, #040C1A 50%, #030A0E 100%)'
         }} />
+
+        {/* Feixes de luz animados — combina com os holofotes azuis */}
+        <BeamsBackground colorMode="cyan" intensity="subtle" />
 
         {/* Scan lines */}
         <div className="absolute inset-0 pointer-events-none" style={{

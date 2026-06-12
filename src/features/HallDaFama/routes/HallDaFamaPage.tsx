@@ -9,6 +9,7 @@ import {
   Medal, Sparkles, Hand
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { BeamsBackground } from '@/components/ui/BeamsBackground';
 import icHallDaFama from '@/assets/icones/halldafama.webp';
 
 // ─── PALETA RIOT ──────────────────────────────────────────
@@ -181,6 +182,9 @@ const GoatHero = ({ goat }: any) => {
         <div className="absolute inset-0" style={{ background: 'linear-gradient(90deg, #010A13 0%, transparent 30%, transparent 70%, #010A13 100%)' }} />
         <div className="absolute bottom-0 left-0 right-0 h-64" style={{ background: 'linear-gradient(0deg, #010A13, transparent)' }} />
       </motion.div>
+
+      {/* Feixes de luz dourados — atrás do conteúdo, combinando com o tema do Panteão */}
+      <BeamsBackground colorMode="gold" intensity="medium" />
 
       {/* Conteúdo do hero */}
       <motion.div style={{ opacity: fgOpacity }} className="relative z-10 w-full container-main px-6">
