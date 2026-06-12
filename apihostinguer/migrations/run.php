@@ -9,12 +9,12 @@
 
 require_once __DIR__ . '/../config/env.php';
 
-// Proteção mínima por token
-$token = $_GET['token'] ?? '';
-$expected = $_ENV['MIGRATION_TOKEN'] ?? 'futlendas-migrate-2024';
-if ($token !== $expected) {
+// Proteção por token — OBRIGATÓRIO definir MIGRATION_TOKEN no .env (sem fallback)
+$token    = $_GET['token'] ?? '';
+$expected = $_ENV['MIGRATION_TOKEN'] ?? '';
+if ($expected === '' || !hash_equals($expected, $token)) {
     http_response_code(403);
-    die(json_encode(['error' => 'Token inválido. Use ?token=SEU_TOKEN']));
+    die(json_encode(['error' => 'Acesso negado. Defina MIGRATION_TOKEN no .env e use ?token=SEU_TOKEN']));
 }
 
 header('Content-Type: text/html; charset=utf-8');
@@ -43,6 +43,11 @@ function colExists(PDO $pdo, string $table, string $col): bool {
 function tableExists(PDO $pdo, string $table): bool {
     $r = $pdo->prepare("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?");
     $r->execute([$table]);
+    return (int)$r->fetchColumn() > 0;
+}
+function idxExists(PDO $pdo, string $table, string $index): bool {
+    $r = $pdo->prepare("SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND INDEX_NAME=?");
+    $r->execute([$table, $index]);
     return (int)$r->fetchColumn() > 0;
 }
 function run(PDO $pdo, string $label, string $sql): void {
@@ -150,6 +155,40 @@ if (!colExists($pdo, 'campeonato_vencedores', 'posicao')) {
         "ALTER TABLE campeonato_vencedores ADD COLUMN posicao INT(11) DEFAULT 1");
 } else {
     skip('006b: ADD campeonato_vencedores.posicao', 'coluna já existe');
+}
+
+// ── 008: segurança + índices (email único, google_id, convites.expira_em) ───
+if (!idxExists($pdo, 'usuarios', 'uk_usuarios_email')) {
+    // Antes de criar o UNIQUE, verifica se há emails duplicados
+    $dups = $pdo->query("
+        SELECT email, COUNT(*) AS c FROM usuarios
+        WHERE email IS NOT NULL AND email <> ''
+        GROUP BY email HAVING c > 1
+    ")->fetchAll(PDO::FETCH_ASSOC);
+
+    if ($dups) {
+        $lista = implode(', ', array_map(fn($d) => htmlspecialchars($d['email']) . " ({$d['c']}x)", $dups));
+        skip('008a: UNIQUE usuarios.email', "emails duplicados encontrados: {$lista} — resolva manualmente e rode de novo");
+    } else {
+        run($pdo, '008a: UNIQUE usuarios.email',
+            "ALTER TABLE usuarios ADD UNIQUE INDEX uk_usuarios_email (email)");
+    }
+} else {
+    skip('008a: UNIQUE usuarios.email', 'índice já existe');
+}
+
+if (!idxExists($pdo, 'usuarios', 'idx_usuarios_google_id')) {
+    run($pdo, '008b: INDEX usuarios.google_id',
+        "ALTER TABLE usuarios ADD INDEX idx_usuarios_google_id (google_id)");
+} else {
+    skip('008b: INDEX usuarios.google_id', 'índice já existe');
+}
+
+if (!idxExists($pdo, 'convites', 'idx_convites_expira')) {
+    run($pdo, '008c: INDEX convites.expira_em',
+        "ALTER TABLE convites ADD INDEX idx_convites_expira (expira_em)");
+} else {
+    skip('008c: INDEX convites.expira_em', 'índice já existe');
 }
 
 echo "</table>";

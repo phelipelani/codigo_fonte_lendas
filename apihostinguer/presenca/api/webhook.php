@@ -9,6 +9,21 @@ require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../whatsapp.php';
 require_once __DIR__ . '/../bot.php';
 
+// ── Valida que a chamada veio da Evolution API ────────
+// Configure o webhook na Evolution com a URL:
+//   https://SEU-DOMINIO/api/presenca/webhook?token=SEU_TOKEN
+// O token e PRESENCA_WEBHOOK_TOKEN do .env (fallback: EVOLUTION_APIKEY).
+$tokenEsperado = $_ENV['PRESENCA_WEBHOOK_TOKEN'] ?? ($_ENV['EVOLUTION_APIKEY'] ?? '');
+if ($tokenEsperado !== '') {
+    $headers       = array_change_key_case(getallheaders() ?: [], CASE_LOWER);
+    $tokenRecebido = (string)($_GET['token'] ?? ($headers['apikey'] ?? ''));
+    if (!hash_equals($tokenEsperado, $tokenRecebido)) {
+        log_bot('WEBHOOK BLOQUEADO: token invalido ou ausente (IP ' . ($_SERVER['REMOTE_ADDR'] ?? '?') . ')');
+        http_response_code(401);
+        exit(json_encode(['ok' => false, 'msg' => 'token invalido']));
+    }
+}
+
 $rawBody = file_get_contents('php://input');
 $payload = json_decode($rawBody, true);
 

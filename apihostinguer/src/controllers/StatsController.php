@@ -656,6 +656,7 @@ class StatsController
             ],
             '_debug_errors' => $errors, // TEMPORARIO -- remover depois de confirmar funcionamento
         ], JSON_UNESCAPED_UNICODE);
-        exit; // IMPORTANTE: garante que nada mais e escrito no output
+        // Sem exit aqui: a rota usa cachedJsonRoute (index.php), que captura
+        // esta saída via output buffering, grava no cache e dá o exit.
     }
 }

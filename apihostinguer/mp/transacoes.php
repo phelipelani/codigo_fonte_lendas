@@ -20,7 +20,12 @@ try {
         exit(json_encode(['ok' => false, 'msg' => 'Conta MP nÃ£o conectada']));
     }
 
-    $accessToken = $conta['access_token'];
+    require_once __DIR__ . '/crypto.php';
+    $accessToken = mp_decrypt($conta['access_token']);
+    if (!$accessToken) {
+        http_response_code(500);
+        exit(json_encode(['ok' => false, 'msg' => 'Token MP ilegível — reconecte a conta em Financeiro.']));
+    }
 
     // Busca pagamentos recebidos
     $params = http_build_query([

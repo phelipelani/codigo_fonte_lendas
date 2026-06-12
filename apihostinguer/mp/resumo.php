@@ -21,7 +21,12 @@ try {
         exit(json_encode(['ok' => false, 'msg' => 'Conta MP não conectada']));
     }
 
-    $accessToken = $conta['access_token'];
+    require_once __DIR__ . '/crypto.php';
+    $accessToken = mp_decrypt($conta['access_token']);
+    if (!$accessToken) {
+        http_response_code(500);
+        exit(json_encode(['ok' => false, 'msg' => 'Token MP ilegível — reconecte a conta em Financeiro.']));
+    }
 
     // Busca sem filtro de data — mesmo endpoint que transacoes.php
     $params = http_build_query([

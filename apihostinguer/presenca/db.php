@@ -129,17 +129,15 @@ function botConfig(string $key): string {
     return $cache[$key] ?? $defaults[$key] ?? '';
 }
 
-// ── Jogadores ativos do banco (fallback: config.php) ────────
+// ── Jogadores ativos — fonte única: tabela bot_jogadores ────
 function getJogadoresAtivos(): array {
     try {
-        $rows = Database::getInstance()->fetchAll(
+        return Database::getInstance()->fetchAll(
             "SELECT nome, numero, tipo FROM bot_jogadores WHERE ativo = 1 ORDER BY tipo DESC, nome ASC"
         );
-        if (!empty($rows)) return $rows;
     } catch (Throwable $e) {
-        // tabela ainda não existe — usa constantes do config.php
+        $msg = 'ERRO: tabela bot_jogadores indisponível — rode /presenca/setup. ' . $e->getMessage();
+        function_exists('log_bot') ? log_bot($msg) : error_log('[presenca] ' . $msg);
+        return [];
     }
-    $linha    = array_map(fn($j) => array_merge($j, ['tipo' => 'linha']),   JOGADORES_LINHA);
-    $goleiros = array_map(fn($j) => array_merge($j, ['tipo' => 'goleiro']), GOLEIROS);
-    return array_merge($linha, $goleiros);
 }

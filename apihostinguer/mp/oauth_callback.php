@@ -22,7 +22,12 @@ if (!$code || !$state) {
 }
 
 // ── Valida e decodifica o state ──────────────────────
-$secret = $_ENV['JWT_SECRET'] ?? 'futlendas_secret';
+$secret = $_ENV['JWT_SECRET'] ?? '';
+if ($secret === '') {
+    error_log('[MP OAuth] JWT_SECRET ausente no .env — callback bloqueado.');
+    header("Location: {$frontendBase}/financeiro?mp=erro&msg=config_ausente");
+    exit;
+}
 $parts  = explode('.', $state, 2);
 if (count($parts) !== 2) {
     header("Location: {$frontendBase}/financeiro?mp=erro&msg=state_invalido");
@@ -87,7 +92,11 @@ $expiraEm     = $expiresIn > 0
     ? date('Y-m-d H:i:s', time() + $expiresIn)
     : null;
 
-// ── Salva ou atualiza no banco ───────────────────────
+// ── Salva ou atualiza no banco (tokens criptografados) ──
+require_once __DIR__ . '/crypto.php';
+$accessToken  = mp_encrypt($accessToken);
+$refreshToken = mp_encrypt($refreshToken);
+
 try {
     $pdo = Database::getInstance()->getConnection();
     $stmt = $pdo->prepare("

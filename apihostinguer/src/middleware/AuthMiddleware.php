@@ -6,6 +6,7 @@
 
 require_once __DIR__ . '/../utils/JWT.php';
 require_once __DIR__ . '/../utils/HttpError.php';
+require_once __DIR__ . '/../../config/database.php';
 
 class AuthMiddleware
 {
@@ -26,16 +27,25 @@ class AuthMiddleware
     /**
      * Verifica autenticação E exige role admin
      * Lança 403 se o usuário não for admin
+     *
+     * O role é reconferido no BANCO (não só no token): como o token vive 7 dias,
+     * isso garante que rebaixar/desativar um admin tem efeito imediato.
      */
     public static function isAdmin(): array
     {
         try {
             $decoded = self::extractToken();
 
-            if (!isset($decoded['role']) || $decoded['role'] !== 'admin') {
+            $user = Database::getInstance()->fetchOne(
+                'SELECT role, ativo FROM usuarios WHERE id = ? LIMIT 1',
+                [(int)($decoded['userId'] ?? 0)]
+            );
+
+            if (!$user || empty($user['ativo']) || $user['role'] !== 'admin') {
                 throw new HttpError('Acesso negado. Requer privilégios de administrador.', 403);
             }
 
+            $decoded['role'] = $user['role'];
             $_REQUEST['authUser'] = $decoded;
 
             return $decoded;

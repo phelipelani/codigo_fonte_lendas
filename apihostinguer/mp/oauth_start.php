@@ -22,8 +22,12 @@ if (!$clientId) {
 }
 
 // Gera state assinado (user_id + timestamp + HMAC)
+$secret = $_ENV['JWT_SECRET'] ?? '';
+if ($secret === '') {
+    http_response_code(500);
+    exit(json_encode(['ok' => false, 'msg' => 'JWT_SECRET não configurado no .env']));
+}
 $payload = base64_encode(json_encode(['uid' => $userId, 'ts' => time()]));
-$secret  = $_ENV['JWT_SECRET'] ?? 'futlendas_secret';
 $sig     = substr(hash_hmac('sha256', $payload, $secret), 0, 16);
 $state   = $payload . '.' . $sig;
 

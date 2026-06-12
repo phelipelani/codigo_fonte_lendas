@@ -89,23 +89,9 @@ foreach ($configs as $chave => $valor) {
 }
 echo "✅ Config padrão: $seedConfig valor(es) inserido(s)<br>";
 
-// Seed: jogadores (só se tabela estiver vazia)
+// Jogadores: cadastrados via painel (POST /presenca/jogadores) — sem seed em código
 $count = (int) db()->query("SELECT COUNT(*) FROM bot_jogadores")->fetchColumn();
-if ($count === 0) {
-    $jogadores = [];
-    foreach (JOGADORES_LINHA as $j) $jogadores[] = [$j['nome'], $j['numero'], 'linha'];
-    foreach (GOLEIROS        as $j) $jogadores[] = [$j['nome'], $j['numero'], 'goleiro'];
-
-    $stmt = db()->prepare("INSERT IGNORE INTO bot_jogadores (nome, numero, tipo) VALUES (?, ?, ?)");
-    $inseridos = 0;
-    foreach ($jogadores as [$nome, $numero, $tipo]) {
-        $stmt->execute([$nome, $numero, $tipo]);
-        $inseridos += $stmt->rowCount();
-    }
-    echo "✅ Jogadores importados: $inseridos jogador(es)<br>";
-} else {
-    echo "✅ bot_jogadores já possui $count jogador(es) — seed ignorado<br>";
-}
+echo "✅ bot_jogadores possui $count jogador(es) — cadastre/edite pelo painel<br>";
 
 $logsDir = __DIR__ . '/logs';
 if (!is_dir($logsDir)) {

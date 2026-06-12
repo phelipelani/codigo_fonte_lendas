@@ -82,9 +82,10 @@ class AuthController
         $login    = trim($input['login']);
         $password = $input['password'];
 
-        // Aceita login por username OU email (case-insensitive)
+        // Aceita login por username OU email — a collation utf8mb4_unicode_ci do banco
+        // já é case-insensitive; sem LOWER() a query usa os índices das colunas.
         $user = $this->db->fetchOne(
-            'SELECT * FROM usuarios WHERE LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?) LIMIT 1',
+            'SELECT * FROM usuarios WHERE username = ? OR email = ? LIMIT 1',
             [$login, $login]
         );
 
@@ -298,7 +299,7 @@ class AuthController
             'username'  => $user['username'],
             'role'      => $user['role'],
             'jogadorId' => $jogadorIdG,
-        ], 86400);
+        ], 7 * 86400); // 7 dias — rotas admin reconferem o role no banco a cada request
 
         // Redireciona para o front com o token na URL
         // O frontend deve capturar o token do hash e armazenar
@@ -381,8 +382,8 @@ class AuthController
             throw new HttpError('Nova senha é obrigatória.', 400);
         }
 
-        if (strlen($input['password']) < 6) {
-            throw new HttpError('A senha deve ter pelo menos 6 caracteres.', 400);
+        if (strlen($input['password']) < 8) {
+            throw new HttpError('A senha deve ter pelo menos 8 caracteres.', 400);
         }
 
         if (isset($input['confirmPassword']) && $input['password'] !== $input['confirmPassword']) {
@@ -432,8 +433,8 @@ class AuthController
             throw new HttpError('Senha é obrigatória.', 400);
         }
 
-        if (strlen($input['password']) < 6) {
-            throw new HttpError('A senha deve ter pelo menos 6 caracteres.', 400);
+        if (strlen($input['password']) < 8) {
+            throw new HttpError('A senha deve ter pelo menos 8 caracteres.', 400);
         }
 
         $token    = trim($input['token']);
@@ -463,8 +464,23 @@ class AuthController
         $passwordHash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
         $role         = $convite['role'] ?? 'user';
 
-        // Email opcional no registro
-        $email = !empty($input['email']) ? trim($input['email']) : null;
+        // Email opcional no registro — mas se informado, precisa ser válido e único
+        // (sem isso, alguém poderia registrar com o email de outra pessoa e capturar
+        // o login Google dela, que busca a conta por email)
+        $email = !empty($input['email']) ? strtolower(trim($input['email'])) : null;
+
+        if ($email !== null) {
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                throw new HttpError('Email inválido.', 400);
+            }
+            $emailExists = $this->db->fetchOne(
+                'SELECT id FROM usuarios WHERE email = ? LIMIT 1',
+                [$email]
+            );
+            if ($emailExists) {
+                throw new HttpError('Este email já está em uso.', 409);
+            }
+        }
 
         // Transaction para garantir atomicidade
         $this->db->beginTransaction();
@@ -580,7 +596,7 @@ class AuthController
             'username'  => $user['username'],
             'role'      => $user['role'],
             'jogadorId' => $jogadorId,
-        ], 86400); // 24 horas
+        ], 7 * 86400); // 7 dias — rotas admin reconferem o role no banco a cada request
 
         http_response_code($statusCode);
         echo json_encode([

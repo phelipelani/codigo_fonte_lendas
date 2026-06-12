@@ -25,7 +25,6 @@ class Database {
             ];
             
             $this->connection = new PDO($dsn, $user, $password, $options);
-            error_log("✅ Conectado ao MySQL com sucesso!");
         } catch (PDOException $e) {
             error_log("❌ Erro ao conectar ao MySQL: " . $e->getMessage());
             throw $e;
