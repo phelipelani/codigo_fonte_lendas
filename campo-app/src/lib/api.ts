@@ -1,6 +1,6 @@
 // Cliente HTTP do /campo.
 // Web (mesma origem): usa '/api'. APK/dev override: VITE_API_BASE.
-const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) || '/api'
+export const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) || '/api'
 
 const TOKEN_KEY = 'campo_token'
 

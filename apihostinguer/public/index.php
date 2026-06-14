@@ -1323,6 +1323,7 @@ try {
         require_once __DIR__ . '/../src/controllers/CampoJogadorController.php';
         require_once __DIR__ . '/../src/controllers/CampoAdversarioController.php';
         require_once __DIR__ . '/../src/controllers/CampoPartidaController.php';
+        require_once __DIR__ . '/../src/controllers/CampoConviteController.php';
 
         // GET /campo/setup — cria tabelas + seed (rodar 1x). Protegido por env CAMPO_SETUP_KEY.
         if ($path === '/campo/setup' && $method === 'GET') {
@@ -1344,6 +1345,34 @@ try {
         if ($path === '/campo/auth/me' && $method === 'GET') {
             CampoMiddleware::auth();
             (new CampoAuthController())->me();
+            exit;
+        }
+
+        // Google OAuth (publicas)
+        if ($path === '/campo/auth/google' && $method === 'GET') {
+            (new CampoAuthController())->googleRedirect();
+            exit;
+        }
+        if ($path === '/campo/auth/google/callback' && $method === 'GET') {
+            (new CampoAuthController())->googleCallback();
+            exit;
+        }
+
+        // CONVITES
+        // criar (diretor/tecnico)
+        if ($path === '/campo/convites' && $method === 'POST') {
+            CampoMiddleware::auth(['diretor', 'tecnico']);
+            (new CampoConviteController())->store();
+            exit;
+        }
+        // validar (publico)
+        if (preg_match('#^/campo/convites/([a-f0-9]+)$#', $path, $m) && $method === 'GET') {
+            (new CampoConviteController())->validate($m[1]);
+            exit;
+        }
+        // ativar (publico)
+        if (preg_match('#^/campo/convites/([a-f0-9]+)/ativar$#', $path, $m) && $method === 'POST') {
+            (new CampoConviteController())->ativar($m[1]);
             exit;
         }
 

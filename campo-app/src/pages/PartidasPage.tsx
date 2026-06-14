@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
+import Layout from '../components/Layout'
 
 interface Adversario {
   id: number
@@ -29,9 +30,9 @@ const STATUS_LABEL: Record<string, string> = {
   finalizada: 'Finalizada',
 }
 const STATUS_COR: Record<string, string> = {
-  agendada: 'bg-white/15 text-white/80',
-  ao_vivo: 'bg-campo-red/30 text-red-200',
-  finalizada: 'bg-campo-green/30 text-green-200',
+  agendada: 'border border-white/15 bg-white/5 text-white/75',
+  ao_vivo: 'border border-campo-red/40 bg-campo-red/20 text-red-200',
+  finalizada: 'border border-night-cyan/40 bg-night-cyan/10 text-night-cyan',
 }
 
 type Form = {
@@ -42,14 +43,7 @@ type Form = {
   localBairro: string
   competicao: string
 }
-const FORM_VAZIO: Form = {
-  adversarioId: '',
-  dataHora: '',
-  local: 'casa',
-  localNome: '',
-  localBairro: '',
-  competicao: '',
-}
+const FORM_VAZIO: Form = { adversarioId: '', dataHora: '', local: 'casa', localNome: '', localBairro: '', competicao: '' }
 
 function fmtData(dh: string | null): string {
   if (!dh) return 'Data a definir'
@@ -88,7 +82,6 @@ export default function PartidasPage() {
       setLoading(false)
     }
   }
-
   useEffect(() => {
     carregar()
   }, [])
@@ -146,98 +139,98 @@ export default function PartidasPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl p-5">
-      <header className="mb-5 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link to="/" className="btn-ghost px-3 py-1.5 text-sm">
-            ←
-          </Link>
-          <h1 className="text-2xl font-extrabold">Partidas</h1>
-        </div>
+    <Layout
+      active="partidas"
+      title="Partidas"
+      subtitle={`${lista.length} jogo${lista.length === 1 ? '' : 's'}`}
+      actions={
         <button onClick={novo} className="btn-primary text-sm">
           + Partida
         </button>
-      </header>
+      }
+    >
+      <div className="max-w-3xl">
+        {erro && (
+          <div className="mb-3 rounded-lg border border-campo-red/40 bg-campo-red/15 px-3 py-2 text-sm text-red-200">
+            {erro}
+          </div>
+        )}
 
-      {erro && (
-        <div className="mb-3 rounded-lg bg-campo-red/20 px-3 py-2 text-sm text-red-200">{erro}</div>
-      )}
-
-      {loading ? (
-        <p className="text-white/60">Carregando…</p>
-      ) : lista.length === 0 ? (
-        <div className="card p-8 text-center text-white/60">
-          Nenhuma partida ainda. Toque em <b>+ Partida</b>.
-        </div>
-      ) : (
-        <ul className="space-y-2">
-          {lista.map((p) => (
-            <li key={p.id} className="card p-3">
-              <div className="flex items-center gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate font-bold">
-                      Caraguatas <span className="text-white/40">x</span>{' '}
-                      {p.adversarioNome ?? 'A definir'}
-                    </span>
-                    {p.status === 'finalizada' && (
-                      <span className="text-sm font-bold text-campo-accent">
-                        {p.placarNos}–{p.placarEles}
+        {loading ? (
+          <p className="text-white/60">Carregando…</p>
+        ) : lista.length === 0 ? (
+          <div className="card p-8 text-center text-white/60">
+            Nenhuma partida ainda. Toque em <b>+ Partida</b>.
+          </div>
+        ) : (
+          <ul className="space-y-2">
+            {lista.map((p) => (
+              <li key={p.id} className="card p-4">
+                <div className="flex items-center gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate font-bold">
+                        {p.adversarioNome ?? 'A definir'}
                       </span>
-                    )}
+                      {p.status === 'finalizada' && (
+                        <span className="text-sm font-bold text-night-cyan">
+                          {p.placarNos}–{p.placarEles}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-white/55">
+                      <span>{fmtData(p.dataHora)}</span>
+                      <span>· {LOCAL_LABEL[p.local]}</span>
+                      {p.localNome && (
+                        <span>
+                          · 📍 {p.localNome}
+                          {p.localBairro ? ` — ${p.localBairro}` : ''}
+                        </span>
+                      )}
+                      {p.competicao && <span>· {p.competicao}</span>}
+                    </div>
                   </div>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-white/60">
-                    <span>{fmtData(p.dataHora)}</span>
-                    <span>· {LOCAL_LABEL[p.local]}</span>
-                    {p.localNome && (
-                      <span>
-                        · 📍 {p.localNome}
-                        {p.localBairro ? ` — ${p.localBairro}` : ''}
-                      </span>
-                    )}
-                    {p.competicao && <span>· {p.competicao}</span>}
-                  </div>
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${STATUS_COR[p.status]}`}>
+                    {STATUS_LABEL[p.status]}
+                  </span>
                 </div>
-                <span className={`rounded px-2 py-0.5 text-xs font-bold ${STATUS_COR[p.status]}`}>
-                  {STATUS_LABEL[p.status]}
-                </span>
-              </div>
-              <div className="mt-2 flex items-center gap-2">
-                {p.status !== 'finalizada' && (
-                  <button
-                    onClick={() => navigate(`/partidas/${p.id}/anotar`)}
-                    className="btn-primary px-3 py-1 text-sm"
-                  >
-                    {p.status === 'ao_vivo' ? '● Continuar' : '▶ Anotar'}
+                <div className="mt-3 flex items-center gap-2">
+                  {p.status !== 'finalizada' && (
+                    <button
+                      onClick={() => navigate(`/partidas/${p.id}/anotar`)}
+                      className="btn-primary px-3 py-1.5 text-sm"
+                    >
+                      {p.status === 'ao_vivo' ? '● Continuar' : '▶ Anotar'}
+                    </button>
+                  )}
+                  {p.status === 'finalizada' && (
+                    <button
+                      onClick={() => navigate(`/partidas/${p.id}/relatorio`)}
+                      className="btn-ghost px-3 py-1.5 text-sm"
+                    >
+                      📊 Relatório
+                    </button>
+                  )}
+                  <div className="flex-1" />
+                  <button onClick={() => editar(p)} className="btn-ghost px-3 py-1.5 text-sm">
+                    Editar
                   </button>
-                )}
-                {p.status === 'finalizada' && (
                   <button
-                    onClick={() => navigate(`/partidas/${p.id}/relatorio`)}
-                    className="btn-ghost px-3 py-1 text-sm"
+                    onClick={() => excluir(p)}
+                    className="btn border border-white/12 px-3 py-1.5 text-sm text-red-300 hover:bg-campo-red/20"
                   >
-                    📊 Relatório
+                    ✕
                   </button>
-                )}
-                <div className="flex-1" />
-                <button onClick={() => editar(p)} className="btn-ghost px-3 py-1 text-sm">
-                  Editar
-                </button>
-                <button
-                  onClick={() => excluir(p)}
-                  className="btn px-3 py-1 text-sm text-red-300 hover:bg-campo-red/20"
-                >
-                  ✕
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       {aberto && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4"
           onClick={() => setAberto(false)}
         >
           <div
@@ -261,9 +254,7 @@ export default function PartidasPage() {
                   ))}
                 </select>
                 {adversarios.length === 0 && (
-                  <p className="mt-1 text-xs text-white/50">
-                    Dica: cadastre adversários na tela Adversários.
-                  </p>
+                  <p className="mt-1 text-xs text-white/50">Dica: cadastre adversários na tela Adversários.</p>
                 )}
               </div>
 
@@ -333,6 +324,6 @@ export default function PartidasPage() {
           </div>
         </div>
       )}
-    </div>
+    </Layout>
   )
 }

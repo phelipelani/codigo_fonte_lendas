@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { api } from '../lib/api'
+import Layout from '../components/Layout'
 
 interface Partida {
   id: number
@@ -27,16 +28,10 @@ export default function CapturaPage() {
   }, [id])
 
   return (
-    <div className="mx-auto max-w-2xl p-5">
-      <header className="mb-5 flex items-center gap-3">
-        <Link to="/partidas" className="btn-ghost px-3 py-1.5 text-sm">
-          ←
-        </Link>
-        <h1 className="text-2xl font-extrabold">Anotar partida</h1>
-      </header>
-
+    <Layout active="partidas" title="Anotar partida">
+      <div className="max-w-2xl">
       {erro && (
-        <div className="mb-3 rounded-lg bg-campo-red/20 px-3 py-2 text-sm text-red-200">{erro}</div>
+        <div className="mb-3 rounded-lg border border-campo-red/40 bg-campo-red/15 px-3 py-2 text-sm text-red-200">{erro}</div>
       )}
 
       {loading ? (
@@ -65,6 +60,7 @@ export default function CapturaPage() {
           </div>
         </>
       ) : null}
-    </div>
+      </div>
+    </Layout>
   )
 }
