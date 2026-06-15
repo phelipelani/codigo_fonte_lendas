@@ -1,0 +1,14 @@
+{
+  "name": "Futlendas — Analista de Campo",
+  "short_name": "Analista",
+  "description": "Análise de desempenho do seu time de futebol de campo.",
+  "start_url": "/campo/",
+  "scope": "/campo/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#08272e",
+  "theme_color": "#0a3a3f",
+  "icons": [
+    { "src": "/campo/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

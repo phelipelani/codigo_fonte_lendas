@@ -2,16 +2,36 @@
 /**
  * API FutLendas
  * Arquivo: public/index.php
+ *
+ * Versão mesclada (jun/2026): base = index do servidor (inclui rotas do /campo,
+ * mural do álbum, presenca reenviar/sincronizar, debug) + melhorias de
+ * segurança/performance (CORS restrito, rate limit, cache, validações).
  */
 
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 
-// Headers CORS
-header('Access-Control-Allow-Origin: *');
+// Carrega env ANTES dos headers (CORS depende de FRONTEND_URL)
+require_once __DIR__ . '/../config/env.php';
+
+// Headers CORS — restringe aos domínios configurados no .env
+// FRONTEND_URL = domínio principal; FRONTEND_URL_EXTRA = outros (separados por vírgula,
+// ex: www. e o domínio do front do /campo se for diferente)
+$allowedOrigins = array_filter(array_map('trim', explode(',',
+    ($_ENV['FRONTEND_URL'] ?? 'http://localhost:5173') . ',' .
+    ($_ENV['FRONTEND_URL_EXTRA'] ?? '')
+)));
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if (in_array($origin, $allowedOrigins, true)) {
+    header("Access-Control-Allow-Origin: {$origin}");
+} elseif (empty($origin)) {
+    // Requisição sem Origin (curl, Postman, server-side) — permite
+    header('Access-Control-Allow-Origin: ' . ($allowedOrigins[0] ?? '*'));
+}
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+header('Vary: Origin');
 
 // Não força JSON em rotas OAuth (que fazem redirect: Google e Mercado Pago)
 $requestUri    = $_SERVER['REQUEST_URI'] ?? '';
@@ -27,9 +47,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // Imports
-require_once __DIR__ . '/../config/env.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../src/utils/HttpError.php';
+require_once __DIR__ . '/../src/utils/RateLimiter.php';
+require_once __DIR__ . '/../src/utils/Cache.php';
 require_once __DIR__ . '/../src/utils/JWT.php';
 require_once __DIR__ . '/../src/middleware/AuthMiddleware.php';
 require_once __DIR__ . '/../src/controllers/AuthController.php';
@@ -56,10 +77,16 @@ function sendApiError(Throwable $e): void
     $code = 500;
     $data = ['error' => true, 'message' => 'Erro interno do servidor.'];
 
+    // Em produção, detalhes de erros internos vão só para o error_log —
+    // nunca para o cliente (evita vazar estrutura do banco/queries).
+    $isProd = ($_ENV['APP_ENV'] ?? 'production') === 'production';
+
     if ($e instanceof HttpError) {
         $code = $e->getStatusCode();
         $data = $e->toArray();
     } else {
+        error_log('[API ERROR] ' . get_class($e) . ': ' . $e->getMessage() . ' em ' . $e->getFile() . ':' . $e->getLine());
+
         // PDOException.getCode() retorna SQLSTATE string (ex: '42S22') — nunca usar como HTTP code
         $numericCode = is_numeric($e->getCode()) ? (int) $e->getCode() : 0;
         if ($numericCode >= 100 && $numericCode <= 599) {
@@ -69,17 +96,19 @@ function sendApiError(Throwable $e): void
         if ($e instanceof PDOException) {
             $sqlState = (string) $e->getCode();
             if (str_starts_with($sqlState, '42S22')) {
-                $data['message'] = 'Coluna nao encontrada no banco. Verifique as migrations. Detalhe: ' . $e->getMessage();
+                $data['message'] = 'Coluna nao encontrada no banco. Verifique as migrations.';
             } elseif (str_starts_with($sqlState, '42S02')) {
                 $data['message'] = 'Tabela nao encontrada no banco. Verifique as migrations.';
             } elseif (str_starts_with($sqlState, '23000')) {
                 $data['message'] = 'Registro duplicado ou violacao de chave.';
             } else {
-                $data['message'] = 'Erro no banco: ' . $e->getMessage();
+                $data['message'] = $isProd ? 'Erro interno no banco de dados.' : 'Erro no banco: ' . $e->getMessage();
             }
-            $data['sqlstate'] = $sqlState;
+            if (!$isProd) {
+                $data['sqlstate'] = $sqlState;
+            }
         } else {
-            $data['message'] = $e->getMessage();
+            $data['message'] = $isProd ? 'Erro interno do servidor.' : $e->getMessage();
         }
     }
 
@@ -95,8 +124,37 @@ function jsonResponse(mixed $data, int $code = 200): void
     exit;
 }
 
+/**
+ * Serve a resposta do cache se existir; senão executa o handler,
+ * captura a saída JSON e guarda no cache por $ttl segundos.
+ * Usado nos endpoints pesados de stats/analytics (dados globais, sem nada por usuário).
+ */
+function cachedJsonRoute(string $cacheKey, callable $handler, int $ttl = 300): void
+{
+    $hit = Cache::get($cacheKey);
+    if ($hit !== null) {
+        http_response_code(200);
+        echo $hit;
+        exit;
+    }
+
+    ob_start();
+    $handler();
+    $out = ob_get_clean();
+
+    if ($out !== false && $out !== '' && http_response_code() === 200) {
+        Cache::set($cacheKey, $out, $ttl);
+    }
+
+    echo $out;
+    exit;
+}
+
 try {
-    $db     = Database::getInstance();
+    // Rotas /campo usam banco proprio (CampoDatabase, localhost). Evita abrir a
+    // conexao REMOTA do Futlendas (srv791) a toa em cada request do /campo.
+    $isCampoReq = strpos($_SERVER['REQUEST_URI'] ?? '', '/campo') !== false;
+    $db     = $isCampoReq ? null : Database::getInstance();
     $method = $_SERVER['REQUEST_METHOD'];
     $uri    = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
@@ -114,7 +172,15 @@ try {
         $path = rtrim($path, '/');
     }
 
-    error_log("[ROUTE] {$method} {$path}");
+    if (($_ENV['APP_DEBUG'] ?? '') === 'true') {
+        error_log("[ROUTE] {$method} {$path}");
+    }
+
+    // Qualquer escrita no Futlendas invalida o cache de stats/analytics.
+    // Custo ~zero; garante que rankings nunca fiquem desatualizados após uma ação.
+    if (!$isCampoReq && $method !== 'GET' && $method !== 'OPTIONS') {
+        Cache::clear();
+    }
 
     // =========================================================
     // HEALTH CHECK
@@ -123,11 +189,24 @@ try {
         jsonResponse(['status' => 'ok', 'message' => 'FutLendas API On!']);
     }
 
+    // =========================================================
+    // MIGRATIONS — runner via browser
+    // GET /migrations/run?token=MIGRATION_TOKEN
+    // (o .htaccess manda tudo para o index.php, então o run.php
+    //  precisa ser roteado por aqui; o token é validado dentro dele)
+    // =========================================================
+    if (preg_match('#^/migrations/run(\.php)?$#', $path) && $method === 'GET') {
+        header('Content-Type: text/html; charset=utf-8');
+        require __DIR__ . '/../migrations/run.php';
+        exit;
+    }
 
     // =========================================================
     // AUTH — Públicas
     // =========================================================
     if ($path === '/auth/login' && $method === 'POST') {
+        // 10 tentativas por IP em 60 segundos
+        RateLimiter::check('login', $_SERVER['REMOTE_ADDR'] ?? 'unknown', 10, 60);
         (new AuthController())->login(); exit;
     }
 
@@ -140,14 +219,20 @@ try {
     }
 
     if ($path === '/auth/forgot-password' && $method === 'POST') {
+        // 3 tentativas por IP em 5 minutos (evita spam de email)
+        RateLimiter::check('forgot_password', $_SERVER['REMOTE_ADDR'] ?? 'unknown', 3, 300);
         (new AuthController())->forgotPassword(); exit;
     }
 
     if ($path === '/auth/reset-password' && $method === 'POST') {
+        // 5 tentativas por IP em 5 minutos
+        RateLimiter::check('reset_password', $_SERVER['REMOTE_ADDR'] ?? 'unknown', 5, 300);
         (new AuthController())->resetPassword(); exit;
     }
 
     if ($path === '/auth/register' && $method === 'POST') {
+        // 5 tentativas por IP em 5 minutos
+        RateLimiter::check('register', $_SERVER['REMOTE_ADDR'] ?? 'unknown', 5, 300);
         (new AuthController())->register(); exit;
     }
 
@@ -366,6 +451,7 @@ try {
     }
 
     // Recalcular prêmios de uma rodada já finalizada (corrige dados errados) — admin
+    // Usa ReflectionMethod para funcionar com salvarPremiosRodada público OU privado
     if (preg_match('#^/rodadas/(\d+)/recalcular-premios$#', $path, $m) && $method === 'POST') {
         AuthMiddleware::isAdmin();
         $rc = new RodadaController();
@@ -497,13 +583,13 @@ try {
     // =========================================================
     if ($path === '/analytics/panoramica' && $method === 'GET') {
         AuthMiddleware::handle();
-        (new AnalyticsController())->panoramica(); exit;
+        cachedJsonRoute('analytics_panoramica', fn() => (new AnalyticsController())->panoramica());
     }
 
     // GET /analytics/geral
     if ($path === '/analytics/geral' && $method === 'GET') {
         AuthMiddleware::handle();
-        (new AnalyticsController())->geral(); exit;
+        cachedJsonRoute('analytics_geral', fn() => (new AnalyticsController())->geral());
     }
 
     // GET /analytics/jogador/:id
@@ -521,7 +607,7 @@ try {
     // GET /analytics/sinergia
     if ($path === '/analytics/sinergia' && $method === 'GET') {
         AuthMiddleware::handle();
-        (new AnalyticsController())->sinergia(); exit;
+        cachedJsonRoute('analytics_sinergia', fn() => (new AnalyticsController())->sinergia());
     }
 
     // GET /analytics/confronto/:idA/:idB
@@ -693,6 +779,18 @@ try {
         exit;
     }
 
+    // CAMPEONATOS — REPARO BRACKET (corrige final ausente) — admin
+    // method_exists: protege caso o RodadaController do servidor ainda não tenha o método
+    if (preg_match('#^/campeonatos/(\d+)/mata-mata/reparar$#', $path, $m) && $method === 'POST') {
+        AuthMiddleware::isAdmin();
+        $rc = new RodadaController();
+        if (!method_exists($rc, 'repararBracket')) {
+            throw new HttpError('repararBracket indisponível nesta versão do RodadaController. Atualize o arquivo no servidor.', 501);
+        }
+        $rc->repararBracket((int)$m[1]);
+        exit;
+    }
+
     // =========================================================
     // CAMPEONATOS — SORTEIO
     // =========================================================
@@ -707,6 +805,85 @@ try {
         exit;
     }
 
+    // POST /campeonatos/:id/recalcular-premios — recalcula MVP, artilheiro, garçom, etc. (admin)
+    if (preg_match('#^/campeonatos/(\d+)/recalcular-premios$#', $path, $m) && $method === 'POST') {
+        AuthMiddleware::isAdmin();
+        $cc = new CampeonatoController();
+        if (!method_exists($cc, 'salvarPremiosCampeonato')) {
+            throw new HttpError('salvarPremiosCampeonato indisponível nesta versão do CampeonatoController. Atualize o arquivo no servidor.', 501);
+        }
+        $campId  = (int)$m[1];
+        $premios = $cc->salvarPremiosCampeonato($campId);
+        jsonResponse(['success' => true, 'campeonato_id' => $campId, 'premios' => $premios]);
+    }
+
+    // POST /campeonatos/recalcular-todos-premios — recalcula todos os campeonatos finalizados (admin)
+    if ($path === '/campeonatos/recalcular-todos-premios' && $method === 'POST') {
+        AuthMiddleware::isAdmin();
+        $cc = new CampeonatoController();
+        if (!method_exists($cc, 'salvarPremiosCampeonato')) {
+            throw new HttpError('salvarPremiosCampeonato indisponível nesta versão do CampeonatoController. Atualize o arquivo no servidor.', 501);
+        }
+        $pdo   = Database::getInstance()->getConnection();
+        $camps = $pdo->query("SELECT id, nome FROM campeonatos WHERE status = 'finalizado' ORDER BY data ASC")->fetchAll(PDO::FETCH_ASSOC);
+        $resultado = [];
+        foreach ($camps as $c) {
+            try {
+                $premios = $cc->salvarPremiosCampeonato((int)$c['id']);
+                $resultado[] = ['campeonato_id' => (int)$c['id'], 'nome' => $c['nome'], 'status' => 'ok', 'premios' => count($premios)];
+            } catch (Throwable $ex) {
+                $resultado[] = ['campeonato_id' => (int)$c['id'], 'nome' => $c['nome'], 'status' => 'erro', 'message' => $ex->getMessage()];
+            }
+        }
+        jsonResponse(['success' => true, 'total' => count($camps), 'resultado' => $resultado]);
+    }
+
+    // POST /campeonatos/:id/registrar-vencedores — corrige campeonatos antigos que
+    // foram finalizados antes do fix (não tinham jogador_id em campeonato_vencedores)
+    if (preg_match('#^/campeonatos/(\d+)/registrar-vencedores$#', $path, $m) && $method === 'POST') {
+        AuthMiddleware::isAdmin();
+        $campId = (int)$m[1];
+        $pdo    = Database::getInstance()->getConnection();
+
+        $camp = $pdo->prepare("SELECT id, time_campeao_id FROM campeonatos WHERE id = ?");
+        $camp->execute([$campId]);
+        $camp = $camp->fetch(PDO::FETCH_ASSOC);
+
+        if (!$camp || !$camp['time_campeao_id']) {
+            throw new HttpError('Campeonato não encontrado ou sem campeão definido.', 404);
+        }
+
+        $campeaoId = (int)$camp['time_campeao_id'];
+
+        // Garante registro do time
+        $pdo->prepare("INSERT IGNORE INTO campeonato_vencedores (campeonato_id, time_id, posicao) VALUES (?, ?, 1)")
+            ->execute([$campId, $campeaoId]);
+
+        // Busca jogadores que jogaram pelo time campeão neste campeonato
+        $stmt = $pdo->prepare("
+            SELECT DISTINCT ep.jogador_id
+            FROM campeonato_estatisticas_partida ep
+            JOIN campeonato_partidas cp ON cp.id = ep.partida_id
+                AND cp.campeonato_id = ?
+                AND cp.status = 'finalizada'
+            WHERE ep.time_id = ?
+        ");
+        $stmt->execute([$campId, $campeaoId]);
+        $jogadores = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $ins = $pdo->prepare("INSERT IGNORE INTO campeonato_vencedores (campeonato_id, jogador_id, time_id, posicao) VALUES (?, ?, ?, 1)");
+        foreach ($jogadores as $jog) {
+            $ins->execute([$campId, (int)$jog['jogador_id'], $campeaoId]);
+        }
+
+        jsonResponse([
+            'success'   => true,
+            'campeonato_id' => $campId,
+            'time_campeao_id' => $campeaoId,
+            'jogadores_registrados' => count($jogadores),
+        ]);
+    }
+
     // =========================================================
     // UPLOAD DE FOTO — AWS S3
     // =========================================================
@@ -718,13 +895,38 @@ try {
         }
 
         $file = $_FILES['foto'];
-        $allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-        if (!in_array($file['type'], $allowedTypes)) {
-            throw new HttpError('Tipo nao permitido. Use JPEG, PNG ou WEBP.', 400);
-        }
         if ($file['size'] > 5 * 1024 * 1024) {
             throw new HttpError('Maximo 5MB.', 400);
         }
+
+        // Valida pelo CONTEUDO do arquivo (finfo), nao pelo MIME enviado
+        // pelo cliente — impede upload de arquivos disfarçados de imagem.
+        $extPorMime = [
+            'image/jpeg'    => 'jpg',
+            'image/png'     => 'png',
+            'image/webp'    => 'webp',
+            'image/gif'     => 'gif',
+            'image/svg+xml' => 'svg',
+        ];
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mime  = $finfo->file($file['tmp_name']) ?: '';
+
+        // SVG pode ser detectado como XML/texto — aceita se a extensao for .svg e o conteudo tiver <svg
+        if (!isset($extPorMime[$mime]) && in_array($mime, ['text/xml', 'application/xml', 'text/plain'], true)) {
+            $extOriginal = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+            $inicio      = (string) file_get_contents($file['tmp_name'], false, null, 0, 4096);
+            if ($extOriginal === 'svg' && stripos($inicio, '<svg') !== false) {
+                $mime = 'image/svg+xml';
+            }
+        }
+
+        if (!isset($extPorMime[$mime])) {
+            throw new HttpError('Arquivo nao e uma imagem valida. Use JPEG, PNG, WEBP, GIF ou SVG.', 400);
+        }
+
+        // Normaliza tipo e extensao a partir do MIME real detectado
+        $file['type'] = $mime;
+        $file['name'] = 'upload.' . $extPorMime[$mime];
 
         $pasta = preg_replace('/[^a-z0-9_-]/', '', strtolower($_GET['pasta'] ?? 'uploads'));
 
@@ -739,80 +941,86 @@ try {
     }
 
     // =========================================================
-    // ESTATÍSTICAS — Dashboard
+    // ESTATÍSTICAS — Dashboard (cacheado)
     // =========================================================
     if ($path === '/estatisticas/dashboard' && $method === 'GET') {
         AuthMiddleware::handle();
-        try {
-            $pdo = Database::getInstance()->getConnection();
-            $gols      = (int) $pdo->query("SELECT COALESCE(SUM(gols),0) FROM campeonato_estatisticas_partida")->fetchColumn();
-            $assists   = (int) $pdo->query("SELECT COALESCE(SUM(assistencias),0) FROM campeonato_estatisticas_partida")->fetchColumn();
-            $jogadores = (int) $pdo->query("SELECT COUNT(*) FROM jogadores")->fetchColumn();
-            $jogos     = (int) $pdo->query("SELECT COUNT(*) FROM campeonato_partidas WHERE status = 'finalizada'")->fetchColumn();
-            jsonResponse([
-                'total_gols'         => $gols,
-                'total_assistencias' => $assists,
-                'total_jogadores'    => $jogadores,
-                'total_jogos'        => $jogos,
-            ]);
-        } catch (Exception $e) {
-            jsonResponse(['total_gols' => 0, 'total_assistencias' => 0, 'total_jogadores' => 0, 'total_jogos' => 0, 'debug' => $e->getMessage()]);
-        }
+        cachedJsonRoute('estatisticas_dashboard', function () {
+            http_response_code(200);
+            try {
+                $pdo = Database::getInstance()->getConnection();
+                $gols      = (int) $pdo->query("SELECT COALESCE(SUM(gols),0) FROM campeonato_estatisticas_partida")->fetchColumn();
+                $assists   = (int) $pdo->query("SELECT COALESCE(SUM(assistencias),0) FROM campeonato_estatisticas_partida")->fetchColumn();
+                $jogadores = (int) $pdo->query("SELECT COUNT(*) FROM jogadores")->fetchColumn();
+                $jogos     = (int) $pdo->query("SELECT COUNT(*) FROM campeonato_partidas WHERE status = 'finalizada'")->fetchColumn();
+                echo json_encode([
+                    'total_gols'         => $gols,
+                    'total_assistencias' => $assists,
+                    'total_jogadores'    => $jogadores,
+                    'total_jogos'        => $jogos,
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            } catch (Exception $e) {
+                echo json_encode(['total_gols' => 0, 'total_assistencias' => 0, 'total_jogadores' => 0, 'total_jogos' => 0, 'debug' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+            }
+        });
     }
 
     // =========================================================
-    // STATS — Destaques da Rodada (MVP + Pé de Rato)
+    // STATS — Destaques da Rodada (MVP + Pé de Rato) (cacheado)
     // =========================================================
     if ($path === '/stats/destaques-rodada' && $method === 'GET') {
         AuthMiddleware::handle();
-        try {
-            $pdo = Database::getInstance()->getConnection();
+        cachedJsonRoute('stats_destaques_rodada', function () {
+            http_response_code(200);
+            try {
+                $pdo = Database::getInstance()->getConnection();
 
-            // Primeira: descobre a rodada mais recente que tem prêmios
-            $ultimaRodada = $pdo->query("
-                SELECT r.id, r.data, r.status, r.campeonato_id
-                FROM rodadas r
-                WHERE r.id IN (SELECT DISTINCT rodada_id FROM premios_rodada)
-                ORDER BY r.data DESC, r.id DESC
-                LIMIT 1
-            ")->fetch(PDO::FETCH_ASSOC) ?: null;
+                // Primeira: descobre a rodada mais recente que tem prêmios
+                $ultimaRodada = $pdo->query("
+                    SELECT r.id, r.data, r.status, r.campeonato_id
+                    FROM rodadas r
+                    WHERE r.id IN (SELECT DISTINCT rodada_id FROM premios_rodada)
+                    ORDER BY r.data DESC, r.id DESC
+                    LIMIT 1
+                ")->fetch(PDO::FETCH_ASSOC) ?: null;
 
-            $rid = $ultimaRodada['id'] ?? 0;
+                $rid = $ultimaRodada['id'] ?? 0;
 
-            // MVP: busca TODOS os empatados (pode haver mais de 1)
-            $stmt = $pdo->prepare("
-                SELECT j.nome, j.foto_url, pr.pontuacao AS total, pr.tipo_premio,
-                       r.data AS rodada_data, r.id AS rodada_id
-                FROM premios_rodada pr
-                JOIN jogadores j ON j.id = pr.jogador_id
-                JOIN rodadas r ON r.id = pr.rodada_id
-                WHERE pr.tipo_premio = 'mvp_rodada'
-                  AND pr.rodada_id = ?
-            ");
-            $stmt->execute([$rid]);
-            $mvpAll = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                // MVP: busca TODOS os empatados (pode haver mais de 1)
+                $stmt = $pdo->prepare("
+                    SELECT j.nome, j.foto_url, pr.pontuacao AS total, pr.tipo_premio,
+                           r.data AS rodada_data, r.id AS rodada_id
+                    FROM premios_rodada pr
+                    JOIN jogadores j ON j.id = pr.jogador_id
+                    JOIN rodadas r ON r.id = pr.rodada_id
+                    WHERE pr.tipo_premio = 'mvp_rodada'
+                      AND pr.rodada_id = ?
+                ");
+                $stmt->execute([$rid]);
+                $mvpAll = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Pé de Rato: busca TODOS os empatados
-            $stmt2 = $pdo->prepare("
-                SELECT j.nome, j.foto_url, pr.pontuacao AS total, pr.tipo_premio,
-                       r.data AS rodada_data, r.id AS rodada_id
-                FROM premios_rodada pr
-                JOIN jogadores j ON j.id = pr.jogador_id
-                JOIN rodadas r ON r.id = pr.rodada_id
-                WHERE pr.tipo_premio = 'pe_de_rato_rodada'
-                  AND pr.rodada_id = ?
-            ");
-            $stmt2->execute([$rid]);
-            $peDeRatoAll = $stmt2->fetchAll(PDO::FETCH_ASSOC);
+                // Pé de Rato: busca TODOS os empatados
+                $stmt2 = $pdo->prepare("
+                    SELECT j.nome, j.foto_url, pr.pontuacao AS total, pr.tipo_premio,
+                           r.data AS rodada_data, r.id AS rodada_id
+                    FROM premios_rodada pr
+                    JOIN jogadores j ON j.id = pr.jogador_id
+                    JOIN rodadas r ON r.id = pr.rodada_id
+                    WHERE pr.tipo_premio = 'pe_de_rato_rodada'
+                      AND pr.rodada_id = ?
+                ");
+                $stmt2->execute([$rid]);
+                $peDeRatoAll = $stmt2->fetchAll(PDO::FETCH_ASSOC);
 
-            // Retorna arrays (frontend já suporta via mvpList/peDeRatoList)
-            jsonResponse([
-                'mvp'      => $mvpAll ?: null,
-                'peDeRato' => $peDeRatoAll ?: null,
-            ]);
-        } catch (Exception $e) {
-            jsonResponse(['mvp' => null, 'peDeRato' => null, '_debug_error' => $e->getMessage()]);
-        }
+                // Retorna arrays (frontend já suporta via mvpList/peDeRatoList)
+                echo json_encode([
+                    'mvp'      => $mvpAll ?: null,
+                    'peDeRato' => $peDeRatoAll ?: null,
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            } catch (Exception $e) {
+                echo json_encode(['mvp' => null, 'peDeRato' => null, '_debug_error' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+            }
+        });
     }
 
     // =========================================================
@@ -894,7 +1102,7 @@ try {
             $pontosFile = __DIR__ . '/../src/utils/Pontos.php';
 
             $tables['_versao_arquivos'] = [
-                'index.php' => 'v2-debug-cartolendas ✅',
+                'index.php' => 'v3-merged-seguranca ✅',
                 'StatsController.php' => [
                     'existe' => file_exists($statsFile),
                     'tamanho' => file_exists($statsFile) ? filesize($statsFile) : 0,
@@ -1014,11 +1222,11 @@ try {
     }
 
     // =========================================================
-    // STATS — Hall da Fama (delegado ao StatsController completo)
+    // STATS — Hall da Fama (delegado ao StatsController completo) (cacheado)
     // =========================================================
     if ($path === '/stats/hall-da-fama' && $method === 'GET') {
         AuthMiddleware::handle();
-        (new StatsController())->hallDaFama();
+        cachedJsonRoute('stats_hall_da_fama', fn() => (new StatsController())->hallDaFama());
     }
     // =========================================================
     // CARTOLENDAS — ligas, transferências, capitão, draft, chat
@@ -1061,6 +1269,12 @@ try {
             require $mpRoot . '/status.php'; exit;
         }
 
+        // GET /mp/resumo — entradas e saídas do mês atual e anterior
+        if ($path === '/mp/resumo' && $method === 'GET') {
+            AuthMiddleware::isAdmin();
+            require $mpRoot . '/resumo.php'; exit;
+        }
+
         // POST /mp/disconnect — desconecta conta MP
         if ($path === '/mp/disconnect' && $method === 'POST') {
             AuthMiddleware::isAdmin();
@@ -1097,28 +1311,55 @@ try {
         require_once $presencaRoot . '/whatsapp.php';
         require_once $presencaRoot . '/bot.php';
 
-        // POST /presenca/webhook — recebe mensagens da Evolution API (sem auth)
+        // POST /presenca/webhook — recebe mensagens da Evolution API
+        // (validacao de token feita dentro do webhook.php)
         if ($path === '/presenca/webhook' && $method === 'POST') {
             require $presencaRoot . '/api/webhook.php'; exit;
         }
 
-        // GET /presenca/dados — estado atual da lista (sem auth para o painel)
+        // GET /presenca/configurar-webhook?token=MIGRATION_TOKEN
+        // Registra automaticamente o webhook desta API na Evolution (rodar 1x via browser)
+        if ($path === '/presenca/configurar-webhook' && $method === 'GET') {
+            $expected = $_ENV['MIGRATION_TOKEN'] ?? '';
+            if ($expected === '' || !hash_equals($expected, (string)($_GET['token'] ?? ''))) {
+                throw new HttpError('Token inválido. Use ?token=MIGRATION_TOKEN (do .env).', 403);
+            }
+            require $presencaRoot . '/configurar_webhook.php'; exit;
+        }
+
+        // GET /presenca/dados — estado da lista (qualquer usuario logado pode ver quem confirmou)
         if ($path === '/presenca/dados' && $method === 'GET') {
+            AuthMiddleware::handle();
             require $presencaRoot . '/api/dados.php'; exit;
         }
 
-        // POST /presenca/acao — confirmar/ausente/lembrete manual
+        // POST /presenca/acao — confirmar/ausente/lembrete manual (admin)
         if ($path === '/presenca/acao' && $method === 'POST') {
+            AuthMiddleware::isAdmin();
             require $presencaRoot . '/api/acao.php'; exit;
         }
 
-        // POST /presenca/recarregar — forca reenvio do relatorio
+        // POST /presenca/recarregar — forca reenvio do relatorio (admin)
         if ($path === '/presenca/recarregar' && $method === 'POST') {
+            AuthMiddleware::isAdmin();
             require $presencaRoot . '/recarregar.php'; exit;
         }
 
-        // POST /presenca/mensagem — mensagem avulsa para jogador ou grupo
+        // POST /presenca/reenviar — reenvia convocacao para quem nao respondeu (admin)
+        if ($path === '/presenca/reenviar' && $method === 'POST') {
+            AuthMiddleware::isAdmin();
+            require $presencaRoot . '/api/reenviar_convocacao.php'; exit;
+        }
+
+        // POST /presenca/sincronizar — busca msgs perdidas na Evolution API e processa (admin)
+        if ($path === '/presenca/sincronizar' && $method === 'POST') {
+            AuthMiddleware::isAdmin();
+            require $presencaRoot . '/api/sincronizar.php'; exit;
+        }
+
+        // POST /presenca/mensagem — mensagem avulsa para jogador ou grupo (admin)
         if ($path === '/presenca/mensagem' && $method === 'POST') {
+            AuthMiddleware::isAdmin();
             require $presencaRoot . '/api/mensagem.php'; exit;
         }
 
@@ -1128,30 +1369,35 @@ try {
             require $presencaRoot . '/api/mensagem_massa.php'; exit;
         }
 
-        // GET /presenca/setup — cria as tabelas (rodar uma vez, apagar depois)
+        // GET /presenca/setup — cria as tabelas (admin)
         if ($path === '/presenca/setup' && $method === 'GET') {
+            AuthMiddleware::isAdmin();
             header('Content-Type: text/html; charset=utf-8');
             require $presencaRoot . '/setup.php'; exit;
         }
 
-        // GET|PUT /presenca/configuracoes — configuracoes do bot
+        // GET|PUT /presenca/configuracoes — configuracoes do bot (admin)
         if ($path === '/presenca/configuracoes') {
+            AuthMiddleware::isAdmin();
             require $presencaRoot . '/api/configuracoes.php'; exit;
         }
 
-        // GET /presenca/jogadores — lista jogadores
+        // GET /presenca/jogadores — lista jogadores (admin — contem telefones)
         if ($path === '/presenca/jogadores' && ($method === 'GET' || $method === 'POST')) {
+            AuthMiddleware::isAdmin();
             require $presencaRoot . '/api/jogadores.php'; exit;
         }
 
-        // PUT|DELETE /presenca/jogadores/{id} — editar ou remover
+        // PUT|DELETE /presenca/jogadores/{id} — editar ou remover (admin)
         if (preg_match('#^/presenca/jogadores/(\d+)$#', $path, $m)) {
+            AuthMiddleware::isAdmin();
             $jogadorId = (int)$m[1];
             require $presencaRoot . '/api/jogadores.php'; exit;
         }
 
-        // POST /presenca/jogadores/{id}/toggle — ativar/desativar
+        // POST /presenca/jogadores/{id}/toggle — ativar/desativar (admin)
         if (preg_match('#^/presenca/jogadores/(\d+)/toggle$#', $path, $m) && $method === 'POST') {
+            AuthMiddleware::isAdmin();
             $jogadorId = (int)$m[1];
             require $presencaRoot . '/api/jogadores.php'; exit;
         }
@@ -1243,6 +1489,44 @@ try {
         (new AlbumController())->setWhatsapp(); exit;
     }
 
+    // --- Novidades de troca (modal para o ofertante) ---
+    if ($path === '/album/trocas/novidades' && $method === 'GET') {
+        AuthMiddleware::handle();
+        (new AlbumController())->novidadesTrocas(); exit;
+    }
+    if ($path === '/album/trocas/novidades/visto' && $method === 'POST') {
+        AuthMiddleware::handle();
+        (new AlbumController())->marcarTrocasVistas(); exit;
+    }
+
+    // --- Origem de uma figurinha (como o usuario a obteve) ---
+    if (preg_match('#^/album/figurinhas/(\d+)/origem$#', $path, $m) && $method === 'GET') {
+        AuthMiddleware::handle();
+        (new AlbumController())->origemFigurinha((int)$m[1]); exit;
+    }
+
+    // --- Mural de trocas ---
+    if ($path === '/album/mural' && $method === 'GET') {
+        AuthMiddleware::handle();
+        (new AlbumController())->listarMural(); exit;
+    }
+    if ($path === '/album/mural' && $method === 'POST') {
+        AuthMiddleware::handle();
+        (new AlbumController())->disponibilizarTroca(); exit;
+    }
+    if (preg_match('#^/album/mural/(\d+)$#', $path, $m) && $method === 'DELETE') {
+        AuthMiddleware::handle();
+        (new AlbumController())->retirarTroca((int)$m[1]); exit;
+    }
+    if (preg_match('#^/album/mural/(\d+)/opcoes$#', $path, $m) && $method === 'GET') {
+        AuthMiddleware::handle();
+        (new AlbumController())->opcoesTroca((int)$m[1]); exit;
+    }
+    if (preg_match('#^/album/mural/(\d+)/trocar$#', $path, $m) && $method === 'POST') {
+        AuthMiddleware::handle();
+        (new AlbumController())->executarTroca((int)$m[1]); exit;
+    }
+
     // --- Admin: usuarios + distribuir pacotes ---
     if ($path === '/album/admin/usuarios' && $method === 'GET') {
         AuthMiddleware::isAdmin();
@@ -1251,6 +1535,172 @@ try {
     if ($path === '/album/admin/distribuir' && $method === 'POST') {
         AuthMiddleware::isAdmin();
         (new AlbumController())->distribuirPacotes(); exit;
+    }
+
+    // =========================================================
+    // MODULO /campo — Analista de Campo (login proprio: campo_usuarios)
+    // =========================================================
+    if (str_starts_with($path, '/campo')) {
+        require_once __DIR__ . '/../config/campo_database.php';
+        require_once __DIR__ . '/../src/middleware/CampoMiddleware.php';
+        require_once __DIR__ . '/../src/controllers/CampoAuthController.php';
+        require_once __DIR__ . '/../src/controllers/CampoJogadorController.php';
+        require_once __DIR__ . '/../src/controllers/CampoAdversarioController.php';
+        require_once __DIR__ . '/../src/controllers/CampoPartidaController.php';
+        require_once __DIR__ . '/../src/controllers/CampoConviteController.php';
+        require_once __DIR__ . '/../src/controllers/CampoRelatorioController.php';
+
+        // GET /campo/setup — cria tabelas + seed (rodar 1x). Protegido por env CAMPO_SETUP_KEY.
+        if ($path === '/campo/setup' && $method === 'GET') {
+            $expected = $_ENV['CAMPO_SETUP_KEY'] ?? '';
+            $key      = $_GET['key'] ?? '';
+            if ($expected === '' || !hash_equals($expected, $key)) {
+                throw new HttpError('Setup bloqueado. Configure CAMPO_SETUP_KEY no .env e informe ?key= correta.', 403);
+            }
+            header('Content-Type: text/html; charset=utf-8');
+            require __DIR__ . '/../campo/setup.php';
+            exit;
+        }
+
+        // AUTH
+        if ($path === '/campo/auth/login' && $method === 'POST') {
+            (new CampoAuthController())->login();
+            exit;
+        }
+        if ($path === '/campo/auth/me' && $method === 'GET') {
+            CampoMiddleware::auth();
+            (new CampoAuthController())->me();
+            exit;
+        }
+
+        // Google OAuth (publicas)
+        if ($path === '/campo/auth/google' && $method === 'GET') {
+            (new CampoAuthController())->googleRedirect();
+            exit;
+        }
+        if ($path === '/campo/auth/google/callback' && $method === 'GET') {
+            (new CampoAuthController())->googleCallback();
+            exit;
+        }
+
+        // CONVITES
+        // criar (diretor/tecnico)
+        if ($path === '/campo/convites' && $method === 'POST') {
+            CampoMiddleware::auth(['diretor', 'tecnico']);
+            (new CampoConviteController())->store();
+            exit;
+        }
+        // validar (publico)
+        if (preg_match('#^/campo/convites/([a-f0-9]+)$#', $path, $m) && $method === 'GET') {
+            (new CampoConviteController())->validate($m[1]);
+            exit;
+        }
+        // ativar (publico)
+        if (preg_match('#^/campo/convites/([a-f0-9]+)/ativar$#', $path, $m) && $method === 'POST') {
+            (new CampoConviteController())->ativar($m[1]);
+            exit;
+        }
+
+        // ELENCO
+        if ($path === '/campo/jogadores' && $method === 'GET') {
+            CampoMiddleware::auth();
+            (new CampoJogadorController())->index();
+            exit;
+        }
+        if ($path === '/campo/jogadores' && $method === 'POST') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoJogadorController())->store();
+            exit;
+        }
+        if (preg_match('#^/campo/jogadores/(\d+)$#', $path, $m) && $method === 'PUT') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoJogadorController())->update((int) $m[1]);
+            exit;
+        }
+        if (preg_match('#^/campo/jogadores/(\d+)$#', $path, $m) && $method === 'DELETE') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoJogadorController())->destroy((int) $m[1]);
+            exit;
+        }
+        if ($path === '/campo/upload' && $method === 'POST') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoJogadorController())->uploadFoto();
+            exit;
+        }
+
+        // RELATORIOS
+        if ($path === '/campo/relatorios' && $method === 'GET') {
+            CampoMiddleware::auth();
+            (new CampoRelatorioController())->geral();
+            exit;
+        }
+
+        // ADVERSARIOS
+        if ($path === '/campo/adversarios' && $method === 'GET') {
+            CampoMiddleware::auth();
+            (new CampoAdversarioController())->index();
+            exit;
+        }
+        if ($path === '/campo/adversarios' && $method === 'POST') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoAdversarioController())->store();
+            exit;
+        }
+        if (preg_match('#^/campo/adversarios/(\d+)$#', $path, $m) && $method === 'PUT') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoAdversarioController())->update((int) $m[1]);
+            exit;
+        }
+        if (preg_match('#^/campo/adversarios/(\d+)$#', $path, $m) && $method === 'DELETE') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoAdversarioController())->destroy((int) $m[1]);
+            exit;
+        }
+
+        // PARTIDAS
+        if ($path === '/campo/partidas' && $method === 'GET') {
+            CampoMiddleware::auth();
+            (new CampoPartidaController())->index();
+            exit;
+        }
+        if ($path === '/campo/partidas' && $method === 'POST') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoPartidaController())->store();
+            exit;
+        }
+        if (preg_match('#^/campo/partidas/(\d+)$#', $path, $m) && $method === 'GET') {
+            CampoMiddleware::auth();
+            (new CampoPartidaController())->show((int) $m[1]);
+            exit;
+        }
+        // escalacao
+        if (preg_match('#^/campo/partidas/(\d+)/escalacao$#', $path, $m) && $method === 'GET') {
+            CampoMiddleware::auth();
+            (new CampoPartidaController())->escalacaoGet((int) $m[1]);
+            exit;
+        }
+        if (preg_match('#^/campo/partidas/(\d+)/escalacao$#', $path, $m) && $method === 'POST') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoPartidaController())->escalacaoSave((int) $m[1]);
+            exit;
+        }
+        if (preg_match('#^/campo/partidas/(\d+)/finalizar$#', $path, $m) && $method === 'POST') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoPartidaController())->finalizar((int) $m[1]);
+            exit;
+        }
+        if (preg_match('#^/campo/partidas/(\d+)$#', $path, $m) && $method === 'PUT') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoPartidaController())->update((int) $m[1]);
+            exit;
+        }
+        if (preg_match('#^/campo/partidas/(\d+)$#', $path, $m) && $method === 'DELETE') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoPartidaController())->destroy((int) $m[1]);
+            exit;
+        }
+
+        throw new HttpError("Rota /campo não encontrada: [{$method}] {$path}", 404);
     }
 
     // =========================================================

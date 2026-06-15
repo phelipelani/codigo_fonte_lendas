@@ -10,6 +10,11 @@ const RARIDADE_STYLE: Record<Raridade, { borda: string; glow: string; faixa: str
     glow: '',
     faixa: 'bg-cyan-500/20 text-cyan-200',
   },
+  rara: {
+    borda: 'border-violet-400/70',
+    glow: 'shadow-[0_0_14px_-4px_rgba(167,139,250,0.55)]',
+    faixa: 'bg-violet-500/25 text-violet-200',
+  },
   lendaria: {
     borda: 'border-amber-400/70',
     glow: 'shadow-[0_0_18px_-4px_rgba(251,191,36,0.55)]',
@@ -23,7 +28,7 @@ type FigurinhaProps = {
   vazio?: boolean;
   /** Força exibir como obtida mesmo sem dados de inventário (ex: abrir pacote) */
   forcarObtida?: boolean;
-  tamanho?: 'sm' | 'md' | 'lg';
+  tamanho?: 'sm' | 'md' | 'lg' | 'album' | 'fluid' | 'cell';
   onClick?: () => void;
   className?: string;
 };
@@ -32,6 +37,13 @@ const TAMANHO_CLASSES = {
   sm: 'w-16 h-[88px] text-[9px]',
   md: 'w-24 h-[132px] text-[11px]',
   lg: 'w-36 h-[200px] text-sm',
+  // Padrao do album: 114x155 no desktop, escala proporcional em telas menores
+  album:
+    'w-[78px] h-[106px] sm:w-[96px] sm:h-[130px] lg:w-[114px] lg:h-[155px] text-[9px] sm:text-[10px]',
+  // Fluido: preenche a largura da celula mantendo a proporcao 114:155
+  fluid: 'w-full aspect-[114/155] text-[8px] sm:text-[9px] lg:text-[10px]',
+  // Celula: preenche 100% da celula do grid (largura E altura)
+  cell: 'w-full h-full text-[8px] sm:text-[9px] lg:text-[10px]',
 };
 
 export const Figurinha: React.FC<FigurinhaProps> = ({
@@ -93,7 +105,9 @@ export const Figurinha: React.FC<FigurinhaProps> = ({
                 'absolute inset-0 flex flex-col items-center justify-center gap-1 p-1',
                 figurinha.raridade === 'lendaria'
                   ? 'bg-gradient-to-br from-amber-900/40 to-[#0d1f35]'
-                  : 'bg-gradient-to-br from-cyan-900/40 to-[#0d1f35]'
+                  : figurinha.raridade === 'rara'
+                    ? 'bg-gradient-to-br from-violet-900/40 to-[#0d1f35]'
+                    : 'bg-gradient-to-br from-cyan-900/40 to-[#0d1f35]'
               )}
             >
               <span className="font-black text-white/30 text-2xl leading-none">
@@ -112,7 +126,11 @@ export const Figurinha: React.FC<FigurinhaProps> = ({
               estilo.faixa
             )}
           >
-            {figurinha.raridade === 'lendaria' ? '★ Lendária' : 'Comum'}
+            {figurinha.raridade === 'lendaria'
+              ? '★ Lendária'
+              : figurinha.raridade === 'rara'
+                ? '◆ Rara'
+                : 'Comum'}
           </span>
 
           {/* Badge de repetidas */}

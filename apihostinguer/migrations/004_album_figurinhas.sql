@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS album_figurinhas (
     id          INT AUTO_INCREMENT PRIMARY KEY,
     numero      INT NOT NULL                    COMMENT 'Numero de colecao (#01, #02...)',
     nome        VARCHAR(150) NOT NULL,
+    `time`      VARCHAR(100) NULL               COMMENT 'Time do jogador/figurinha',
     descricao   VARCHAR(255) NULL,
     categoria   VARCHAR(30) NOT NULL DEFAULT 'jogador'  COMMENT 'jogador|etiqueta|escudo|estatistica|foto',
     raridade    VARCHAR(20) NOT NULL DEFAULT 'comum'    COMMENT 'comum|lendaria',

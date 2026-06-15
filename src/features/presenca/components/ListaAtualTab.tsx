@@ -10,6 +10,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 import {
   usePresencaDados,
   usePresencaAcao,
@@ -54,6 +55,7 @@ const COLUNAS: Coluna[] = [
 export const ListaAtualTab: React.FC = () => {
   const { data, isLoading, isError } = usePresencaDados();
   const acaoMut = usePresencaAcao();
+  const { isAdmin } = useAuth();
 
   if (isLoading) {
     return (
@@ -78,8 +80,14 @@ export const ListaAtualTab: React.FC = () => {
         <Bell className="mx-auto mb-3 h-10 w-10 text-cyan-400/50" />
         <h3 className="text-lg font-bold text-white">Nenhuma lista ativa</h3>
         <p className="mt-1.5 text-sm text-cyan-100/60">
-          Use o botão <strong>"Disparar lista nova"</strong> no topo para criar uma lista
-          da próxima rodada e enviar a convocação pelo WhatsApp.
+          {isAdmin ? (
+            <>
+              Use o botão <strong>"Disparar lista nova"</strong> no topo para criar
+              uma lista da próxima rodada e enviar a convocação pelo WhatsApp.
+            </>
+          ) : (
+            <>Ainda não há uma lista de racha aberta. Volte mais tarde.</>
+          )}
         </p>
       </div>
     );
@@ -150,6 +158,7 @@ export const ListaAtualTab: React.FC = () => {
                       ordemConfirmado={col.id === 'confirmados' ? idx + 1 : null}
                       onAcao={(acao) => acaoMut.mutate({ jogador_id: j.id, acao })}
                       isPending={acaoMut.isPending}
+                      podeAgir={isAdmin}
                     />
                   ))}
                 </ul>
@@ -171,10 +180,46 @@ type JogadorRowProps = {
   ordemConfirmado: number | null;
   onAcao: (acao: 'confirmar' | 'ausente' | 'aguardando' | 'lembrete') => void;
   isPending: boolean;
+  /** Quando false, a linha é só leitura (sem ações) */
+  podeAgir?: boolean;
 };
 
-const JogadorRow: React.FC<JogadorRowProps> = ({ jogador, ordemConfirmado, onAcao, isPending }) => {
+const JogadorRow: React.FC<JogadorRowProps> = ({
+  jogador,
+  ordemConfirmado,
+  onAcao,
+  isPending,
+  podeAgir = true,
+}) => {
   const [open, setOpen] = React.useState(false);
+
+  // Não-admin: linha estática, apenas exibe o jogador
+  if (!podeAgir) {
+    return (
+      <li className="rounded-xl border border-white/10 bg-black/20">
+        <div className="w-full flex items-center gap-2 p-2">
+          {ordemConfirmado != null && (
+            <span className="flex-shrink-0 inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-200 text-[11px] font-black">
+              {ordemConfirmado}
+            </span>
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold text-white truncate">
+              {jogador.nome}
+            </div>
+            {jogador.horario_resposta && (
+              <div className="text-[10px] text-white/40">
+                {jogador.horario_resposta}
+              </div>
+            )}
+          </div>
+          {jogador.tipo === 'goleiro' && (
+            <span className="text-[10px] font-bold text-emerald-300/80">⚽</span>
+          )}
+        </div>
+      </li>
+    );
+  }
 
   return (
     <li className="rounded-xl border border-white/10 bg-black/20 hover:border-cyan-400/30 transition-colors">

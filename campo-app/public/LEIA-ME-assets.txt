@@ -1,0 +1,11 @@
+Coloque aqui os assets de imagem do app:
+
+- logo.png   (obrigatório)  -> o logo quadrado "FUTLENDAS - Analista de Campo".
+                              Usado no login, favicon e ícone do app instalável.
+                              Ideal: PNG quadrado 512x512 (ou maior).
+
+- hero.png   (opcional)     -> versão recortada do mascote (fundo transparente)
+                              para o painel esquerdo do login. Se não existir,
+                              o login usa o logo.png mesmo.
+
+Depois de colocar, rode "npm run build" e suba a pasta dist.

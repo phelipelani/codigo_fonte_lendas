@@ -19,15 +19,20 @@ import {
   Send,
   Lock,
   Unlock,
+  MessageCircle,
+  Zap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 
 import {
   usePresencaDados,
   useDispararLista,
   useFecharLista,
   useRecarregarLista,
+  useReenviarConvocacao,
+  useSincronizarRespostas,
 } from '../api/presencaApi';
 
 import { ListaAtualTab } from '../components/ListaAtualTab';
@@ -38,21 +43,37 @@ import { LogsTab } from '../components/LogsTab';
 
 type TabId = 'lista' | 'jogadores' | 'comunicado' | 'config' | 'logs';
 
-const TABS: { id: TabId; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+type TabDef = {
+  id: TabId;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  adminOnly?: boolean;
+};
+
+const TABS: TabDef[] = [
   { id: 'lista', label: 'Lista atual', icon: Calendar },
-  { id: 'jogadores', label: 'Jogadores', icon: Users },
-  { id: 'comunicado', label: 'Comunicado', icon: Megaphone },
-  { id: 'config', label: 'Configurações', icon: Settings },
-  { id: 'logs', label: 'Logs', icon: ScrollText },
+  { id: 'jogadores', label: 'Jogadores', icon: Users, adminOnly: true },
+  { id: 'comunicado', label: 'Comunicado', icon: Megaphone, adminOnly: true },
+  { id: 'config', label: 'Configurações', icon: Settings, adminOnly: true },
+  { id: 'logs', label: 'Logs', icon: ScrollText, adminOnly: true },
 ];
 
 export const RachaPage: React.FC = () => {
+  const { isAdmin } = useAuth();
   const [tab, setTab] = React.useState<TabId>('lista');
   const { data: dados } = usePresencaDados();
+
+  // Não-admin enxerga apenas a aba "Lista atual"
+  const tabsVisiveis = React.useMemo(
+    () => TABS.filter((t) => !t.adminOnly || isAdmin),
+    [isAdmin]
+  );
 
   const dispararMut = useDispararLista();
   const fecharMut = useFecharLista();
   const recarregarMut = useRecarregarLista();
+  const reenviarMut = useReenviarConvocacao();
+  const sincronizarMut = useSincronizarRespostas();
 
   const lista = dados?.lista ?? null;
 
@@ -72,9 +93,33 @@ export const RachaPage: React.FC = () => {
             </p>
           </div>
 
-          {/* Botoes de acao globais — so aparecem se ja existe lista */}
-          {lista && (
+          {/* Botoes de acao globais — somente admin, e se ja existe lista */}
+          {lista && isAdmin && (
             <div className="flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => sincronizarMut.mutate()}
+                disabled={sincronizarMut.isPending}
+                title="Busca mensagens enviadas enquanto o bot estava fora e atualiza a lista"
+                className="border-violet-500/30 text-violet-200 hover:bg-violet-500/10 disabled:opacity-40"
+              >
+                <Zap className={cn('mr-2 h-4 w-4', sincronizarMut.isPending && 'animate-pulse')} />
+                {sincronizarMut.isPending ? 'Sincronizando...' : 'Sincronizar respostas'}
+              </Button>
+
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => reenviarMut.mutate()}
+                disabled={reenviarMut.isPending || !!lista?.fechado}
+                title="Reenvia a mensagem de convocação para quem ainda não respondeu"
+                className="border-emerald-500/30 text-emerald-200 hover:bg-emerald-500/10 disabled:opacity-40"
+              >
+                <MessageCircle className={cn('mr-2 h-4 w-4', reenviarMut.isPending && 'animate-pulse')} />
+                {reenviarMut.isPending ? 'Enviando...' : 'Reenviar convocação'}
+              </Button>
+
               <Button
                 size="sm"
                 variant="outline"
@@ -109,7 +154,7 @@ export const RachaPage: React.FC = () => {
             </div>
           )}
 
-          {!lista && (
+          {!lista && isAdmin && (
             <Button
               onClick={() => dispararMut.mutate()}
               disabled={dispararMut.isPending}
@@ -163,7 +208,7 @@ export const RachaPage: React.FC = () => {
       {/* ===== Tabs ===== */}
       <div className="mb-5 overflow-x-auto">
         <div className="flex min-w-max items-center gap-1 rounded-xl border border-cyan-500/20 bg-[#0a1628]/50 p-1 backdrop-blur-md">
-          {TABS.map((t) => {
+          {tabsVisiveis.map((t) => {
             const Icon = t.icon;
             const ativo = tab === t.id;
             return (
@@ -194,10 +239,10 @@ export const RachaPage: React.FC = () => {
         transition={{ duration: 0.18 }}
       >
         {tab === 'lista' && <ListaAtualTab />}
-        {tab === 'jogadores' && <JogadoresTab />}
-        {tab === 'comunicado' && <ComunicadoTab />}
-        {tab === 'config' && <ConfigTab />}
-        {tab === 'logs' && <LogsTab />}
+        {tab === 'jogadores' && isAdmin && <JogadoresTab />}
+        {tab === 'comunicado' && isAdmin && <ComunicadoTab />}
+        {tab === 'config' && isAdmin && <ConfigTab />}
+        {tab === 'logs' && isAdmin && <LogsTab />}
       </motion.div>
     </div>
   );

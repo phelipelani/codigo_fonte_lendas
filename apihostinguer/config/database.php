@@ -18,14 +18,16 @@ class Database {
         try {
             $dsn = "mysql:host={$host};port={$port};dbname={$database};charset=utf8mb4";
             $options = [
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_EMULATE_PREPARES => false,
-                PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4"
+                PDO::ATTR_EMULATE_PREPARES   => false,
+                // Reutiliza conexoes existentes em vez de abrir uma nova por request.
+                // Essencial no Hostinger shared hosting (limite max_connections_per_hour).
+                PDO::ATTR_PERSISTENT         => true,
+                PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4",
             ];
-            
+
             $this->connection = new PDO($dsn, $user, $password, $options);
-            error_log("✅ Conectado ao MySQL com sucesso!");
         } catch (PDOException $e) {
             error_log("❌ Erro ao conectar ao MySQL: " . $e->getMessage());
             throw $e;

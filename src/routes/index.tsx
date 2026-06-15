@@ -36,6 +36,7 @@ const PartidaDetalhePage = lazy(() => import("@/features/partidas/routes/Partida
 const RachaPage = lazy(() => import("@/features/presenca/routes/RachaPage").then(m => ({ default: m.RachaPage })));
 const AlbumPage = lazy(() => import("@/features/album/routes/AlbumPage").then(m => ({ default: m.AlbumPage })));
 const AlbumAdminPage = lazy(() => import("@/features/album/routes/AlbumAdminPage").then(m => ({ default: m.AlbumAdminPage })));
+const MuralPage = lazy(() => import("@/features/album/routes/MuralPage").then(m => ({ default: m.MuralPage })));
 
 export const AppRoutes = () => {
   return (
@@ -70,10 +71,6 @@ export const AppRoutes = () => {
           <Route path="/hall-da-fama" element={<HallDaFamaPage />} />
           <Route path="/cartolendas" element={<CartolendaPage />} />
 
-          {/* Times / Jogadores — visualização */}
-          <Route path="/times" element={<TimesPage />} />
-          <Route path="/jogadores" element={<JogadoresPage />} />
-
           {/* Perfil */}
           <Route path="/perfil" element={<PerfilPage />} />
 
@@ -82,6 +79,7 @@ export const AppRoutes = () => {
 
           {/* Álbum de Figurinhas */}
           <Route path="/album" element={<AlbumPage />} />
+          <Route path="/album/mural" element={<MuralPage />} />
         </Route>
       </Route>
 
@@ -101,7 +99,11 @@ export const AppRoutes = () => {
           <Route path="/campeonatos/:id/rodadas/:rodadaId" element={<CampeonatoRodadaCheckinPage />} />
           <Route path="/campeonatos/:id/rodadas/:rodadaId/partidas" element={<CampeonatoPartidaLivePage />} />
 
-          {/* Jogadores — criação/edição */}
+          {/* Times — somente admin */}
+          <Route path="/times" element={<TimesPage />} />
+
+          {/* Jogadores — somente admin (lista, criação, edição) */}
+          <Route path="/jogadores" element={<JogadoresPage />} />
           <Route path="/jogadores/novo" element={<JogadorCreatePage />} />
           <Route path="/jogadores/:id/edit" element={<JogadorEditPage />} />
         </Route>

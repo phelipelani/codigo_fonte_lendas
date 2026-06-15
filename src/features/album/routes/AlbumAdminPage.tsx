@@ -13,6 +13,7 @@ import {
   Loader2,
   Upload,
   Search,
+  Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -99,6 +100,7 @@ const FigurinhasTab: React.FC = () => {
   const [form, setForm] = React.useState({
     numero: '',
     nome: '',
+    time: '',
     categoria: 'jogador' as CategoriaFigurinha,
     raridade: 'comum' as Raridade,
     pagina_id: '',
@@ -123,6 +125,7 @@ const FigurinhasTab: React.FC = () => {
       {
         numero: parseInt(form.numero, 10),
         nome: form.nome.trim(),
+        time: form.time.trim() || null,
         categoria: form.categoria,
         raridade: form.raridade,
         imagem_url: imagemUrl,
@@ -134,6 +137,7 @@ const FigurinhasTab: React.FC = () => {
           setForm({
             numero: '',
             nome: '',
+            time: form.time, // mantem time pra cadastro em lote
             categoria: 'jogador',
             raridade: 'comum',
             pagina_id: form.pagina_id, // mantem pagina pra cadastro em lote
@@ -221,6 +225,17 @@ const FigurinhasTab: React.FC = () => {
             value={form.nome}
             onChange={(e) => setForm({ ...form, nome: e.target.value })}
             required
+          />
+        </div>
+
+        <div>
+          <label className="block text-[10px] font-semibold uppercase tracking-widest text-cyan-200/70 mb-1">
+            Time
+          </label>
+          <Input
+            value={form.time}
+            onChange={(e) => setForm({ ...form, time: e.target.value })}
+            placeholder="Ex: FutLendas"
           />
         </div>
 
@@ -314,14 +329,15 @@ const FigurinhasTab: React.FC = () => {
 };
 
 // =============================================================
-// ABA: Distribuir pacotes
+// ABA: Distribuir pacotes — validar presença
+// Admin marca quem esteve no racha; cada presente ganha 1 pacote.
 // =============================================================
 const DistribuirTab: React.FC = () => {
   const { data, isLoading } = useUsuariosAlbum();
   const distribuirMut = useDistribuirPacotes();
 
   const [busca, setBusca] = React.useState('');
-  const [qtds, setQtds] = React.useState<Record<number, number>>({});
+  const [presentes, setPresentes] = React.useState<Set<number>>(new Set());
   const [motivo, setMotivo] = React.useState('');
 
   const usuarios = data?.usuarios ?? [];
@@ -331,28 +347,42 @@ const DistribuirTab: React.FC = () => {
     return usuarios.filter((u) => u.username.toLowerCase().includes(t));
   }, [usuarios, busca]);
 
-  const totalPacotes = Object.values(qtds).reduce((s, n) => s + (n || 0), 0);
+  const totalPresentes = presentes.size;
 
-  const setQtd = (id: number, delta: number) => {
-    setQtds((prev) => ({
-      ...prev,
-      [id]: Math.max(0, (prev[id] ?? 0) + delta),
-    }));
+  const toggle = (id: number) => {
+    setPresentes((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const marcarTodos = () => {
+    if (presentes.size === filtrados.length) {
+      setPresentes(new Set());
+    } else {
+      setPresentes(new Set(filtrados.map((u) => u.id)));
+    }
   };
 
   const distribuir = () => {
-    const distribuicao: DistribuicaoItem[] = Object.entries(qtds)
-      .filter(([, q]) => q > 0)
-      .map(([id, q]) => ({ usuario_id: Number(id), quantidade: q }));
+    const distribuicao: DistribuicaoItem[] = Array.from(presentes).map(
+      (id) => ({ usuario_id: id, quantidade: 1, tipo: 'racha' })
+    );
     if (distribuicao.length === 0) return;
     distribuirMut.mutate(
-      { distribuicao, motivo: motivo.trim() || 'Distribuição de pacotes' },
-      { onSuccess: () => setQtds({}) }
+      { distribuicao, motivo: motivo.trim() || 'Presença no racha' },
+      { onSuccess: () => setPresentes(new Set()) }
     );
   };
 
   return (
     <div className="space-y-4">
+      <div className="rounded-xl border border-cyan-500/20 bg-[#0a1628]/40 p-3 text-xs text-cyan-100/60">
+        Marque os jogadores que estiveram no racha. Cada presente recebe{' '}
+        <strong className="text-amber-300">1 pacote</strong> fechado.
+      </div>
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-cyan-100/40" />
@@ -366,9 +396,24 @@ const DistribuirTab: React.FC = () => {
         <Input
           value={motivo}
           onChange={(e) => setMotivo(e.target.value)}
-          placeholder="Motivo (ex: Racha 20/05 + bônus artilheiro)"
+          placeholder="Motivo (ex: Racha 20/05)"
           className="sm:max-w-xs"
         />
+      </div>
+
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={marcarTodos}
+          className="text-xs font-semibold text-cyan-300 hover:text-cyan-100"
+        >
+          {presentes.size === filtrados.length && filtrados.length > 0
+            ? 'Desmarcar todos'
+            : 'Marcar todos'}
+        </button>
+        <span className="text-[10px] uppercase tracking-widest text-cyan-100/40">
+          {usuarios.length} jogadores
+        </span>
       </div>
 
       {isLoading ? (
@@ -377,60 +422,61 @@ const DistribuirTab: React.FC = () => {
         </div>
       ) : (
         <div className="grid gap-2 sm:grid-cols-2">
-          {filtrados.map((u) => (
-            <div
-              key={u.id}
-              className="flex items-center gap-3 rounded-xl border border-cyan-500/20 bg-[#0a1628]/60 p-3"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="font-bold text-white text-sm truncate">
-                  {u.username}
-                  {u.role === 'admin' && (
-                    <span className="ml-1.5 text-[9px] text-amber-300/70 uppercase">
-                      admin
-                    </span>
+          {filtrados.map((u) => {
+            const marcado = presentes.has(u.id);
+            return (
+              <button
+                key={u.id}
+                type="button"
+                onClick={() => toggle(u.id)}
+                className={cn(
+                  'flex items-center gap-3 rounded-xl border p-3 text-left transition-all',
+                  marcado
+                    ? 'border-emerald-400/50 bg-emerald-500/10'
+                    : 'border-cyan-500/20 bg-[#0a1628]/60 hover:border-cyan-400/40'
+                )}
+              >
+                <span
+                  className={cn(
+                    'flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2 transition-all',
+                    marcado
+                      ? 'border-emerald-400 bg-emerald-500 text-white'
+                      : 'border-cyan-500/40'
                   )}
-                </div>
-                <div className="text-[10px] text-cyan-100/40">
-                  {u.whatsapp ?? 'sem WhatsApp'} • {u.pacotes_fechados} fechados
-                </div>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setQtd(u.id, -1)}
-                  disabled={(qtds[u.id] ?? 0) === 0}
-                  className="h-8 w-8 rounded-lg border border-cyan-500/30 bg-[#0d1f35] text-cyan-200 disabled:opacity-30"
                 >
-                  −
-                </button>
-                <span className="w-8 text-center font-black text-white tabular-nums">
-                  {qtds[u.id] ?? 0}
+                  {marcado && <Check className="h-4 w-4" />}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setQtd(u.id, 1)}
-                  className="h-8 w-8 rounded-lg border border-cyan-500/30 bg-[#0d1f35] text-cyan-200"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-          ))}
+                <div className="min-w-0 flex-1">
+                  <div className="font-bold text-white text-sm truncate">
+                    {u.username}
+                    {u.role === 'admin' && (
+                      <span className="ml-1.5 text-[9px] text-amber-300/70 uppercase">
+                        admin
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[10px] text-cyan-100/40">
+                    {u.whatsapp ?? 'sem WhatsApp'} • {u.pacotes_fechados} fechados
+                  </div>
+                </div>
+              </button>
+            );
+          })}
         </div>
       )}
 
       {/* Barra fixa de envio */}
       <div className="sticky bottom-2 flex items-center justify-between gap-3 rounded-xl border border-amber-400/30 bg-[#0a1628]/95 backdrop-blur p-3">
         <span className="text-sm text-cyan-100/70">
-          Total:{' '}
+          Presentes:{' '}
           <strong className="text-amber-300 tabular-nums">
-            {totalPacotes} pacote(s)
-          </strong>
+            {totalPresentes}
+          </strong>{' '}
+          → {totalPresentes} pacote(s)
         </span>
         <Button
           onClick={distribuir}
-          disabled={totalPacotes === 0 || distribuirMut.isPending}
+          disabled={totalPresentes === 0 || distribuirMut.isPending}
           className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-[#0a1628] font-bold"
         >
           {distribuirMut.isPending ? (
@@ -438,7 +484,7 @@ const DistribuirTab: React.FC = () => {
           ) : (
             <Package className="mr-2 h-4 w-4" />
           )}
-          Distribuir
+          Distribuir pacotes
         </Button>
       </div>
     </div>

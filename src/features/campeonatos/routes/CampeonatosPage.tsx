@@ -316,14 +316,18 @@ export function CampeonatosPage() {
                 </div>
                 <h3 className="text-xl font-bold text-white mb-2">Nenhum campeonato encontrado</h3>
                 <p className="text-cyan-100/50 text-center mb-6 max-w-md text-sm">
-                  Crie seu primeiro campeonato para começar a gerenciar times e partidas.
+                  {isAdmin
+                    ? 'Crie seu primeiro campeonato para começar a gerenciar times e partidas.'
+                    : 'Nenhum campeonato disponível no momento.'}
                 </p>
-                <Link to="/campeonatos/novo">
-                  <Button className="bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white font-bold">
-                    <Plus size={20} className="mr-2" />
-                    Criar Primeiro Campeonato
-                  </Button>
-                </Link>
+                {isAdmin && (
+                  <Link to="/campeonatos/novo">
+                    <Button className="bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white font-bold">
+                      <Plus size={20} className="mr-2" />
+                      Criar Primeiro Campeonato
+                    </Button>
+                  </Link>
+                )}
               </div>
             )}
           </div>
