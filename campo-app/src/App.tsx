@@ -7,6 +7,7 @@ import AdversariosPage from './pages/AdversariosPage'
 import PartidasPage from './pages/PartidasPage'
 import CapturaPage from './pages/CapturaPage'
 import EscalacaoPage from './pages/EscalacaoPage'
+import RelatoriosPage from './pages/RelatoriosPage'
 import CallbackPage from './pages/CallbackPage'
 import ConvitePage from './pages/ConvitePage'
 import ConvidarPage from './pages/ConvidarPage'
@@ -38,6 +39,14 @@ export default function App() {
         element={
           <ProtectedRoute papeis={['tecnico', 'diretor']}>
             <AdversariosPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/relatorios"
+        element={
+          <ProtectedRoute>
+            <RelatoriosPage />
           </ProtectedRoute>
         }
       />

@@ -54,7 +54,7 @@ export default function Layout({
           { key: 'adversarios', label: 'Adversários', icon: A + 'icon_adversarios_sidebar.png', to: '/adversarios' },
         ]
       : []),
-    { key: 'relatorios', label: 'Relatórios', icon: A + 'icon_relatorios_Sidebar.png', disabled: true },
+    { key: 'relatorios', label: 'Relatórios', icon: A + 'icon_relatorios_Sidebar.png', to: '/relatorios' },
     { key: 'agenda', label: 'Agenda', icon: A + 'icon_agenda_sidebar.png', disabled: true },
   ]
 

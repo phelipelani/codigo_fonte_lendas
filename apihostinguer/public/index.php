@@ -1324,6 +1324,7 @@ try {
         require_once __DIR__ . '/../src/controllers/CampoAdversarioController.php';
         require_once __DIR__ . '/../src/controllers/CampoPartidaController.php';
         require_once __DIR__ . '/../src/controllers/CampoConviteController.php';
+        require_once __DIR__ . '/../src/controllers/CampoRelatorioController.php';
 
         // GET /campo/setup — cria tabelas + seed (rodar 1x). Protegido por env CAMPO_SETUP_KEY.
         if ($path === '/campo/setup' && $method === 'GET') {
@@ -1400,6 +1401,13 @@ try {
         if ($path === '/campo/upload' && $method === 'POST') {
             CampoMiddleware::auth(['tecnico', 'diretor']);
             (new CampoJogadorController())->uploadFoto();
+            exit;
+        }
+
+        // RELATORIOS
+        if ($path === '/campo/relatorios' && $method === 'GET') {
+            CampoMiddleware::auth();
+            (new CampoRelatorioController())->geral();
             exit;
         }
 
