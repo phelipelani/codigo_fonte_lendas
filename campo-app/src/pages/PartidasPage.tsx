@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import Layout from '../components/Layout'
@@ -56,6 +56,103 @@ function toInput(dh: string | null): string {
   return dh.replace(' ', 'T').slice(0, 16)
 }
 
+// normaliza pra busca: remove acento e caixa (ex: "São" -> "sao")
+function semAcento(s: string): string {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+}
+
+/**
+ * Campo de adversário híbrido: mostra a lista ao focar (como um dropdown)
+ * MAS permite digitar pra filtrar — útil quando há muitos times cadastrados.
+ */
+function AdversarioCombobox({
+  adversarios,
+  value,
+  onChange,
+}: {
+  adversarios: Adversario[]
+  value: string
+  onChange: (id: string) => void
+}) {
+  const [query, setQuery] = useState('')
+  const [aberto, setAberto] = useState(false)
+  const wrapRef = useRef<HTMLDivElement>(null)
+
+  const selecionado = adversarios.find((a) => String(a.id) === value) ?? null
+  // ao digitar mostra o texto; fechado mostra o nome selecionado
+  const display = aberto ? query : selecionado?.nome ?? ''
+
+  const filtrados = query.trim()
+    ? adversarios.filter((a) => semAcento(a.nome).includes(semAcento(query)))
+    : adversarios
+
+  useEffect(() => {
+    function aoClicarFora(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setAberto(false)
+        setQuery('')
+      }
+    }
+    document.addEventListener('mousedown', aoClicarFora)
+    return () => document.removeEventListener('mousedown', aoClicarFora)
+  }, [])
+
+  function escolher(a: Adversario | null) {
+    onChange(a ? String(a.id) : '')
+    setAberto(false)
+    setQuery('')
+  }
+
+  return (
+    <div className="relative" ref={wrapRef}>
+      <input
+        className="field"
+        value={display}
+        placeholder="Digite ou selecione…"
+        onFocus={() => {
+          setAberto(true)
+          setQuery('')
+        }}
+        onChange={(e) => {
+          setQuery(e.target.value)
+          setAberto(true)
+        }}
+        autoComplete="off"
+      />
+      {aberto && (
+        <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-white/15 bg-white shadow-xl">
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => escolher(null)}
+            className={`block w-full px-3 py-2 text-left text-sm text-[#000407] hover:bg-night-cyan/20 ${
+              value === '' ? 'font-bold' : ''
+            }`}
+          >
+            A definir
+          </button>
+          {filtrados.map((a) => (
+            <button
+              key={a.id}
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => escolher(a)}
+              className={`block w-full px-3 py-2 text-left text-sm text-[#000407] hover:bg-night-cyan/20 ${
+                String(a.id) === value ? 'font-bold' : ''
+              }`}
+            >
+              {a.nome}
+            </button>
+          ))}
+          {filtrados.length === 0 && (
+            <div className="px-3 py-2 text-sm text-[#000407]/50">Nenhum adversário encontrado.</div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function PartidasPage() {
   const [lista, setLista] = useState<Partida[]>([])
   const [adversarios, setAdversarios] = useState<Adversario[]>([])
@@ -69,18 +166,17 @@ export default function PartidasPage() {
 
   async function carregar() {
     setLoading(true)
-    try {
-      const [p, a] = await Promise.all([
-        api.get<Partida[]>('/campo/partidas'),
-        api.get<Adversario[]>('/campo/adversarios'),
-      ])
-      setLista(p)
-      setAdversarios(a)
-    } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao carregar.')
-    } finally {
-      setLoading(false)
-    }
+    setErro('')
+    // allSettled: uma falha (ex: coluna faltando em /partidas) nao pode
+    // zerar a lista de adversarios usada no combobox do modal, e vice-versa.
+    const [pRes, aRes] = await Promise.allSettled([
+      api.get<Partida[]>('/campo/partidas'),
+      api.get<Adversario[]>('/campo/adversarios'),
+    ])
+    if (pRes.status === 'fulfilled') setLista(pRes.value)
+    else setErro(pRes.reason instanceof Error ? pRes.reason.message : 'Erro ao carregar partidas.')
+    if (aRes.status === 'fulfilled') setAdversarios(aRes.value)
+    setLoading(false)
   }
   useEffect(() => {
     carregar()
@@ -247,18 +343,11 @@ export default function PartidasPage() {
             <form onSubmit={salvar} className="space-y-3">
               <div>
                 <label className="mb-1 block text-sm text-white/70">Adversário</label>
-                <select
-                  className="field"
+                <AdversarioCombobox
+                  adversarios={adversarios}
                   value={form.adversarioId}
-                  onChange={(e) => setForm({ ...form, adversarioId: e.target.value })}
-                >
-                  <option value="">A definir</option>
-                  {adversarios.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.nome}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(id) => setForm({ ...form, adversarioId: id })}
+                />
                 {adversarios.length === 0 && (
                   <p className="mt-1 text-xs text-white/50">Dica: cadastre adversários na tela Adversários.</p>
                 )}
