@@ -109,6 +109,148 @@ class CampoPartidaController
         $this->json(['success' => true]);
     }
 
+    // GET /campo/partidas/{id}/escalacao
+    public function escalacaoGet(int $id): void
+    {
+        $clubeId = CampoMiddleware::clubeId();
+        $this->findOrFail($id, $clubeId);
+        $rows = $this->db->fetchAll(
+            'SELECT e.jogador_id, e.posicao, e.titular, j.nome, j.numero, j.tipo, j.foto_url
+             FROM campo_escalacoes e
+             JOIN campo_jogadores j ON j.id = e.jogador_id
+             WHERE e.partida_id = ?
+             ORDER BY e.titular DESC, FIELD(j.tipo,"gk","def","mid","atk"), j.numero',
+            [$id]
+        );
+        $this->json(array_map(fn(array $r) => [
+            'jogadorId' => (int) $r['jogador_id'],
+            'nome'      => $r['nome'],
+            'numero'    => $r['numero'] !== null ? (int) $r['numero'] : null,
+            'posicao'   => $r['posicao'],
+            'tipo'      => $r['tipo'],
+            'fotoUrl'   => $r['foto_url'],
+            'titular'   => (bool) $r['titular'],
+        ], $rows));
+    }
+
+    // POST /campo/partidas/{id}/escalacao  body: { formacao, titulares: [jogador_id...] }
+    public function escalacaoSave(int $id): void
+    {
+        $clubeId = CampoMiddleware::clubeId();
+        $this->findOrFail($id, $clubeId);
+        $in = $this->input();
+
+        $titulares = is_array($in['titulares'] ?? null) ? $in['titulares'] : [];
+        $formacao  = $this->str($in['formacao'] ?? null);
+
+        // mapa jogador_id => posicao (somente jogadores do clube)
+        $jogs = $this->db->fetchAll(
+            'SELECT id, posicao FROM campo_jogadores WHERE clube_id = ?',
+            [$clubeId]
+        );
+        $posDe = [];
+        foreach ($jogs as $j) {
+            $posDe[(int) $j['id']] = $j['posicao'];
+        }
+
+        $this->db->beginTransaction();
+        try {
+            $this->db->execute('DELETE FROM campo_escalacoes WHERE partida_id = ?', [$id]);
+            foreach ($titulares as $t) {
+                $jid = (int) (is_array($t) ? ($t['jogador_id'] ?? 0) : $t);
+                if (!isset($posDe[$jid])) {
+                    continue; // ignora jogador que nao e do clube
+                }
+                $this->db->execute(
+                    'INSERT INTO campo_escalacoes (partida_id, jogador_id, posicao, titular) VALUES (?, ?, ?, 1)',
+                    [$id, $jid, $posDe[$jid]]
+                );
+            }
+            $this->db->execute(
+                'UPDATE campo_partidas SET formacao = ?, status = "ao_vivo" WHERE id = ? AND clube_id = ?',
+                [$formacao, $id, $clubeId]
+            );
+            $this->db->commit();
+        } catch (\Throwable $e) {
+            $this->db->rollBack();
+            throw new HttpError('Erro ao salvar escalação: ' . $e->getMessage(), 500);
+        }
+
+        $this->escalacaoGet($id);
+    }
+
+    // POST /campo/partidas/{id}/finalizar
+    // body: { placar_nos, placar_eles, jogadores: [{jogador_id, passe_certo, ...}], eventos: [{jogador_id, tipo, minuto, tempo}] }
+    public function finalizar(int $id): void
+    {
+        $clubeId = CampoMiddleware::clubeId();
+        $this->findOrFail($id, $clubeId);
+        $in = $this->input();
+
+        $placarNos  = (int) ($in['placar_nos'] ?? 0);
+        $placarEles = (int) ($in['placar_eles'] ?? 0);
+        $jogadores  = is_array($in['jogadores'] ?? null) ? $in['jogadores'] : [];
+        $eventos    = is_array($in['eventos'] ?? null) ? $in['eventos'] : [];
+
+        // ids validos do clube
+        $rows = $this->db->fetchAll('SELECT id FROM campo_jogadores WHERE clube_id = ?', [$clubeId]);
+        $validos = [];
+        foreach ($rows as $r) {
+            $validos[(int) $r['id']] = true;
+        }
+
+        $cols = [
+            'passe_certo', 'passe_errado', 'chute_certo', 'chute_errado', 'gols', 'assist',
+            'desarme_ganho', 'desarme_perdido', 'interceptacao', 'corte', 'retomada',
+            'defesa', 'gol_sofrido', 'amarelo', 'vermelho', 'falta', 'min_jogados',
+        ];
+
+        $this->db->beginTransaction();
+        try {
+            $this->db->execute(
+                'UPDATE campo_partidas SET placar_nos = ?, placar_eles = ?, status = "finalizada" WHERE id = ? AND clube_id = ?',
+                [$placarNos, $placarEles, $id, $clubeId]
+            );
+
+            $this->db->execute('DELETE FROM campo_estatisticas_partida WHERE partida_id = ?', [$id]);
+            foreach ($jogadores as $j) {
+                $jid = (int) ($j['jogador_id'] ?? 0);
+                if (!isset($validos[$jid])) {
+                    continue;
+                }
+                $vals = [$id, $jid];
+                foreach ($cols as $c) {
+                    $vals[] = (int) ($j[$c] ?? 0);
+                }
+                $ph = implode(', ', array_fill(0, count($cols) + 2, '?'));
+                $this->db->execute(
+                    'INSERT INTO campo_estatisticas_partida (partida_id, jogador_id, ' . implode(', ', $cols) . ") VALUES ($ph)",
+                    $vals
+                );
+            }
+
+            $this->db->execute('DELETE FROM campo_eventos WHERE partida_id = ?', [$id]);
+            foreach ($eventos as $e) {
+                $jid = isset($e['jogador_id']) ? (int) $e['jogador_id'] : null;
+                if ($jid !== null && !isset($validos[$jid])) {
+                    $jid = null;
+                }
+                $this->db->execute(
+                    'INSERT INTO campo_eventos (partida_id, jogador_id, tipo, minuto, tempo) VALUES (?, ?, ?, ?, ?)',
+                    [$id, $jid, substr((string) ($e['tipo'] ?? 'evento'), 0, 24),
+                     isset($e['minuto']) ? (int) $e['minuto'] : null, (int) ($e['tempo'] ?? 1)]
+                );
+            }
+
+            $this->db->commit();
+        } catch (\Throwable $ex) {
+            $this->db->rollBack();
+            throw new HttpError('Erro ao finalizar: ' . $ex->getMessage(), 500);
+        }
+
+        $this->json($this->findOrFail($id, $clubeId));
+    }
+
     // ---------- helpers ----------
 
     private function findOrFail(int $id, int $clubeId): array

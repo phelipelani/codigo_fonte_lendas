@@ -197,10 +197,16 @@ export default function PartidasPage() {
                 <div className="mt-3 flex items-center gap-2">
                   {p.status !== 'finalizada' && (
                     <button
-                      onClick={() => navigate(`/partidas/${p.id}/anotar`)}
+                      onClick={() =>
+                        navigate(
+                          p.status === 'ao_vivo'
+                            ? `/partidas/${p.id}/anotar`
+                            : `/partidas/${p.id}/escalacao`,
+                        )
+                      }
                       className="btn-primary px-3 py-1.5 text-sm"
                     >
-                      {p.status === 'ao_vivo' ? '● Continuar' : '▶ Anotar'}
+                      {p.status === 'ao_vivo' ? '● Continuar' : '▶ Escalar'}
                     </button>
                   )}
                   {p.status === 'finalizada' && (

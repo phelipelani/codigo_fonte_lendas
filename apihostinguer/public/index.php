@@ -1441,6 +1441,22 @@ try {
             (new CampoPartidaController())->show((int) $m[1]);
             exit;
         }
+        // escalacao
+        if (preg_match('#^/campo/partidas/(\d+)/escalacao$#', $path, $m) && $method === 'GET') {
+            CampoMiddleware::auth();
+            (new CampoPartidaController())->escalacaoGet((int) $m[1]);
+            exit;
+        }
+        if (preg_match('#^/campo/partidas/(\d+)/escalacao$#', $path, $m) && $method === 'POST') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoPartidaController())->escalacaoSave((int) $m[1]);
+            exit;
+        }
+        if (preg_match('#^/campo/partidas/(\d+)/finalizar$#', $path, $m) && $method === 'POST') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoPartidaController())->finalizar((int) $m[1]);
+            exit;
+        }
         if (preg_match('#^/campo/partidas/(\d+)$#', $path, $m) && $method === 'PUT') {
             CampoMiddleware::auth(['tecnico', 'diretor']);
             (new CampoPartidaController())->update((int) $m[1]);

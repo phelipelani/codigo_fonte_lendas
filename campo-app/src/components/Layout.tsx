@@ -14,17 +14,19 @@ function Ic({ src, className = '' }: { src: string; className?: string }) {
 
 export default function Layout({
   active = '',
-  title,
+  title = '',
   subtitle,
   actions,
   hideNotif = false,
+  bare = false,
   children,
 }: {
   active?: MenuKey
-  title: string
+  title?: string
   subtitle?: string
   actions?: ReactNode
   hideNotif?: boolean
+  bare?: boolean
   children: ReactNode
 }) {
   const { user, logout } = useAuth()
@@ -145,11 +147,12 @@ export default function Layout({
 
       {/* ===== CONTEÚDO ===== */}
       <main className="min-w-0 flex-1 px-2 py-4 md:px-6 md:py-6">
+        {!bare && (
         <div className="mb-7 flex items-start justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
             <Link
               to="/"
-              className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-white/12 bg-white/[0.05] text-lg md:hidden"
+              className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-lg md:hidden"
             >
               ←
             </Link>
@@ -171,6 +174,7 @@ export default function Layout({
             )}
           </div>
         </div>
+        )}
 
         {children}
       </main>
