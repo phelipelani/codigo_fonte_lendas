@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { API_BASE } from '../lib/api'
+import HeroWave from '../components/HeroWave'
 
 const ERRO_MSG: Record<string, string> = {
   nao_convidado: 'Esse e-mail não tem convite. Peça acesso ao diretor do clube.',
@@ -10,7 +11,6 @@ const ERRO_MSG: Record<string, string> = {
 }
 
 const LOGO = import.meta.env.BASE_URL + 'logo.png'
-const BG = import.meta.env.BASE_URL + 'estadio.webp'
 
 function IconUser() {
   return (
@@ -82,11 +82,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div
-      className="relative min-h-screen bg-cover bg-center"
-      style={{ backgroundImage: `url(${BG})` }}
-    >
-      {/* escurece a foto pra dar contraste ao form */}
+    <div className="relative min-h-screen overflow-hidden bg-[#05070b]">
+      {/* fundo animado (ondas) */}
+      <HeroWave className="absolute inset-0 h-full w-full" scale={2} />
+      {/* escurece o fundo pra dar contraste ao form */}
       <div className="absolute inset-0 bg-[#03161a]/45" />
 
       <div className="relative z-10 flex min-h-screen items-center justify-center p-4">

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { api } from '../lib/api'
 import Layout from '../components/Layout'
+import HeroWave from '../components/HeroWave'
 
 const A = import.meta.env.BASE_URL
 const PAPEL_LABEL: Record<string, string> = { diretor: 'Diretor', tecnico: 'Técnico', jogador: 'Jogador' }
@@ -70,7 +71,7 @@ export default function DashboardPage() {
   ]
 
   return (
-    <Layout active="inicio" title={PAPEL_LABEL[user.papel]} subtitle={user.nome}>
+    <Layout active="inicio" title={PAPEL_LABEL[user.papel]} subtitle={user.nome} backdrop={<HeroWave scale={3} />}>
       <h2 className="text-2xl font-extrabold">Painel de Controle</h2>
       <p className="mb-6 mt-1 text-white/50">Acompanhe e gerencie todas as informações do clube.</p>
 

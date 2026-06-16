@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
@@ -7,6 +7,9 @@ import AdversariosPage from './pages/AdversariosPage'
 import PartidasPage from './pages/PartidasPage'
 import CapturaPage from './pages/CapturaPage'
 import EscalacaoPage from './pages/EscalacaoPage'
+import RelatorioPartidaPage from './pages/RelatorioPartidaPage'
+import EstrategiaPage from './pages/EstrategiaPage'
+import AgendaPage from './pages/AgendaPage'
 import RelatoriosPage from './pages/RelatoriosPage'
 import CallbackPage from './pages/CallbackPage'
 import ConvitePage from './pages/ConvitePage'
@@ -43,10 +46,26 @@ export default function App() {
         }
       />
       <Route
+        path="/estrategia"
+        element={
+          <ProtectedRoute papeis={['tecnico', 'diretor']}>
+            <EstrategiaPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/relatorios"
         element={
           <ProtectedRoute>
             <RelatoriosPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/agenda"
+        element={
+          <ProtectedRoute>
+            <AgendaPage />
           </ProtectedRoute>
         }
       />
@@ -75,6 +94,14 @@ export default function App() {
         }
       />
       <Route
+        path="/partidas/:id/relatorio"
+        element={
+          <ProtectedRoute>
+            <RelatorioPartidaPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/convidar"
         element={
           <ProtectedRoute papeis={['diretor', 'tecnico']}>
@@ -82,6 +109,7 @@ export default function App() {
           </ProtectedRoute>
         }
       />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }
