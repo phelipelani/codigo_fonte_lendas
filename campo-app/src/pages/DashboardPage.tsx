@@ -58,7 +58,7 @@ export default function DashboardPage() {
 
   if (!user) return null
 
-  const cards = [
+  const cards: { label: string; desc: string; icon: string; to?: string; disabled?: boolean }[] = [
     { label: 'Partidas', desc: 'Gerencie e analise os jogos do time.', icon: A + 'icon_partidas.png', to: '/partidas' },
     ...(podeGerir
       ? [
@@ -66,8 +66,8 @@ export default function DashboardPage() {
           { label: 'Adversários', desc: 'Conheça os times rivais.', icon: A + 'icon_adversarios.png', to: '/adversarios' },
         ]
       : []),
-    { label: 'Relatórios', desc: 'Gere relatórios e insights em breve.', icon: A + 'icon_relatorios.png', disabled: true },
-    { label: 'Agenda', desc: 'Veja os próximos compromissos.', icon: A + 'icon_agenda.png', disabled: true },
+    { label: 'Relatórios', desc: 'Veja relatórios e estatísticas das partidas.', icon: A + 'icon_relatorios.png', to: '/relatorios' },
+    { label: 'Agenda', desc: 'Veja os próximos compromissos.', icon: A + 'icon_agenda.png', to: '/agenda' },
   ]
 
   return (
