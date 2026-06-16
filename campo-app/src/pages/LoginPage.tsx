@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { API_BASE } from '../lib/api'
+import { ehNativo, loginGoogleNativo } from '../lib/native'
 import HeroWave from '../components/HeroWave'
 
 const ERRO_MSG: Record<string, string> = {
@@ -63,7 +64,13 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false)
 
   function entrarComGoogle() {
-    window.location.href = `${API_BASE}/campo/auth/google`
+    const url = `${API_BASE}/campo/auth/google`
+    if (ehNativo()) {
+      // no APK: abre no navegador in-app; o OAuth volta por deep link (?app=1)
+      void loginGoogleNativo(`${url}?app=1`)
+    } else {
+      window.location.href = url
+    }
   }
 
   async function onSubmit(e: FormEvent) {

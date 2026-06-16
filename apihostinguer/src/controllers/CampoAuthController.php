@@ -99,6 +99,13 @@ class CampoAuthController
             unset($_SESSION['campo_oauth_convite']);
         }
 
+        // origem APK (Capacitor) — sinaliza retorno via deep link em vez da URL web
+        if (!empty($_GET['app'])) {
+            $_SESSION['campo_oauth_app'] = true;
+        } else {
+            unset($_SESSION['campo_oauth_app']);
+        }
+
         $params = http_build_query([
             'client_id'     => $this->googleClientId,
             'redirect_uri'  => $this->googleRedirectUri,
@@ -197,7 +204,13 @@ class CampoAuthController
 
     private function redirectFront(?string $token, ?string $erro = null): void
     {
-        $base = $this->frontendUrl . '/campo/#/auth/callback';
+        // origem APK: volta por deep link (esquema custom registrado no app);
+        // web: volta pra rota do HashRouter em /campo.
+        $app = !empty($_SESSION['campo_oauth_app']);
+        unset($_SESSION['campo_oauth_app']);
+        $base = $app
+            ? (($_ENV['CAMPO_APP_SCHEME'] ?? 'futlendascampo') . '://auth/callback')
+            : ($this->frontendUrl . '/campo/#/auth/callback');
         if ($token !== null) {
             header('Location: ' . $base . '?token=' . urlencode($token));
         } else {
