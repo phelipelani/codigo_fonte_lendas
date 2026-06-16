@@ -251,6 +251,80 @@ class CampoPartidaController
         $this->json($this->findOrFail($id, $clubeId));
     }
 
+    // GET /campo/partidas/{id}/relatorio
+    public function relatorio(int $id): void
+    {
+        $clubeId = CampoMiddleware::clubeId();
+        $partida = $this->findOrFail($id, $clubeId);
+
+        $rows = $this->db->fetchAll(
+            'SELECT e.jogador_id, e.passe_certo, e.passe_errado, e.chute_certo, e.chute_errado,
+                    e.gols, e.assist, e.desarme_ganho, e.desarme_perdido, e.interceptacao, e.corte,
+                    e.retomada, e.defesa, e.gol_sofrido, e.amarelo, e.vermelho, e.falta, e.min_jogados,
+                    j.nome, j.numero, j.posicao, j.tipo, j.foto_url
+             FROM campo_estatisticas_partida e
+             JOIN campo_jogadores j ON j.id = e.jogador_id
+             WHERE e.partida_id = ?
+             ORDER BY FIELD(j.tipo, "gk", "def", "mid", "atk"), j.numero',
+            [$id]
+        );
+
+        $jogadores = array_map(fn(array $r) => [
+            'jogadorId'      => (int) $r['jogador_id'],
+            'nome'           => $r['nome'],
+            'numero'         => $r['numero'] !== null ? (int) $r['numero'] : null,
+            'posicao'        => $r['posicao'],
+            'tipo'           => $r['tipo'],
+            'fotoUrl'        => $r['foto_url'],
+            'passeCerto'     => (int) $r['passe_certo'],
+            'passeErrado'    => (int) $r['passe_errado'],
+            'chuteCerto'     => (int) $r['chute_certo'],
+            'chuteErrado'    => (int) $r['chute_errado'],
+            'gols'           => (int) $r['gols'],
+            'assist'         => (int) $r['assist'],
+            'desarmeGanho'   => (int) $r['desarme_ganho'],
+            'desarmePerdido' => (int) $r['desarme_perdido'],
+            'interceptacao'  => (int) $r['interceptacao'],
+            'corte'          => (int) $r['corte'],
+            'retomada'       => (int) $r['retomada'],
+            'defesa'         => (int) $r['defesa'],
+            'golSofrido'     => (int) $r['gol_sofrido'],
+            'amarelo'        => (int) $r['amarelo'],
+            'vermelho'       => (int) $r['vermelho'],
+            'falta'          => (int) $r['falta'],
+            'minJogados'     => (int) $r['min_jogados'],
+        ], $rows);
+
+        $evs = $this->db->fetchAll(
+            'SELECT ev.tipo, ev.minuto, ev.tempo, ev.jogador_id, j.nome
+             FROM campo_eventos ev
+             LEFT JOIN campo_jogadores j ON j.id = ev.jogador_id
+             WHERE ev.partida_id = ?
+             ORDER BY ev.tempo, ev.minuto, ev.id',
+            [$id]
+        );
+        $eventos = array_map(fn(array $e) => [
+            'tipo'      => $e['tipo'],
+            'minuto'    => $e['minuto'] !== null ? (int) $e['minuto'] : null,
+            'tempo'     => (int) $e['tempo'],
+            'jogadorId' => $e['jogador_id'] !== null ? (int) $e['jogador_id'] : null,
+            'nome'      => $e['nome'],
+        ], $evs);
+
+        $tot = ['chuteCerto' => 0, 'chuteErrado' => 0, 'passeCerto' => 0, 'passeErrado' => 0, 'defesas' => 0, 'gols' => 0, 'assist' => 0];
+        foreach ($jogadores as $j) {
+            $tot['chuteCerto']  += $j['chuteCerto'];
+            $tot['chuteErrado'] += $j['chuteErrado'];
+            $tot['passeCerto']  += $j['passeCerto'];
+            $tot['passeErrado'] += $j['passeErrado'];
+            $tot['defesas']     += $j['defesa'];
+            $tot['gols']        += $j['gols'];
+            $tot['assist']      += $j['assist'];
+        }
+
+        $this->json(['partida' => $partida, 'jogadores' => $jogadores, 'eventos' => $eventos, 'totais' => $tot]);
+    }
+
     // ---------- helpers ----------
 
     private function findOrFail(int $id, int $clubeId): array
