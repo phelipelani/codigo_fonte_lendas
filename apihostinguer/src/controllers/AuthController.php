@@ -133,6 +133,13 @@ class AuthController
             unset($_SESSION['oauth_convite_token']);
         }
 
+        // origem APK (Capacitor) — sinaliza retorno via deep link em vez da URL web
+        if (!empty($_GET['app'])) {
+            $_SESSION['oauth_app'] = true;
+        } else {
+            unset($_SESSION['oauth_app']);
+        }
+
         $params = http_build_query([
             'client_id'     => $this->googleClientId,
             'redirect_uri'  => $this->googleRedirectUri,
@@ -300,9 +307,12 @@ class AuthController
             'jogadorId' => $jogadorIdG,
         ], 86400);
 
-        // Redireciona para o front com o token na URL
-        // O frontend deve capturar o token do hash e armazenar
-        header('Location: ' . $this->frontendUrl . '/auth/callback#token=' . urlencode($token));
+        // Redireciona para o front com o token no hash.
+        // APK (Capacitor): volta por deep link (esquema custom); web: URL normal.
+        $app = !empty($_SESSION['oauth_app']);
+        unset($_SESSION['oauth_app']);
+        $base = $app ? (($_ENV['APP_SCHEME'] ?? 'futlendas') . '://') : ($this->frontendUrl . '/');
+        header('Location: ' . $base . 'auth/callback#token=' . urlencode($token));
         exit;
     }
 

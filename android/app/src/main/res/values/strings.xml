@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">FutLendas</string>
+    <string name="title_activity_main">FutLendas</string>
+    <string name="package_name">br.com.futlendas.app</string>
+    <string name="custom_url_scheme">br.com.futlendas.app</string>
+</resources>

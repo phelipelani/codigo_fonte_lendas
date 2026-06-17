@@ -20,6 +20,7 @@ import { useLogin } from '../api/useLogin'
 import { LoginSchema } from '@/utils/schemas'
 import { getApiErrorMessage } from '@/utils/errorHandling'
 import { GOOGLE_AUTH_URL } from '@/utils/constants'
+import { ehNativo, loginGoogleNativo } from '@/lib/native'
 
 export function LoginForm() {
   const loginMutation = useLogin()
@@ -37,8 +38,13 @@ export function LoginForm() {
   }
 
   function handleGoogleLogin() {
-    // Redireciona para o backend que vai redirecionar ao Google
-    window.location.href = GOOGLE_AUTH_URL
+    if (ehNativo()) {
+      // no APK: abre no navegador in-app; o OAuth volta por deep link (?app=1)
+      void loginGoogleNativo(`${GOOGLE_AUTH_URL}?app=1`)
+    } else {
+      // web: redireciona para o backend que vai redirecionar ao Google
+      window.location.href = GOOGLE_AUTH_URL
+    }
   }
 
   return (
