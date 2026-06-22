@@ -259,7 +259,13 @@ export default function ElencoPage() {
                       {j.pe || '–'} <Foot />
                     </span>
                     <span className="w-16 text-center text-lg font-bold">{j.numero ?? '–'}</span>
-                    <span className="text-night-cyan">›</span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); editar(j) }}
+                      title="Editar jogador"
+                      className="flex h-7 w-7 items-center justify-center rounded-lg border border-night-cyan/30 text-night-cyan transition hover:bg-night-cyan/10"
+                    >
+                      ✎
+                    </button>
                   </li>
                 )
               })}

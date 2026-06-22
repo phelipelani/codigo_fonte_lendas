@@ -37,6 +37,7 @@ export default function Layout({
   const navigate = useNavigate()
   const [menuAberto, setMenuAberto] = useState(false)
   const [colapsado, setColapsado] = useState(() => localStorage.getItem('campo_sidebar') === '1')
+  const [mobileNav, setMobileNav] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -208,12 +209,13 @@ export default function Layout({
         {!bare && (
         <div className="mb-7 flex items-start justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
-            <Link
-              to="/"
+            <button
+              onClick={() => setMobileNav(true)}
+              aria-label="Menu"
               className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-lg md:hidden"
             >
-              ←
-            </Link>
+              ☰
+            </button>
             <div className="min-w-0">
               <h1 className="truncate text-3xl font-extrabold md:text-[2.4rem] md:leading-tight">{title}</h1>
               {subtitle && <p className="mt-0.5 truncate text-white/55">{subtitle}</p>}
@@ -236,6 +238,79 @@ export default function Layout({
 
         {children}
       </main>
+
+      {/* ===== NAV MOBILE (drawer) ===== */}
+      {mobileNav && (
+        <div className="fixed inset-0 z-[60] md:hidden" onClick={() => setMobileNav(false)}>
+          <div className="absolute inset-0 bg-black/60" />
+          <div
+            className="absolute inset-y-0 left-0 flex w-72 max-w-[82%] flex-col bg-night-panel p-4 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-6 flex flex-col items-center pt-2 text-center">
+              <img src={escudo} alt="" className="mb-2 h-16 w-16 object-contain" />
+              <div className="text-base font-extrabold uppercase tracking-wide">{user.clube?.nome}</div>
+              <div className="mt-0.5 text-[10px] font-bold tracking-[0.22em] text-night-cyan">ANALISTA DE CAMPO</div>
+            </div>
+
+            <nav className="flex flex-col gap-1.5">
+              {menu.map((m) => {
+                const ico = m.emoji ? (
+                  <span className="flex h-6 w-6 items-center justify-center text-lg leading-none">{m.emoji}</span>
+                ) : (
+                  <Ic src={m.icon!} className="h-6 w-6" />
+                )
+                if (m.disabled)
+                  return (
+                    <span key={m.key} className="flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold text-white/35">
+                      {ico}{m.label}
+                    </span>
+                  )
+                return (
+                  <Link
+                    key={m.key}
+                    to={m.to!}
+                    onClick={() => setMobileNav(false)}
+                    className={`flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+                      active === m.key ? 'border border-night-cyan/45 bg-night-cyan/10 text-night-cyan' : 'text-white/80 hover:bg-white/5'
+                    }`}
+                  >
+                    {ico}{m.label}
+                  </Link>
+                )
+              })}
+              {podeGerir && (
+                <button
+                  onClick={() => { setMobileNav(false); navigate('/convidar') }}
+                  className="flex items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-white/80 hover:bg-white/5"
+                >
+                  <span className="flex h-6 w-6 items-center justify-center text-lg leading-none">✉️</span>
+                  Convidar
+                </button>
+              )}
+            </nav>
+
+            <div className="flex-1" />
+
+            <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10">
+                <Ic src={A + 'icon_user.png'} className="h-6 w-6" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-bold">{PAPEL_LABEL[user.papel]}</div>
+                <div className="truncate text-xs text-white/55">{user.nome}</div>
+              </div>
+            </div>
+            <button
+              onClick={logout}
+              className="mt-2 flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold text-white/70 hover:bg-white/5"
+            >
+              <Ic src={A + 'icon_exit.png'} className="h-5 w-5" />
+              Sair
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

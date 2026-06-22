@@ -63,11 +63,12 @@ function Build-One {
   Write-Host "[2/4] Copiando para $dst (fora do OneDrive)..." -ForegroundColor Yellow
   if (Test-Path $dst) { Remove-Item -LiteralPath $dst -Recurse -Force -ErrorAction SilentlyContinue }
   New-Item -ItemType Directory -Force $dst | Out-Null
+  # /XF *Rodolfo*  => ignora copias de conflito do OneDrive (quebram o AAPT por causa do '-')
   if ($CopyMode -eq 'full') {
-    robocopy $AppDir $dst /E /XD build .gradle .git dist /NFL /NDL /NJH /NJS /R:1 /W:1 | Out-Null
+    robocopy $AppDir $dst /E /XD build .gradle .git dist /XF *Rodolfo* /NFL /NDL /NJH /NJS /R:1 /W:1 | Out-Null
   } else {
-    robocopy "$AppDir\android" "$dst\android" /E /XD build .gradle .git /NFL /NDL /NJH /NJS /R:1 /W:1 | Out-Null
-    robocopy "$AppDir\node_modules" "$dst\node_modules" /E /XD build .git .cache /NFL /NDL /NJH /NJS /R:1 /W:1 | Out-Null
+    robocopy "$AppDir\android" "$dst\android" /E /XD build .gradle .git /XF *Rodolfo* /NFL /NDL /NJH /NJS /R:1 /W:1 | Out-Null
+    robocopy "$AppDir\node_modules" "$dst\node_modules" /E /XD build .git .cache /XF *Rodolfo* /NFL /NDL /NJH /NJS /R:1 /W:1 | Out-Null
   }
 
   # 3) compila o APK debug
