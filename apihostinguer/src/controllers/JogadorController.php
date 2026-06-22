@@ -200,9 +200,21 @@ class JogadorController
     // =========================================================
     public function update(int $id): void
     {
-        $jogador = $this->db->fetchOne('SELECT id FROM jogadores WHERE id = ?', [$id]);
+        $jogador = $this->db->fetchOne('SELECT id, usuario_id FROM jogadores WHERE id = ?', [$id]);
         if (!$jogador) {
             throw new HttpError('Jogador não encontrado.', 404);
+        }
+
+        // Permissão: admin edita qualquer jogador; usuário comum só o PRÓPRIO
+        // perfil (jogador vinculado à sua conta). Campos técnicos (posição,
+        // nível, joga_recuado) ficam restritos a admin mesmo no próprio perfil.
+        $authUser = $_REQUEST['authUser'] ?? null;
+        $isAdmin  = ($authUser['role'] ?? '') === 'admin';
+        if (!$isAdmin) {
+            $meuUserId = (int) ($authUser['userId'] ?? 0);
+            if ($meuUserId === 0 || (int) ($jogador['usuario_id'] ?? 0) !== $meuUserId) {
+                throw new HttpError('Você só pode editar o seu próprio perfil.', 403);
+            }
         }
 
         $input  = $this->getJsonInput();
@@ -214,7 +226,8 @@ class JogadorController
             $params[] = $input['nome'];
         }
 
-        if (isset($input['posicao'])) {
+        // ── Campos técnicos: apenas admin ──
+        if ($isAdmin && isset($input['posicao'])) {
             if (!in_array($input['posicao'], ['linha', 'goleiro'])) {
                 throw new HttpError('Posição inválida.', 400);
             }
@@ -222,17 +235,18 @@ class JogadorController
             $params[] = $input['posicao'];
         }
 
-        if (isset($input['nivel'])) {
+        if ($isAdmin && isset($input['nivel'])) {
             $fields[] = 'nivel = ?';
             $params[] = max(0, min(10, (int) $input['nivel']));
         }
 
-        if (isset($input['joga_recuado']) || isset($input['jogarRecuado'])) {
+        if ($isAdmin && (isset($input['joga_recuado']) || isset($input['jogarRecuado']))) {
             $val      = $input['joga_recuado'] ?? $input['jogarRecuado'];
             $fields[] = 'joga_recuado = ?';
             $params[] = $val ? 1 : 0;
         }
 
+        // ── Foto: dono e admin ──
         if (isset($input['foto_url']) || isset($input['fotoUrl'])) {
             $fields[] = 'foto_url = ?';
             $params[] = $input['foto_url'] ?? $input['fotoUrl'];

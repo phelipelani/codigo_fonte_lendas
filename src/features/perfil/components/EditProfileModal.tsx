@@ -29,7 +29,7 @@ const EditProfileModal = React.memo(function EditProfileModal({
     const file = e.target.files?.[0];
     if (!file) return;
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('foto', file); // backend espera o campo "foto" (S3)
     try {
       const res = await api.post('/upload/foto', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       setEditFoto(res.data.url || res.data.foto_url || URL.createObjectURL(file));

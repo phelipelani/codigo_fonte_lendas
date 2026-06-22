@@ -313,7 +313,9 @@ try {
     }
 
     if (preg_match('#^/jogadores/(\d+)$#', $path, $m) && $method === 'PUT') {
-        AuthMiddleware::isAdmin();
+        // Qualquer logado: o dono edita o PRÓPRIO perfil (nome/foto).
+        // A permissão fina (dono vs admin, campos técnicos) é feita no controller.
+        AuthMiddleware::handle();
         (new JogadorController())->update((int)$m[1]); exit;
     }
 
