@@ -206,6 +206,14 @@ function DetalheLiga({ ligaId, onVoltar }: { ligaId: number; onVoltar: () => voi
     } else { navigator.clipboard.writeText(texto); toast.success('Convite copiado para a area de transferencia!'); }
   }, [liga?.codigo_convite, liga?.nome]);
   const sairLiga = useCallback(async () => { try { await api.delete(`/cartolendas/ligas/${ligaId}/sair`); toast.success('Saiu da liga'); qc.invalidateQueries({ queryKey: ['cartolendas', 'ligas'] }); onVoltar(); } catch { toast.error('Erro ao sair'); } }, [ligaId, qc, onVoltar]);
+  const finalizarLiga = useCallback(async () => { 
+    if(!confirm('Tem certeza que deseja finalizar esta liga? Ela será encerrada e o ranking atual será congelado permanentemente.')) return;
+    try { 
+      await api.post(`/cartolendas/ligas/${ligaId}/finalizar`); 
+      toast.success('Liga finalizada com sucesso!'); 
+      qc.invalidateQueries({ queryKey: ['cartolendas', 'liga', ligaId] }); 
+    } catch { toast.error('Erro ao finalizar liga'); } 
+  }, [ligaId, qc]);
   const handleVerEscalacao = useCallback((userId: number, rodadaId: number) => setVerEscalacao({ userId, rodadaId }), []);
 
   if (isLoading) return <div className="text-center py-20 text-white/30">Carregando...</div>;
@@ -230,10 +238,18 @@ function DetalheLiga({ ligaId, onVoltar }: { ligaId: number; onVoltar: () => voi
           <button onClick={onVoltar} className="text-xs text-white/30 hover:text-white mb-2 flex items-center gap-1 transition-colors">
             <ArrowLeft size={12} /> Voltar ao Dashboard
           </button>
-          <h2 className="font-black text-2xl text-white">{liga.nome}</h2>
+          <h2 className="font-black text-2xl text-white flex items-center gap-2">
+            {liga.nome}
+            {liga.ativa === 0 && <span className="px-2 py-0.5 rounded bg-red-500/20 border border-red-500/30 text-[10px] text-red-400 font-bold tracking-wider uppercase">Finalizada</span>}
+          </h2>
           <p className="text-sm text-white/40">{liga.campeonato_nome} · {liga.total_membros}/{liga.max_membros} membros</p>
         </div>
         <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+          {isLigaAdmin && liga.ativa !== 0 && (
+            <button onClick={finalizarLiga} className="flex items-center gap-1.5 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 rounded-xl px-3 py-2 text-xs font-bold text-red-400 transition-all">
+              <Lock size={14} /> Finalizar
+            </button>
+          )}
           {isLigaAdmin && (
             <button onClick={() => { setShowAddMember(!showAddMember); setShowInvite(false); }} className="flex items-center gap-1.5 bg-cyan-500/10 border border-cyan-500/20 hover:bg-cyan-500/20 rounded-xl px-3 py-2 text-xs font-bold text-cyan-400 transition-all">
               <Plus size={14} /> Adicionar

@@ -241,6 +241,43 @@ class AlbumController
         }
     }
 
+    // =========================================================
+    // RANKING / DISPUTA
+    // =========================================================
+    public function ranking(): void
+    {
+        $this->authUserId(); // Valida se está logado
+
+        try {
+            $sql = "
+                SELECT 
+                    u.id, 
+                    u.nome, 
+                    u.avatar, 
+                    COUNT(DISTINCT i.figurinha_id) as total_obtidas,
+                    (SELECT COUNT(*) FROM album_figurinhas WHERE ativa = 1) as total_figurinhas
+                FROM usuarios u
+                JOIN album_inventario i ON u.id = i.usuario_id
+                JOIN album_figurinhas f ON i.figurinha_id = f.id
+                WHERE f.ativa = 1
+                GROUP BY u.id, u.nome, u.avatar
+                ORDER BY total_obtidas DESC, u.nome ASC
+            ";
+
+            $ranking = $this->db->fetchAll($sql);
+            
+            $this->ok(['ranking' => $ranking]);
+        } catch (\Throwable $e) {
+            // Em caso de erro SQL, retorna mensagem de erro para debug
+            http_response_code(500);
+            echo json_encode(['error' => true, 'message' => 'Erro DB: ' . $e->getMessage()]);
+            exit;
+        }
+    }
+
+    // =========================================================
+    // ÁLBUM DO USUÁRIO
+    // =========================================================
     public function meuAlbum(): void
     {
         $uid = $this->authUserId();

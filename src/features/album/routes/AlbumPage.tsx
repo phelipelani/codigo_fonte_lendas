@@ -34,6 +34,7 @@ import {
 import { AbrirPacoteModal } from '../components/AbrirPacoteModal';
 import { VincularWhatsappModal } from '../components/VincularWhatsappModal';
 import { OrigemFigurinhaModal } from '../components/OrigemFigurinhaModal';
+import { AlbumRankingModal } from '../components/AlbumRankingModal';
 
 // =============================================================
 // Hook simples para media-query (sem dependencia extra)
@@ -67,6 +68,7 @@ export const AlbumPage: React.FC = () => {
   const [indiceMobile, setIndiceMobile] = React.useState(0);
 
   const [pacoteAberto, setPacoteAberto] = React.useState<number | null>(null);
+  const [rankingAberto, setRankingAberto] = React.useState(false);
   const [whatsappOk, setWhatsappOk] = React.useState(false);
   const [figClicada, setFigClicada] = React.useState<FigurinhaType | null>(null);
 
@@ -144,6 +146,11 @@ export const AlbumPage: React.FC = () => {
         onClose={() => setPacoteAberto(null)}
       />
 
+      <AlbumRankingModal
+        isOpen={rankingAberto}
+        onClose={() => setRankingAberto(false)}
+      />
+
       <AnimatePresence>
         {figClicada && (
           <OrigemFigurinhaModal
@@ -170,6 +177,14 @@ export const AlbumPage: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setRankingAberto(true)}
+            className="inline-flex items-center gap-2 rounded-xl border border-yellow-500/30 bg-[#0d1f35] px-4 py-2.5 font-bold text-yellow-400 transition-all hover:bg-yellow-500/10"
+          >
+            <Trophy className="h-5 w-5" />
+            Disputa
+          </button>
+
           <Link
             to="/album/mural"
             className="inline-flex items-center gap-2 rounded-xl border border-cyan-500/30 bg-[#0d1f35] px-4 py-2.5 font-bold text-cyan-200 transition-all hover:bg-cyan-500/10"

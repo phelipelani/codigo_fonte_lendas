@@ -313,7 +313,9 @@ try {
     }
 
     if (preg_match('#^/jogadores/(\d+)$#', $path, $m) && $method === 'PUT') {
-        AuthMiddleware::isAdmin();
+        // Qualquer logado: o dono edita o PRÓPRIO perfil (nome/foto).
+        // A permissão fina (dono vs admin, campos técnicos) é feita no controller.
+        AuthMiddleware::handle();
         (new JogadorController())->update((int)$m[1]); exit;
     }
 
@@ -1469,6 +1471,11 @@ try {
         (new AlbumController())->meuAlbum(); exit;
     }
 
+    if ($path === '/album/ranking' && $method === 'GET') {
+        AuthMiddleware::handle();
+        (new AlbumController())->ranking(); exit;
+    }
+
     // --- Pacotes ---
     if ($path === '/album/pacotes' && $method === 'GET') {
         AuthMiddleware::handle();
@@ -1549,6 +1556,8 @@ try {
         require_once __DIR__ . '/../src/controllers/CampoPartidaController.php';
         require_once __DIR__ . '/../src/controllers/CampoConviteController.php';
         require_once __DIR__ . '/../src/controllers/CampoRelatorioController.php';
+        require_once __DIR__ . '/../src/controllers/CampoFormacaoController.php';
+        require_once __DIR__ . '/../src/controllers/CampoAgendaController.php';
 
         // GET /campo/setup — cria tabelas + seed (rodar 1x). Protegido por env CAMPO_SETUP_KEY.
         if ($path === '/campo/setup' && $method === 'GET') {
@@ -1689,6 +1698,11 @@ try {
             (new CampoPartidaController())->finalizar((int) $m[1]);
             exit;
         }
+        if (preg_match('#^/campo/partidas/(\d+)/relatorio$#', $path, $m) && $method === 'GET') {
+            CampoMiddleware::auth();
+            (new CampoPartidaController())->relatorio((int) $m[1]);
+            exit;
+        }
         if (preg_match('#^/campo/partidas/(\d+)$#', $path, $m) && $method === 'PUT') {
             CampoMiddleware::auth(['tecnico', 'diretor']);
             (new CampoPartidaController())->update((int) $m[1]);
@@ -1697,6 +1711,55 @@ try {
         if (preg_match('#^/campo/partidas/(\d+)$#', $path, $m) && $method === 'DELETE') {
             CampoMiddleware::auth(['tecnico', 'diretor']);
             (new CampoPartidaController())->destroy((int) $m[1]);
+            exit;
+        }
+
+        // FORMACOES / ESTRATEGIA (board tatico)
+        if ($path === '/campo/formacoes' && $method === 'GET') {
+            CampoMiddleware::auth();
+            (new CampoFormacaoController())->index();
+            exit;
+        }
+        if ($path === '/campo/formacoes' && $method === 'POST') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoFormacaoController())->store();
+            exit;
+        }
+        if (preg_match('#^/campo/formacoes/(\d+)$#', $path, $m) && $method === 'GET') {
+            CampoMiddleware::auth();
+            (new CampoFormacaoController())->show((int) $m[1]);
+            exit;
+        }
+        if (preg_match('#^/campo/formacoes/(\d+)$#', $path, $m) && $method === 'PUT') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoFormacaoController())->update((int) $m[1]);
+            exit;
+        }
+        if (preg_match('#^/campo/formacoes/(\d+)$#', $path, $m) && $method === 'DELETE') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoFormacaoController())->destroy((int) $m[1]);
+            exit;
+        }
+
+        // AGENDA (qualquer um le; diretor/tecnico cria/edita/exclui)
+        if ($path === '/campo/agenda' && $method === 'GET') {
+            CampoMiddleware::auth();
+            (new CampoAgendaController())->index();
+            exit;
+        }
+        if ($path === '/campo/agenda' && $method === 'POST') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoAgendaController())->store();
+            exit;
+        }
+        if (preg_match('#^/campo/agenda/(\d+)$#', $path, $m) && $method === 'PUT') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoAgendaController())->update((int) $m[1]);
+            exit;
+        }
+        if (preg_match('#^/campo/agenda/(\d+)$#', $path, $m) && $method === 'DELETE') {
+            CampoMiddleware::auth(['tecnico', 'diretor']);
+            (new CampoAgendaController())->destroy((int) $m[1]);
             exit;
         }
 

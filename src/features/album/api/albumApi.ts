@@ -1,4 +1,4 @@
-// Arquivo: src/features/album/api/albumApi.ts
+﻿// Arquivo: src/features/album/api/albumApi.ts
 //
 // Hooks React Query para o Album de Figurinhas.
 
@@ -81,7 +81,7 @@ export type Pacote = {
 };
 
 // =============================================================
-// Album do usuário
+// Album do usuÃ¡rio
 // =============================================================
 
 export const useMeuAlbum = () =>
@@ -119,7 +119,7 @@ export const useAbrirPacote = () => {
 };
 
 // =============================================================
-// WhatsApp (vínculo)
+// WhatsApp (vÃ­nculo)
 // =============================================================
 
 export const useMeuWhatsapp = () =>
@@ -143,7 +143,7 @@ export const useVincularWhatsapp = () => {
 };
 
 // =============================================================
-// Admin — catálogo de figurinhas
+// Admin â€” catÃ¡logo de figurinhas
 // =============================================================
 
 export const useFigurinhas = () =>
@@ -213,7 +213,7 @@ export const useDeletarFigurinha = () => {
 };
 
 // =============================================================
-// Admin — usuários + distribuir pacotes
+// Admin â€” usuÃ¡rios + distribuir pacotes
 // =============================================================
 
 export type UsuarioAlbum = {
@@ -243,7 +243,7 @@ export const useDistribuirPacotes = () => {
       (await api.post('/album/admin/distribuir', body)).data,
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['album'] });
-      toast.success(data?.message ?? 'Pacotes distribuídos!');
+      toast.success(data?.message ?? 'Pacotes distribuÃ­dos!');
     },
     onError: (e: any) =>
       toast.error(e?.response?.data?.message ?? 'Erro ao distribuir pacotes'),
@@ -285,9 +285,9 @@ export const useMural = () =>
   useQuery<{ ok: boolean; trocas: TrocaMural[] }>({
     queryKey: ['album', 'mural'],
     queryFn: async () => (await api.get('/album/mural')).data,
-    // Atualiza automaticamente a cada 60s e ao voltar para a aba —
-    // garante que figurinhas já trocadas somem sem precisar recarregar a página.
-    // 60s é suficiente para o caso de uso e evita exceder o limite de conexões do Hostinger.
+    // Atualiza automaticamente a cada 60s e ao voltar para a aba â€”
+    // garante que figurinhas jÃ¡ trocadas somem sem precisar recarregar a pÃ¡gina.
+    // 60s Ã© suficiente para o caso de uso e evita exceder o limite de conexÃµes do Hostinger.
     refetchInterval: 60_000,
     refetchOnWindowFocus: true,
   });
@@ -342,7 +342,7 @@ export const useExecutarTroca = () => {
     onSuccess: (data) => {
       // Invalida tudo do album (inventario, mural, album completo)
       qc.invalidateQueries({ queryKey: ['album'] });
-      // Força refetch imediato do mural para a figurinha trocada sumir na hora
+      // ForÃ§a refetch imediato do mural para a figurinha trocada sumir na hora
       qc.refetchQueries({ queryKey: ['album', 'mural'] });
       toast.success(data?.message ?? 'Troca realizada!');
     },
@@ -387,7 +387,7 @@ export const useMarcarTrocasVistas = () => {
 };
 
 // =============================================================
-// Origem de uma figurinha (como o usuário a obteve)
+// Origem de uma figurinha (como o usuÃ¡rio a obteve)
 // =============================================================
 
 export type EventoOrigem = {
@@ -429,3 +429,26 @@ export const useUploadImagem = () =>
     onError: (e: any) =>
       toast.error(e?.response?.data?.message ?? 'Erro no upload da imagem'),
   });
+
+// =============================================================
+// RANKING DO ÁLBUM
+// =============================================================
+export interface AlbumRankingUser {
+  id: number;
+  nome: string;
+  avatar: string | null;
+  total_obtidas: number;
+  total_figurinhas: number;
+  pacotes_abertos: number;
+}
+
+export const useAlbumRanking = () =>
+  useQuery<AlbumRankingUser[]>({
+    queryKey: ['album', 'ranking'],
+    queryFn: async () => {
+      const { data } = await api.get('/album/ranking');
+      return data.ranking;
+    },
+    staleTime: 60 * 1000,
+  });
+

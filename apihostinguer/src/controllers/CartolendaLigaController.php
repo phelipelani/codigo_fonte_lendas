@@ -289,6 +289,33 @@ class CartolendaLigaController {
         $this->json(['message' => 'Saiu da liga.']);
     }
 
+    // POST /cartolendas/ligas/:id/finalizar
+    public function finalizar(int $ligaId): void {
+        $userId = $this->userId();
+        
+        // Verifica se é admin ou dono da liga
+        $stLiga = $this->pdo->prepare("SELECT criador_id, ativa FROM cartolendas_ligas WHERE id = ?");
+        $stLiga->execute([$ligaId]);
+        $liga = $stLiga->fetch();
+
+        if (!$liga) {
+            $this->error('Liga não encontrada.', 404);
+        }
+
+        if ($liga['ativa'] == 0) {
+            $this->error('Esta liga já está finalizada.', 400);
+        }
+
+        if ($liga['criador_id'] != $userId && !$this->isAdmin()) {
+            $this->error('Apenas o criador da liga ou um administrador pode finalizá-la.', 403);
+        }
+
+        $this->pdo->prepare("UPDATE cartolendas_ligas SET ativa = 0 WHERE id = ?")
+                  ->execute([$ligaId]);
+
+        $this->json(['message' => 'Liga finalizada com sucesso.']);
+    }
+
     // ──────────────────────────────────────────────────────────
     // RANKING POR LIGA
     // ──────────────────────────────────────────────────────────
@@ -1917,6 +1944,9 @@ class CartolendaLigaController {
             }
             if (preg_match('#^/cartolendas/ligas/(\d+)/sair$#', $path, $m) && $method === 'DELETE') {
                 $ctrl->sair((int)$m[1]); return;
+            }
+            if (preg_match('#^/cartolendas/ligas/(\d+)/finalizar$#', $path, $m) && $method === 'POST') {
+                $ctrl->finalizar((int)$m[1]); return;
             }
             if (preg_match('#^/cartolendas/ligas/(\d+)/adicionar-membro$#', $path, $m) && $method === 'POST') {
                 $ctrl->adicionarMembro((int)$m[1]); return;
