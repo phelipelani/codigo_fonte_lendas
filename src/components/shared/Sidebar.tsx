@@ -11,6 +11,8 @@ import {
   Crown,
   ClipboardList,
   Images,
+  Zap,
+  Wallet,
 } from 'lucide-react';
 import logoLendas from '@/assets/Logo.webp';
 import { useAuth } from '@/hooks/useAuth';
@@ -49,8 +51,16 @@ const navLinks = [
   { to: '/jogadores', icon: <NavIcon src={icJogadores} alt="Jogadores" />, label: 'Jogadores', adminOnly: true },
   { to: '/analytics', icon: <NavIcon src={icEstatisticas} alt="Analytics" />, label: 'Analytics' },
   { to: '/racha', icon: <ClipboardList size={22} />, label: 'Racha' },
-  { to: '/album', icon: <Images size={22} />, label: 'Álbum', highlight: true },
+  { to: '/album', icon: <Images size={22} />, label: 'Álbum', highlight: 'pink' as const },
+  { to: '/financeiro', icon: <Wallet size={22} />, label: 'Financeiro', adminOnly: true, highlight: 'green' as const },
 ];
+
+const highlightStyles = {
+  purple: 'text-violet-300 border border-violet-500/25 hover:bg-violet-500/10 hover:text-violet-200',
+  gold:   'text-yellow-300 border border-yellow-500/25 hover:bg-yellow-500/10 hover:text-yellow-200',
+  pink:   'text-pink-300 border border-pink-500/25 hover:bg-pink-500/10 hover:text-pink-200',
+  green:  'text-green-300 border border-green-500/25 hover:bg-green-500/10 hover:text-green-200',
+};
 
 export const Sidebar = () => {
   const navigate = useNavigate();

@@ -258,24 +258,277 @@ class CampeonatoController
     // =========================================================
     public function finalizar(int $id): void
     {
-        $this->getCampeonatoOr404($id);
-        $classificacao = $this->calcularClassificacao($id);
-        $campeaoId     = $classificacao[0]['time_id'] ?? null;
+        $camp = $this->getCampeonatoOr404($id);
+
+        // Para Copa (mata-mata): campeão vem da partida final
+        $campeaoId = null;
+        $formato   = $camp['formato'] ?? '';
+        $ehCopa    = str_starts_with($formato, 'copa_') || in_array($formato, ['grupos', 'mata-mata', 'mata_mata']);
+
+        if ($ehCopa) {
+            // Busca vencedor da partida final do mata-mata
+            $final = $this->db->fetchOne("
+                SELECT placar_timeA, placar_timeB, placar_penaltis_timeA, placar_penaltis_timeB,
+                       timeA_id, timeB_id
+                FROM campeonato_partidas
+                WHERE campeonato_id = ? AND fase = 'mata_mata' AND fase_mata_mata = 'final' AND status = 'finalizada'
+                ORDER BY id DESC LIMIT 1
+            ", [$id]);
+
+            if ($final) {
+                $pA = (int)$final['placar_timeA'];
+                $pB = (int)$final['placar_timeB'];
+                $penA = $final['placar_penaltis_timeA'] !== null ? (int)$final['placar_penaltis_timeA'] : null;
+                $penB = $final['placar_penaltis_timeB'] !== null ? (int)$final['placar_penaltis_timeB'] : null;
+
+                if ($pA > $pB || ($pA === $pB && $penA !== null && $penA > $penB)) {
+                    $campeaoId = (int)$final['timeA_id'];
+                } elseif ($pB > $pA || ($pA === $pB && $penB !== null && $penB > $penA)) {
+                    $campeaoId = (int)$final['timeB_id'];
+                }
+            }
+        }
+
+        // Para Liga ou fallback: usa classificação de pontos
+        if (!$campeaoId) {
+            $classificacao = $this->calcularClassificacao($id);
+            $campeaoId     = $classificacao[0]['time_id'] ?? null;
+        }
 
         $this->db->execute(
             "UPDATE campeonatos SET fase_atual = 'finalizada', status = 'finalizado', time_campeao_id = ? WHERE id = ?",
             [$campeaoId, $id]
         );
 
+        // Registra o time campeão + todos os jogadores que participaram
         if ($campeaoId) {
+            // 1. Registra o time
             $this->db->execute(
                 "INSERT IGNORE INTO campeonato_vencedores (campeonato_id, time_id, posicao) VALUES (?, ?, 1)",
                 [$id, $campeaoId]
             );
+
+            // 2. Registra cada jogador cujo time de maior frequência no camp é o campeão.
+            //    Isso evita dar título a goleiros rotativos que jogaram mais pelo time rival.
+            $jogadoresCampeoes = $this->getJogadoresCampeoes($id, $campeaoId);
+
+            foreach ($jogadoresCampeoes as $jog) {
+                $this->db->execute(
+                    "INSERT IGNORE INTO campeonato_vencedores (campeonato_id, jogador_id, time_id, posicao) VALUES (?, ?, ?, 1)",
+                    [$id, (int)$jog['jogador_id'], $campeaoId]
+                );
+            }
         }
 
+        // 3. Calcula e salva prêmios individuais do campeonato
+        $premios = $this->salvarPremiosCampeonato($id);
+
         http_response_code(200);
-        echo json_encode(['success' => true, 'time_campeao_id' => $campeaoId]);
+        echo json_encode([
+            'success'             => true,
+            'time_campeao_id'     => $campeaoId,
+            'jogadores_registrados' => isset($jogadoresCampeoes) ? count($jogadoresCampeoes) : 0,
+            'premios_calculados'  => $premios,
+        ]);
+    }
+
+    // =========================================================
+    // Calcula e salva os prêmios individuais do campeonato:
+    // MVP, Artilheiro, Garçom, Melhor Goleiro, Melhor Zagueiro, Pé de Rato
+    // =========================================================
+    // Retorna os jogadores que devem receber o título:
+    // somente quem jogou mais pelo time campeão do que por qualquer outro time.
+    // Resolve o caso de goleiros rotativos (Alexandre, Gogo, Alex) que não são
+    // fixos — cada um defende mais um time específico ao longo do camp.
+    // =========================================================
+    public function getJogadoresCampeoes(int $campId, int $campeaoId): array
+    {
+        // ── 1. Identifica goleiros do campeonato via campeonato_partidas ────────────
+        // Fonte mais confiável: goleiro_timeA_id / goleiro_timeB_id são explícitos.
+        $goleiros   = $this->db->fetchAll("
+            SELECT DISTINCT goleiro_id FROM (
+                SELECT goleiro_timeA_id AS goleiro_id FROM campeonato_partidas
+                WHERE campeonato_id = ? AND status = 'finalizada' AND goleiro_timeA_id IS NOT NULL
+                UNION
+                SELECT goleiro_timeB_id AS goleiro_id FROM campeonato_partidas
+                WHERE campeonato_id = ? AND status = 'finalizada' AND goleiro_timeB_id IS NOT NULL
+            ) g
+        ", [$campId, $campId]);
+        $goleiroIds = array_map('intval', array_column($goleiros, 'goleiro_id'));
+
+        // ── 2. Jogadores de linha (excluindo goleiros): usa campeonato_estatisticas_partida ──
+        // Jogadores de linha são fixos por time — ep.time_id é confiável para eles.
+        $excl = empty($goleiroIds)
+            ? ''
+            : 'AND ep.jogador_id NOT IN (' . implode(',', $goleiroIds) . ')'; // IDs vindos do próprio BD — seguro
+
+        $jogadoresLinha = $this->db->fetchAll("
+            SELECT a.jogador_id
+            FROM (
+                SELECT ep.jogador_id, ep.time_id, COUNT(*) AS jogos
+                FROM campeonato_estatisticas_partida ep
+                JOIN campeonato_partidas cp ON cp.id = ep.partida_id
+                    AND cp.campeonato_id = ?
+                    AND cp.status = 'finalizada'
+                {$excl}
+                GROUP BY ep.jogador_id, ep.time_id
+            ) a
+            WHERE a.time_id = ?
+              AND a.jogos > COALESCE((
+                  SELECT MAX(b.jogos)
+                  FROM (
+                      SELECT ep2.jogador_id, ep2.time_id, COUNT(*) AS jogos
+                      FROM campeonato_estatisticas_partida ep2
+                      JOIN campeonato_partidas cp2 ON cp2.id = ep2.partida_id
+                          AND cp2.campeonato_id = ?
+                          AND cp2.status = 'finalizada'
+                      GROUP BY ep2.jogador_id, ep2.time_id
+                  ) b
+                  WHERE b.jogador_id = a.jogador_id AND b.time_id != ?
+              ), 0)
+        ", [$campId, $campeaoId, $campId, $campeaoId]);
+
+        // ── 3. Goleiros: só ganham título se defenderam MAIS DE 50% das partidas do campeão ──
+        // Goleiros são rotativos (não fixos por time). Regra: se o time campeão jogou N
+        // partidas e o goleiro defendeu mais da metade delas, o título é dele também.
+        // Ex.: campeão jogou 30, goleiro defendeu 16 (53%) → ganha. Defendeu 14 (47%) → não.
+        $totalJogosCampeao = (int)$this->db->fetchOne("
+            SELECT COUNT(*) AS total FROM campeonato_partidas
+            WHERE campeonato_id = ? AND status = 'finalizada'
+              AND (timeA_id = ? OR timeB_id = ?)
+        ", [$campId, $campeaoId, $campeaoId])['total'];
+
+        $jogadoresGoleiro = [];
+        if ($totalJogosCampeao > 0) {
+            foreach ($goleiroIds as $gkId) {
+                $jogosDefendidos = (int)$this->db->fetchOne("
+                    SELECT COUNT(*) AS total FROM campeonato_partidas
+                    WHERE campeonato_id = ? AND status = 'finalizada'
+                      AND ((timeA_id = ? AND goleiro_timeA_id = ?)
+                        OR (timeB_id = ? AND goleiro_timeB_id = ?))
+                ", [$campId, $campeaoId, $gkId, $campeaoId, $gkId])['total'];
+
+                // Estritamente mais da metade (16 de 30 sim, 15 de 30 não)
+                if ($jogosDefendidos * 2 > $totalJogosCampeao) {
+                    $jogadoresGoleiro[] = ['jogador_id' => $gkId];
+                }
+            }
+        }
+
+        return array_merge($jogadoresLinha, $jogadoresGoleiro);
+    }
+
+    // Pode ser chamado diretamente para recálculo retroativo.
+    // =========================================================
+    public function salvarPremiosCampeonato(int $campId): array
+    {
+        // Remove prêmios anteriores (idempotente — pode rodar várias vezes)
+        $this->db->execute("DELETE FROM campeonato_premios WHERE campeonato_id = ?", [$campId]);
+
+        // Busca todos os jogadores que participaram do campeonato com seus totais
+        $jogadores = $this->db->fetchAll("
+            SELECT
+                ep.jogador_id,
+                j.nome,
+                j.joga_recuado,
+                SUM(ep.gols)         AS gols,
+                SUM(ep.assistencias) AS assists,
+                SUM(ep.clean_sheet)  AS clean_sheets,
+                SUM(CASE WHEN (ep.time_id = cp.timeA_id AND cp.placar_timeA > cp.placar_timeB)
+                              OR (ep.time_id = cp.timeB_id AND cp.placar_timeB > cp.placar_timeA)
+                         THEN 1 ELSE 0 END) AS vitorias,
+                SUM(CASE WHEN cp.placar_timeA = cp.placar_timeB THEN 1 ELSE 0 END) AS empates,
+                SUM(CASE WHEN (ep.time_id = cp.timeA_id AND cp.placar_timeA < cp.placar_timeB)
+                              OR (ep.time_id = cp.timeB_id AND cp.placar_timeB < cp.placar_timeA)
+                         THEN 1 ELSE 0 END) AS derrotas,
+                COUNT(DISTINCT ep.partida_id) AS jogos,
+                MAX(CASE WHEN cp.goleiro_timeA_id = ep.jogador_id
+                           OR cp.goleiro_timeB_id = ep.jogador_id THEN 1 ELSE 0 END) AS is_goleiro
+            FROM campeonato_estatisticas_partida ep
+            JOIN campeonato_partidas cp ON cp.id = ep.partida_id
+                AND cp.campeonato_id = ?
+                AND cp.status = 'finalizada'
+            JOIN jogadores j ON j.id = ep.jogador_id
+            GROUP BY ep.jogador_id, j.nome, j.joga_recuado
+        ", [$campId]);
+
+        if (empty($jogadores)) return [];
+
+        // Calcula pontuação total de cada jogador no campeonato
+        $pontuados = [];
+        foreach ($jogadores as $j) {
+            $gols    = (int)$j['gols'];
+            $assists = (int)$j['assists'];
+            $cs      = (int)$j['clean_sheets'];
+            $v       = (int)$j['vitorias'];
+            $e       = (int)$j['empates'];
+            $d       = (int)$j['derrotas'];
+            $isRec   = (int)$j['joga_recuado'] === 1;
+            $isGol   = (int)$j['is_goleiro'] > 0;
+
+            if ($isGol || $isRec) {
+                $pts = Pontos::calcularJogadorRecuado($cs, $v, $e, $d);
+            } else {
+                $pts = Pontos::calcularJogadorLinha($gols, $assists, 0, $v, $e, $d);
+            }
+
+            $pontuados[] = [
+                'jogador_id' => (int)$j['jogador_id'],
+                'nome'       => $j['nome'],
+                'pts'        => $pts,
+                'gols'       => $gols,
+                'assists'    => $assists,
+                'cs'         => $cs,
+                'jogos'      => (int)$j['jogos'],
+                'is_goleiro' => $isGol,
+                'is_recuado' => $isRec,
+            ];
+        }
+
+        $inseridos = [];
+
+        // Helper: insere prêmio para o(s) melhor(es) empatados no topo
+        $insertTied = function (array $lista, string $tipo, string $campo, bool $asc = false) use ($campId, &$inseridos) {
+            if (empty($lista)) return;
+            usort($lista, fn($a, $b) => $asc ? ($a[$campo] <=> $b[$campo]) : ($b[$campo] <=> $a[$campo]));
+            $topVal = $lista[0][$campo];
+            foreach ($lista as $p) {
+                if ($p[$campo] != $topVal) break;
+                $this->db->execute(
+                    "INSERT IGNORE INTO campeonato_premios (campeonato_id, jogador_id, tipo_premio, valor) VALUES (?, ?, ?, ?)",
+                    [$campId, $p['jogador_id'], $tipo, $p[$campo]]
+                );
+                $inseridos[] = ['tipo' => $tipo, 'jogador' => $p['nome'], 'valor' => $p[$campo]];
+            }
+        };
+
+        // ── MVP do Campeonato (maior pontuação — jogadores de linha) ──
+        $linha = array_values(array_filter($pontuados, fn($p) => !$p['is_goleiro']));
+        $insertTied($linha, 'mvp', 'pts');
+
+        // ── Artilheiro do Campeonato ──
+        $artilheiros = array_values(array_filter($pontuados, fn($p) => $p['gols'] > 0));
+        $insertTied($artilheiros, 'artilheiro', 'gols');
+
+        // ── Garçom do Campeonato ──
+        $garcons = array_values(array_filter($pontuados, fn($p) => $p['assists'] > 0));
+        $insertTied($garcons, 'garcom', 'assists');
+
+        // ── Melhor Goleiro do Campeonato ──
+        $goleiros = array_values(array_filter($pontuados, fn($p) => $p['is_goleiro']));
+        $insertTied($goleiros, 'melhor_goleiro', 'pts');
+
+        // ── Melhor Zagueiro do Campeonato ──
+        $recuados = array_values(array_filter($pontuados, fn($p) => $p['is_recuado'] && !$p['is_goleiro']));
+        $insertTied($recuados, 'melhor_zagueiro', 'pts');
+
+        // ── Pé de Rato do Campeonato (menor pontuação entre jogadores de linha, mín. 2 jogos) ──
+        $linhaMin2 = array_values(array_filter($linha, fn($p) => !$p['is_recuado'] && $p['jogos'] >= 2));
+        if (count($linhaMin2) > 1) {
+            $insertTied($linhaMin2, 'pe_de_rato', 'pts', true); // asc = menor pts
+        }
+
+        return $inseridos;
     }
 
     // =========================================================

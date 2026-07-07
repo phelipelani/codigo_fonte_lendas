@@ -37,6 +37,7 @@ const RachaPage = lazy(() => import("@/features/presenca/routes/RachaPage").then
 const AlbumPage = lazy(() => import("@/features/album/routes/AlbumPage").then(m => ({ default: m.AlbumPage })));
 const AlbumAdminPage = lazy(() => import("@/features/album/routes/AlbumAdminPage").then(m => ({ default: m.AlbumAdminPage })));
 const MuralPage = lazy(() => import("@/features/album/routes/MuralPage").then(m => ({ default: m.MuralPage })));
+const FinanceiroPage = lazy(() => import("@/features/financeiro/routes/FinanceiroPage").then(m => ({ default: m.FinanceiroPage })));
 
 export const AppRoutes = () => {
   return (
@@ -106,6 +107,9 @@ export const AppRoutes = () => {
           <Route path="/jogadores" element={<JogadoresPage />} />
           <Route path="/jogadores/novo" element={<JogadorCreatePage />} />
           <Route path="/jogadores/:id/edit" element={<JogadorEditPage />} />
+          
+          {/* Financeiro — Mercado Pago */}
+          <Route path="/financeiro" element={<FinanceiroPage />} />
         </Route>
       </Route>
 

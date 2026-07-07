@@ -53,7 +53,7 @@ export const DiagBg = React.memo(function DiagBg({ accentRgb }: { accentRgb: str
 export const MiniStat = React.memo(function MiniStat({ label, value, color }: { label: string; value: number; color: string }) {
   return (
     <div className="flex items-center gap-1.5 text-xs">
-      <span className="text-white/35 font-bold text-[10px]">{label}</span>
+      <span className="text-white/80 font-bold text-[10px]">{label}</span>
       <span className="font-black text-sm" style={{ color }}>{value}</span>
     </div>
   );
@@ -64,7 +64,7 @@ export const StatBox = React.memo(function StatBox({ label, value, color }: { la
   return (
     <div className="text-center px-2">
       <div className="text-base font-black" style={{ color }}>{value}</div>
-      <div className="text-[8px] text-white/35 font-bold uppercase tracking-wider">{label}</div>
+      <div className="text-[8px] text-white/80 font-bold uppercase tracking-wider">{label}</div>
     </div>
   );
 });

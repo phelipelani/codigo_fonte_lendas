@@ -136,7 +136,7 @@ const PerfilMobile = React.memo(function PerfilMobile({
             <h2 className="text-2xl font-black text-white uppercase">{perfil.nome}</h2>
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold" style={{ color: acc }}>{rating} pts</span>
-              <span className="text-xs" style={{ color: "#A0A0AB" }}>{perfil.posicao || "ATA"}</span>
+              <span className="text-xs" style={{ color: "#E0E0EC" }}>{perfil.posicao || "ATA"}</span>
             </div>
           </div>
         </div>
@@ -152,7 +152,7 @@ const PerfilMobile = React.memo(function PerfilMobile({
             <div key={s.label} className="rounded-xl p-3 text-center"
               style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
               <span className="block text-xl font-black" style={{ color: s.color }}>{s.value}</span>
-              <span className="text-[8px] font-bold uppercase tracking-wide" style={{ color: "#A0A0AB" }}>{s.label}</span>
+              <span className="text-[8px] font-bold uppercase tracking-wide" style={{ color: "#E0E0EC" }}>{s.label}</span>
             </div>
           ))}
         </div>
@@ -177,7 +177,7 @@ const PerfilMobile = React.memo(function PerfilMobile({
               </div>
               <div className="text-right">
                 <span className="text-xl font-black" style={{ color: acc }}>{melhorDupla.total}</span>
-                <p className="text-[9px]" style={{ color: "#A0A0AB" }}>gols</p>
+                <p className="text-[9px]" style={{ color: "#E0E0EC" }}>gols</p>
               </div>
             </div>
           </div>
@@ -203,13 +203,13 @@ const PerfilMobile = React.memo(function PerfilMobile({
             style={{ background: "rgba(10,20,40,0.8)", border: "1px solid rgba(251,146,60,0.15)" }}>
             <Zap size={14} className="text-orange-400 mb-2" />
             <span className="block text-xl font-black text-orange-400">{mvpsSemanais}</span>
-            <span className="text-[9px] uppercase tracking-wider" style={{ color: "#A0A0AB" }}>MVP Rodada</span>
+            <span className="text-[9px] uppercase tracking-wider" style={{ color: "#E0E0EC" }}>MVP Rodada</span>
           </div>
           <div className="rounded-xl p-4 relative overflow-hidden"
             style={{ background: "rgba(10,20,40,0.8)", border: "1px solid rgba(167,139,250,0.15)" }}>
             <Star size={14} className="text-purple-400 mb-2" />
             <span className="block text-xl font-black text-purple-400">{qtdMvpGeral}</span>
-            <span className="text-[9px] uppercase tracking-wider" style={{ color: "#A0A0AB" }}>MVP Geral</span>
+            <span className="text-[9px] uppercase tracking-wider" style={{ color: "#E0E0EC" }}>MVP Geral</span>
           </div>
         </div>
       </div>

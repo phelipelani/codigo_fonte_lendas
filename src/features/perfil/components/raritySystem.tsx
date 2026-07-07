@@ -445,7 +445,7 @@ export const PilarBar = ({
     <span className="text-sm w-4 flex-shrink-0">{icon}</span>
     <span
       className="text-[9px] font-black uppercase tracking-wider w-16 flex-shrink-0"
-      style={{ color: "rgba(255,255,255,0.4)" }}
+      style={{ color: "rgba(255,255,255,0.92)" }}
     >
       {label}
     </span>

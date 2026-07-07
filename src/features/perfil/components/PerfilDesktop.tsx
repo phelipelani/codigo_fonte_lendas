@@ -107,7 +107,7 @@ const PerfilDesktop = React.memo(function PerfilDesktop({
                     {rarity.name}
                   </span>
                   <span className="text-xl font-black" style={{ color: acc }}>{rating}</span>
-                  <span className="text-sm font-bold" style={{ color: "#A0A0AB" }}>{perfil.posicao || "ATA"}</span>
+                  <span className="text-sm font-bold" style={{ color: "#E0E0EC" }}>{perfil.posicao || "ATA"}</span>
                 </div>
               </div>
             </div>
@@ -117,7 +117,7 @@ const PerfilDesktop = React.memo(function PerfilDesktop({
               className="rounded-xl p-4 space-y-2"
               style={{ background: "rgba(255,255,255,0.025)", border: `1px solid ${acc}15` }}
             >
-              <p className="text-[9px] font-black uppercase tracking-[0.3em] mb-3" style={{ color: `${acc}80` }}>
+              <p className="text-[9px] font-black uppercase tracking-[0.3em] mb-3" style={{ color: "rgba(255,255,255,0.70)" }}>
                 Atributos
               </p>
               <PilarBar label="Ataque"  value={pilares.ataque}       accent={acc} icon="⚽" />
@@ -142,7 +142,7 @@ const PerfilDesktop = React.memo(function PerfilDesktop({
                   style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
                 >
                   <span className="block text-2xl font-black" style={{ color: s.color }}>{s.value}</span>
-                  <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "#A0A0AB" }}>{s.label}</span>
+                  <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "#E0E0EC" }}>{s.label}</span>
                 </div>
               ))}
             </div>
@@ -150,7 +150,7 @@ const PerfilDesktop = React.memo(function PerfilDesktop({
             {/* W/D/L bar */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: "#A0A0AB" }}>Desempenho</span>
+                <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: "#E0E0EC" }}>Desempenho</span>
                 <div className="flex gap-3 text-[11px] font-bold">
                   <span style={{ color: "#4ade80" }}>{desempenho.vitorias}V</span>
                   <span style={{ color: "#eab308" }}>{desempenho.empates}E</span>
@@ -202,7 +202,7 @@ const PerfilDesktop = React.memo(function PerfilDesktop({
               <button
                 onClick={onShare}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#A0A0AB" }}
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#E0E0EC" }}
               >
                 <Share2 size={14} /> Compartilhar
               </button>
@@ -352,11 +352,11 @@ const PerfilDesktop = React.memo(function PerfilDesktop({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-black text-white truncate">{melhorDupla.nome}</p>
-                    <p className="text-[10px]" style={{ color: "#A0A0AB" }}>Parceiro de jogo</p>
+                    <p className="text-[10px]" style={{ color: "#E0E0EC" }}>Parceiro de jogo</p>
                   </div>
                   <div className="text-right">
                     <span className="text-2xl font-black" style={{ color: acc }}>{melhorDupla.total}</span>
-                    <p className="text-[9px] uppercase" style={{ color: "#A0A0AB" }}>gols juntos</p>
+                    <p className="text-[9px] uppercase" style={{ color: "#E0E0EC" }}>gols juntos</p>
                   </div>
                 </div>
               </div>
@@ -375,7 +375,7 @@ const PerfilDesktop = React.memo(function PerfilDesktop({
                 >
                   <s.icon size={14} style={{ color: s.color }} className="mb-2" />
                   <span className="block text-xl font-black" style={{ color: s.color }}>{s.value}</span>
-                  <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "#A0A0AB" }}>{s.label}</span>
+                  <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "#E0E0EC" }}>{s.label}</span>
                   <div className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
                     style={{ background: `linear-gradient(90deg, ${s.color}50, transparent)` }} />
                 </div>
@@ -391,7 +391,7 @@ const PerfilDesktop = React.memo(function PerfilDesktop({
                 <Shield size={20} style={{ color: "#2dd4bf" }} />
                 <div>
                   <span className="block text-xl font-black" style={{ color: "#2dd4bf" }}>{totais.clean_sheets}</span>
-                  <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "#A0A0AB" }}>Clean Sheets</span>
+                  <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "#E0E0EC" }}>Clean Sheets</span>
                 </div>
               </div>
             )}
