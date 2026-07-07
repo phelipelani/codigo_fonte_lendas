@@ -22,6 +22,7 @@ import { AnimatedBackground } from '@/components/ui/AnimatedBackground';
 import { useValidarConvite } from '../api/useValidarConvite';
 import { useAtivarConta } from '../api/useAtivarConta';
 import { GOOGLE_AUTH_URL } from '@/utils/constants';
+import { ehNativo, loginGoogleNativo } from '@/lib/native';
 
 // Schema de validação
 const ativarContaSchema = z.object({
@@ -221,7 +222,11 @@ export const AtivarContaPage = () => {
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="mb-4">
             <Button
               type="button"
-              onClick={() => { window.location.href = `${GOOGLE_AUTH_URL}?convite=${token}`; }}
+              onClick={() => {
+                const url = `${GOOGLE_AUTH_URL}?convite=${token}`;
+                if (ehNativo()) { void loginGoogleNativo(`${url}&app=1`); }
+                else { window.location.href = url; }
+              }}
               className="w-full h-12 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20
                 text-white font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-3"
             >

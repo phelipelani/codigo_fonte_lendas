@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { api } from '../lib/api'
 import Layout from '../components/Layout'
+import HeroWave from '../components/HeroWave'
 
 const A = import.meta.env.BASE_URL
 const PAPEL_LABEL: Record<string, string> = { diretor: 'Diretor', tecnico: 'Técnico', jogador: 'Jogador' }
@@ -57,7 +58,7 @@ export default function DashboardPage() {
 
   if (!user) return null
 
-  const cards = [
+  const cards: { label: string; desc: string; icon: string; to?: string; disabled?: boolean }[] = [
     { label: 'Partidas', desc: 'Gerencie e analise os jogos do time.', icon: A + 'icon_partidas.png', to: '/partidas' },
     ...(podeGerir
       ? [
@@ -65,12 +66,12 @@ export default function DashboardPage() {
           { label: 'Adversários', desc: 'Conheça os times rivais.', icon: A + 'icon_adversarios.png', to: '/adversarios' },
         ]
       : []),
-    { label: 'Relatórios', desc: 'Gere relatórios e insights em breve.', icon: A + 'icon_relatorios.png', disabled: true },
-    { label: 'Agenda', desc: 'Veja os próximos compromissos.', icon: A + 'icon_agenda.png', disabled: true },
+    { label: 'Relatórios', desc: 'Veja relatórios e estatísticas das partidas.', icon: A + 'icon_relatorios.png', to: '/relatorios' },
+    { label: 'Agenda', desc: 'Veja os próximos compromissos.', icon: A + 'icon_agenda.png', to: '/agenda' },
   ]
 
   return (
-    <Layout active="inicio" title={PAPEL_LABEL[user.papel]} subtitle={user.nome}>
+    <Layout active="inicio" title={PAPEL_LABEL[user.papel]} subtitle={user.nome} backdrop={<HeroWave scale={3} />}>
       <h2 className="text-2xl font-extrabold">Painel de Controle</h2>
       <p className="mb-6 mt-1 text-white/50">Acompanhe e gerencie todas as informações do clube.</p>
 
