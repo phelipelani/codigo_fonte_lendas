@@ -667,14 +667,15 @@ class AlbumController
         $uid = $this->authUserId();
 
         $rows = $this->db->fetchAll(
-            "SELECT t.id, t.figurinha_id, t.ofertante_id, t.criado_em,
+            "SELECT MIN(t.id) as id, t.figurinha_id, t.ofertante_id, MIN(t.criado_em) as criado_em,
                     f.numero, f.nome, f.time, f.categoria, f.raridade, f.imagem_url,
                     u.username AS ofertante_nome
              FROM album_trocas t
              JOIN album_figurinhas f ON f.id = t.figurinha_id
              JOIN usuarios u ON u.id = t.ofertante_id
              WHERE t.status = 'disponivel'
-             ORDER BY t.criado_em DESC"
+             GROUP BY t.figurinha_id, t.ofertante_id, f.numero, f.nome, f.time, f.categoria, f.raridade, f.imagem_url, u.username
+             ORDER BY criado_em DESC"
         );
 
         $invRows = $this->db->fetchAll(
