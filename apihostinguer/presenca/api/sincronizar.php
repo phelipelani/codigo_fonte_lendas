@@ -113,6 +113,9 @@ foreach ($jogadores as $jogador) {
         continue;
     }
 
+    // Ignora mensagens enviadas pelo próprio bot
+    $msgs = array_filter($msgs, fn($m) => empty($m['key']['fromMe']));
+
     if (empty($msgs)) {
         continue;
     }
@@ -125,6 +128,8 @@ foreach ($jogadores as $jogador) {
     $texto = $ultimaMsg['message']['conversation']
           ?? $ultimaMsg['message']['extendedTextMessage']['text']
           ?? $ultimaMsg['message']['imageMessage']['caption']
+          ?? $ultimaMsg['message']['buttonsResponseMessage']['selectedDisplayText']
+          ?? $ultimaMsg['message']['listResponseMessage']['title']
           ?? '';
 
     if (!$texto) {

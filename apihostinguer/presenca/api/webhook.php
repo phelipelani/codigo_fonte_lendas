@@ -24,8 +24,9 @@ $evento = $payload['event'] ?? '';
 // ── Log de todos os eventos recebidos (debug) ─────────
 log_bot("WEBHOOK evento=$evento instance=" . ($payload['instance'] ?? '-'));
 
-// ── Ignora eventos que não sejam mensagens ────────────
-if ($evento !== 'messages.upsert') {
+// 🟢 Ignora eventos que não sejam mensagens 🟢
+$evt = strtoupper($evento);
+if ($evt !== 'MESSAGES.UPSERT' && $evt !== 'MESSAGES_UPSERT') {
     exit(json_encode(['ok' => true, 'msg' => "evento ignorado: $evento"]));
 }
 
