@@ -15,10 +15,9 @@ $method = $_SERVER['REQUEST_METHOD'];
 $path   = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
 if ($method === 'GET') {
-    // Busca todas as mensagens nao lidas
     $rows = db()->query("
         SELECT c.id, c.jogador_id, c.nome_avulso, c.numero, c.mensagem, c.recebido_em,
-               j.nome, j.apelido
+               j.nome
         FROM bot_caixa_entrada c
         LEFT JOIN bot_jogadores j ON j.id = c.jogador_id
         WHERE c.lido = 0
