@@ -161,8 +161,17 @@ foreach (variacoesNumero($numero) as $variante) {
 
 if (!$jogador) {
     log_bot("WEBHOOK IGNORADO: número $numero (variações tentadas: " . implode(', ', variacoesNumero($numero)) . ") não está na lista #{$lista['id']}");
+    
+    // Tenta encontrar o jogador na base geral para salvar na caixa de entrada
+    $jogGeral = db()->fetchOne("SELECT id FROM bot_jogadores WHERE numero = ? OR numero = ?", [$numero, '55'.$numero]);
+    salvarNaCaixaEntrada($numero, $texto, $jogGeral['id'] ?? null);
+
     exit(json_encode(['ok' => true, 'msg' => "numero nao reconhecido: $numero"]));
 }
+
+// 🟢 Salva a mensagem na Caixa de Entrada Geral 🟢
+$jogGeral = db()->fetchOne("SELECT id FROM bot_jogadores WHERE numero = ? OR numero = ?", [$jogador['numero'] ?? $numero, '55'.($jogador['numero'] ?? $numero)]);
+salvarNaCaixaEntrada($jogador['numero'] ?? $numero, $texto, $jogGeral['id'] ?? null);
 
 // ── Verifica se mensagem é anterior ao disparo ────────
 $disparadoEm = null;

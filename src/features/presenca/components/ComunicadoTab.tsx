@@ -15,6 +15,8 @@ import { cn } from '@/lib/utils';
 import {
   useBotJogadores,
   useMensagemMassa,
+  useCaixaEntrada,
+  useLimparCaixaEntrada,
   type MensagemMassaResponse,
 } from '../api/presencaApi';
 
@@ -23,6 +25,8 @@ type Modo = 'todos' | 'ativos' | 'selecionar';
 export const ComunicadoTab: React.FC = () => {
   const { data: jogadoresData, isLoading } = useBotJogadores();
   const enviarMut = useMensagemMassa();
+  const { data: caixaData, isLoading: isCaixaLoading } = useCaixaEntrada();
+  const limparMut = useLimparCaixaEntrada();
 
   const [modo, setModo] = React.useState<Modo>('ativos');
   const [selecionados, setSelecionados] = React.useState<Set<number>>(new Set());
@@ -270,6 +274,58 @@ export const ComunicadoTab: React.FC = () => {
             : `Enviar para ${totalAlvo} jogador${totalAlvo !== 1 ? 'es' : ''}`}
         </Button>
       </div>
+
+      {/* Caixa de Entrada (Respostas Recentes) */}
+      <section className="rounded-2xl border border-teal-500/20 bg-[#0a1628]/60 backdrop-blur-md p-4 space-y-4 mt-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h4 className="text-xs font-semibold uppercase tracking-widest text-teal-200/80">
+              Respostas Recentes (Inbox)
+            </h4>
+            <p className="text-[10px] text-teal-100/50 mt-1">
+              Todas as mensagens enviadas pelos jogadores aparecem aqui. Limpe a lista antes de disparar um novo comunicado.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (confirm('Tem certeza que deseja marcar todas as respostas como lidas e limpar esta lista?')) {
+                limparMut.mutate();
+              }
+            }}
+            disabled={limparMut.isPending || (caixaData?.respostas?.length || 0) === 0}
+            className="border-red-500/30 text-red-300 hover:bg-red-500/10"
+          >
+            {limparMut.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <XCircle className="h-4 w-4 mr-2" />}
+            Limpar Respostas
+          </Button>
+        </div>
+
+        {isCaixaLoading ? (
+          <div className="py-6 text-center text-teal-100/40 text-xs">Carregando respostas...</div>
+        ) : (caixaData?.respostas?.length || 0) === 0 ? (
+          <div className="py-6 text-center text-teal-100/40 text-xs italic">
+            Nenhuma resposta nova no momento.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {caixaData?.respostas.map((item, idx) => (
+              <div key={idx} className="bg-black/30 rounded-lg p-3 border border-white/5">
+                <span className="font-bold text-teal-300">{item.nome}</span>
+                <span className="text-teal-100/50 text-xs ml-2">({item.numero})</span>
+                <div className="mt-1 space-y-1">
+                  {item.mensagens.map((msg, i) => (
+                    <div key={i} className="text-sm text-gray-200 pl-3 border-l-2 border-teal-500/30">
+                      {msg}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* Resultado do envio */}
       {resultado && (

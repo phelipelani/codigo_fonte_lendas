@@ -282,6 +282,36 @@ export const useMensagemMassa = () =>
   });
 
 // =============================================================
+// Caixa de Entrada (Respostas)
+// =============================================================
+
+export interface CaixaEntradaItem {
+  jogador_id: number | null;
+  numero: string;
+  nome: string;
+  mensagens: string[];
+}
+
+export const useCaixaEntrada = () =>
+  useQuery<{ ok: boolean; respostas: CaixaEntradaItem[] }>({
+    queryKey: ['presenca', 'caixa_entrada'],
+    queryFn: async () => (await api.get('/presenca/caixa-entrada')).data,
+    refetchInterval: 15000,
+  });
+
+export const useLimparCaixaEntrada = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => (await api.post('/presenca/caixa-entrada/limpar')).data,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['presenca', 'caixa_entrada'] });
+      toast.success('Lista de respostas limpa com sucesso!');
+    },
+    onError: () => toast.error('Erro ao limpar caixa de entrada'),
+  });
+};
+
+// =============================================================
 // Logs
 // =============================================================
 

@@ -34,6 +34,18 @@ function identificarIntencao(string $texto): string {
     return 'INVALIDO';
 }
 
+// 🟢 Salvar mensagem genérica na Caixa de Entrada 🟢
+function salvarNaCaixaEntrada(string $numero, string $texto, ?int $jogadorId = null): void {
+    if (!$texto) return;
+    try {
+        db()->prepare(
+            "INSERT INTO bot_caixa_entrada (jogador_id, numero, mensagem) VALUES (?, ?, ?)"
+        )->execute([$jogadorId, $numero, $texto]);
+    } catch (Exception $e) {
+        log_bot("Erro ao salvar na caixa de entrada: " . $e->getMessage());
+    }
+}
+
 // ── Processar resposta de um jogador ─────────────────
 function processarResposta(array $lista, array $jogador, string $texto): void {
     $intencao      = identificarIntencao($texto);

@@ -1359,6 +1359,12 @@ try {
             require $presencaRoot . '/api/sincronizar.php'; exit;
         }
 
+        // GET|POST /presenca/caixa-entrada — caixa de entrada geral do bot
+        if (str_starts_with($path, '/presenca/caixa-entrada')) {
+            AuthMiddleware::isAdmin();
+            require $presencaRoot . '/api/caixa_entrada.php'; exit;
+        }
+
         // POST /presenca/mensagem — mensagem avulsa para jogador ou grupo (admin)
         if ($path === '/presenca/mensagem' && $method === 'POST') {
             AuthMiddleware::isAdmin();

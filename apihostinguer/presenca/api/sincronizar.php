@@ -148,8 +148,17 @@ foreach ($jogadores as $jogador) {
     $intencao = identificarIntencao($texto);
     if ($intencao === 'INVALIDO') {
         $ignoradas++;
+        
+        // Se foi inválido, salva na caixa de entrada para o admin ver
+        $jogGeral = db()->fetchOne("SELECT id FROM bot_jogadores WHERE numero = ? OR numero = ?", [$jogador['numero'], '55'.$jogador['numero']]);
+        salvarNaCaixaEntrada($jogador['numero'], $texto, $jogGeral['id'] ?? null);
+
         continue;
     }
+
+    // 🟢 Salva a mensagem válida na Caixa de Entrada Geral 🟢
+    $jogGeral = db()->fetchOne("SELECT id FROM bot_jogadores WHERE numero = ? OR numero = ?", [$jogador['numero'], '55'.$jogador['numero']]);
+    salvarNaCaixaEntrada($jogador['numero'], $texto, $jogGeral['id'] ?? null);
 
     // Só processa se o status ainda não reflete a mensagem
     // (evita processar uma mensagem já tratada pelo webhook)

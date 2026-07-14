@@ -68,6 +68,21 @@ executar("
 ", "Tabela bot_jogadores");
 
 executar("
+    CREATE TABLE IF NOT EXISTS bot_caixa_entrada (
+        id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        jogador_id    INT UNSIGNED DEFAULT NULL,
+        nome_avulso   VARCHAR(100) DEFAULT NULL,
+        numero        VARCHAR(20)  NOT NULL,
+        mensagem      TEXT         NOT NULL,
+        lido          TINYINT(1)   NOT NULL DEFAULT 0,
+        recebido_em   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (jogador_id) REFERENCES bot_jogadores(id) ON DELETE SET NULL,
+        INDEX idx_lido (lido),
+        INDEX idx_jogador (jogador_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+", "Tabela bot_caixa_entrada");
+
+executar("
     CREATE TABLE IF NOT EXISTS bot_config (
         chave VARCHAR(50)  NOT NULL PRIMARY KEY,
         valor VARCHAR(255) NOT NULL
