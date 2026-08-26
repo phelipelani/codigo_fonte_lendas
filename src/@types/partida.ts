@@ -71,6 +71,9 @@ export type SalvarResultadoPayload = {
 export type JogadorEmPartida = Jogador & {
   gols: number;
   assistencias: number;
+  cartoes_amarelos_rodada?: number;
+  cartoes_azuis_rodada?: number;
+  cartoes_vermelhos_rodada?: number;
 };
 
 /**

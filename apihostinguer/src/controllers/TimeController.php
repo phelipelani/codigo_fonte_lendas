@@ -190,7 +190,7 @@ class TimeController
         $file = $_FILES['foto'];
         $allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
         if (!in_array($file['type'], $allowedTypes)) throw new HttpError('Tipo não permitido. Use JPEG, PNG ou WEBP.', 400);
-        if ($file['size'] > 5 * 1024 * 1024) throw new HttpError('Máximo 5MB.', 400);
+        if ($file['size'] > 15 * 1024 * 1024) throw new HttpError('Máximo 15MB.', 400);
         $pasta = preg_replace('/[^a-z0-9_-]/', '', strtolower($_GET['pasta'] ?? 'uploads'));
         require_once __DIR__ . '/../utils/S3Client.php';
         $url = S3Client::upload($file, $pasta);

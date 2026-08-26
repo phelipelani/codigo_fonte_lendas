@@ -2,6 +2,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 import api from "@/api"; // Nosso cliente Axios centralizado
 import { useAuthStore } from "@/store/useAuthStore";
@@ -86,8 +87,9 @@ export const useLogin = () => {
       navigate("/");
     },
     onError: (error) => {
-      // O hook 'useToast' lidará com a exibição da mensagem de erro
-      if (import.meta.env.DEV) console.error("Falha no login:", getApiErrorMessage(error, "Erro desconhecido"));
+      const msg = getApiErrorMessage(error, "Erro ao tentar fazer login.");
+      toast.error(msg);
+      if (import.meta.env.DEV) console.error("Falha no login:", msg);
     },
   });
 };

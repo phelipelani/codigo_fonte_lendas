@@ -340,6 +340,46 @@ class AlbumController
     // =========================================================
     // PACOTES
     // =========================================================
+
+    public function comprarPacote(): void
+    {
+        $uid = $this->authUserId();
+        
+        // Config: Preco do pacote em Lendacoins
+        $precoPacote = 10.00; 
+        
+        try {
+            $this->db->beginTransaction();
+            
+            // Verifica saldo na bets_carteira com FOR UPDATE para lock
+            $carteira = $this->db->fetchOne("SELECT id, saldo FROM bets_carteira WHERE usuario_id = ? FOR UPDATE", [$uid]);
+            
+            if (!$carteira || (float)$carteira['saldo'] < $precoPacote) {
+                $this->db->rollBack();
+                $this->error('Saldo de Lendacoins insuficiente. Você precisa de ' . $precoPacote . ' Lendacoins para comprar 1 pacote.', 400);
+                return;
+            }
+            
+            // Desconta o saldo
+            $this->db->execute("UPDATE bets_carteira SET saldo = saldo - ? WHERE id = ?", [$precoPacote, $carteira['id']]);
+            
+            // Cria o pacote
+            $this->db->execute(
+                "INSERT INTO album_pacotes (usuario_id, tipo, motivo, status) VALUES (?, ?, ?, ?)",
+                [$uid, 'comprado', 'Comprado na Lojinha', 'fechado']
+            );
+            
+            $this->db->commit();
+            
+            $novoSaldo = (float)$carteira['saldo'] - $precoPacote;
+            $this->ok(['message' => 'Pacote comprado com sucesso!', 'novo_saldo' => $novoSaldo]);
+            
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            throw $e;
+        }
+    }
+
     public function meusPacotes(): void
     {
         $uid = $this->authUserId();
@@ -673,7 +713,8 @@ class AlbumController
              FROM album_trocas t
              JOIN album_figurinhas f ON f.id = t.figurinha_id
              JOIN usuarios u ON u.id = t.ofertante_id
-             WHERE t.status = 'disponivel'
+             JOIN album_inventario i ON i.usuario_id = t.ofertante_id AND i.figurinha_id = t.figurinha_id
+             WHERE t.status = 'disponivel' AND i.quantidade >= 2
              GROUP BY t.figurinha_id, t.ofertante_id, f.numero, f.nome, f.time, f.categoria, f.raridade, f.imagem_url, u.username
              ORDER BY criado_em DESC"
         );

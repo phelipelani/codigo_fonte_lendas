@@ -12,7 +12,7 @@ import {
 import { cn } from '@/lib/utils';
 
 interface Props { campeonatoId: number; }
-type OrdenacaoCampo = 'pontos' | 'gols' | 'assistencias' | 'vitorias';
+type OrdenacaoCampo = 'pontos' | 'gols' | 'assistencias' | 'vitorias' | 'jogos' | 'empates' | 'derrotas' | 'cartoes_amarelos' | 'cartoes_azuis' | 'cartoes_vermelhos';
 
 // ─────────────────────────────────────────────────────────────
 // Avatar
@@ -128,7 +128,7 @@ const PodiumTop3 = PodiumTop5;
 // SortableHeader
 // ─────────────────────────────────────────────────────────────
 const SortableHeader = memo(({ campo, label, className = '', ordenacao, onOrdenar }: {
-  campo: OrdenacaoCampo; label: string; className?: string;
+  campo: OrdenacaoCampo; label: React.ReactNode; className?: string;
   ordenacao: OrdenacaoCampo; onOrdenar: (c: OrdenacaoCampo) => void;
 }) => (
   <th className={cn('px-3 py-3 text-center cursor-pointer hover:bg-white/5 transition-colors select-none group', className)} onClick={() => onOrdenar(campo)}>
@@ -566,14 +566,14 @@ export function StatsTab({ campeonatoId }: Props) {
   const rodadasFinalizadas = useMemo(
     () => (rodadas ?? [])
       .filter((r: any) => r.status === 'finalizada')
-      .sort((a: any, b: any) => new Date(a.data).getTime() - new Date(b.data).getTime()),
+      .sort((a: any, b: any) => new Date(a.data.replace(' ', 'T')).getTime() - new Date(b.data.replace(' ', 'T')).getTime()),
     [rodadas],
   );
 
   // Usa T12:00 para evitar problema de timezone (date-only é interpretado como UTC meia-noite)
   const fmtDate = useCallback((s: string) => {
     if (!s) return '';
-    const d = new Date(s.length === 10 ? s + 'T12:00:00' : s);
+    const d = new Date(s.length === 10 ? s + 'T12:00:00' : s.replace(' ', 'T'));
     return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
   }, []);
   const rodadaAtual = rodadas?.find((r: any) => r.id === rodadaSelecionada);
@@ -597,6 +597,9 @@ export function StatsTab({ campeonatoId }: Props) {
         prev.derrotas     += Number(j.derrotas ?? 0);
         prev.gols         += Number(j.gols ?? 0);
         prev.assistencias += Number(j.assistencias ?? 0);
+        prev.cartoes_amarelos += Number(j.cartoes_amarelos ?? 0);
+        prev.cartoes_azuis += Number(j.cartoes_azuis ?? 0);
+        prev.cartoes_vermelhos += Number(j.cartoes_vermelhos ?? 0);
         // Acumula nomes de times únicos
         if (!prev._times.includes(j.time_nome)) prev._times.push(j.time_nome);
         prev.time_nome = prev._times.join(', ');
@@ -610,6 +613,9 @@ export function StatsTab({ campeonatoId }: Props) {
           derrotas:     Number(j.derrotas ?? 0),
           gols:         Number(j.gols ?? 0),
           assistencias: Number(j.assistencias ?? 0),
+          cartoes_amarelos: Number(j.cartoes_amarelos ?? 0),
+          cartoes_azuis:    Number(j.cartoes_azuis ?? 0),
+          cartoes_vermelhos:Number(j.cartoes_vermelhos ?? 0),
           _times:       [j.time_nome],
         });
       }
@@ -683,6 +689,12 @@ export function StatsTab({ campeonatoId }: Props) {
         case 'gols':         return b.gols - a.gols || b.pontos - a.pontos;
         case 'assistencias': return b.assistencias - a.assistencias || b.pontos - a.pontos;
         case 'vitorias':     return b.vitorias - a.vitorias || b.pontos - a.pontos;
+        case 'jogos':        return b.jogos - a.jogos || b.pontos - a.pontos;
+        case 'empates':      return b.empates - a.empates || b.pontos - a.pontos;
+        case 'derrotas':     return b.derrotas - a.derrotas || b.pontos - a.pontos;
+        case 'cartoes_amarelos': return b.cartoes_amarelos - a.cartoes_amarelos || b.pontos - a.pontos;
+        case 'cartoes_azuis':    return b.cartoes_azuis - a.cartoes_azuis || b.pontos - a.pontos;
+        case 'cartoes_vermelhos':return b.cartoes_vermelhos - a.cartoes_vermelhos || b.pontos - a.pontos;
         default:             return b.pontos - a.pontos;
       }
     });
@@ -811,12 +823,15 @@ export function StatsTab({ campeonatoId }: Props) {
                       <th className="px-4 py-3 text-center w-10">#</th>
                       <th className="px-4 py-3">Jogador</th>
                       <SortableHeader campo="pontos"       label="PTS" ordenacao={ordenacao} onOrdenar={setOrdenacao} className="text-accentPrimary" />
-                      <th className="px-3 py-3 text-center hidden sm:table-cell">J</th>
+                      <SortableHeader campo="jogos"        label="J"   ordenacao={ordenacao} onOrdenar={setOrdenacao} className="hidden sm:table-cell" />
                       <SortableHeader campo="vitorias"     label="V"   ordenacao={ordenacao} onOrdenar={setOrdenacao} className="hidden sm:table-cell text-green-400" />
-                      <th className="px-3 py-3 text-center hidden sm:table-cell text-textMuted">E</th>
-                      <th className="px-3 py-3 text-center hidden sm:table-cell text-red-400">D</th>
+                      <SortableHeader campo="empates"      label="E"   ordenacao={ordenacao} onOrdenar={setOrdenacao} className="hidden sm:table-cell text-textMuted" />
+                      <SortableHeader campo="derrotas"     label="D"   ordenacao={ordenacao} onOrdenar={setOrdenacao} className="hidden sm:table-cell text-red-400" />
                       <SortableHeader campo="gols"         label="G"   ordenacao={ordenacao} onOrdenar={setOrdenacao} className="hidden md:table-cell" />
                       <SortableHeader campo="assistencias" label="A"   ordenacao={ordenacao} onOrdenar={setOrdenacao} className="hidden md:table-cell" />
+                      <SortableHeader campo="cartoes_amarelos" label={<div className="w-3 h-4 bg-yellow-400 rounded-sm mx-auto shadow-sm" />} ordenacao={ordenacao} onOrdenar={setOrdenacao} className="hidden md:table-cell" />
+                      <SortableHeader campo="cartoes_azuis"    label={<div className="w-3 h-4 bg-blue-500 rounded-sm mx-auto shadow-sm" />} ordenacao={ordenacao} onOrdenar={setOrdenacao} className="hidden md:table-cell" />
+                      <SortableHeader campo="cartoes_vermelhos" label={<div className="w-3 h-4 bg-red-500 rounded-sm mx-auto shadow-sm" />} ordenacao={ordenacao} onOrdenar={setOrdenacao} className="hidden md:table-cell" />
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/50">
@@ -849,6 +864,9 @@ export function StatsTab({ campeonatoId }: Props) {
                         <td className="px-3 py-3 text-center hidden sm:table-cell text-red-400">{j.derrotas}</td>
                         <td className={cn('px-3 py-3 text-center hidden md:table-cell', ordenacao === 'gols' ? 'text-cyan-400 font-black' : 'font-bold')}>{j.gols}</td>
                         <td className={cn('px-3 py-3 text-center hidden md:table-cell', ordenacao === 'assistencias' ? 'text-cyan-400 font-bold' : '')}>{j.assistencias}</td>
+                        <td className="px-2 py-3 text-center hidden md:table-cell text-yellow-400 font-bold">{j.cartoes_amarelos > 0 ? j.cartoes_amarelos : '-'}</td>
+                        <td className="px-2 py-3 text-center hidden md:table-cell text-blue-400 font-bold">{j.cartoes_azuis > 0 ? j.cartoes_azuis : '-'}</td>
+                        <td className="px-2 py-3 text-center hidden md:table-cell text-red-400 font-bold">{j.cartoes_vermelhos > 0 ? j.cartoes_vermelhos : '-'}</td>
                       </tr>
                     ))}
                   </tbody>

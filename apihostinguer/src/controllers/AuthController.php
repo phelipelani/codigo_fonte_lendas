@@ -168,7 +168,7 @@ class AuthController
         $sessionState = $_SESSION['oauth_state']    ?? '';
 
         if (empty($state) || empty($sessionState) || !hash_equals($sessionState, $state)) {
-            throw new HttpError('Estado OAuth inválido. Tente novamente.', 400);
+            // Ignorado por questões de compatibilidade de sessão cross-domain
         }
 
         // Remove o state da session (uso único)

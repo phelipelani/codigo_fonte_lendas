@@ -35,6 +35,8 @@ import { AbrirPacoteModal } from '../components/AbrirPacoteModal';
 import { VincularWhatsappModal } from '../components/VincularWhatsappModal';
 import { OrigemFigurinhaModal } from '../components/OrigemFigurinhaModal';
 import { AlbumRankingModal } from '../components/AlbumRankingModal';
+import { LojinhaModal } from '../components/LojinhaModal';
+import { ShoppingCart } from 'lucide-react';
 
 // =============================================================
 // Hook simples para media-query (sem dependencia extra)
@@ -69,6 +71,7 @@ export const AlbumPage: React.FC = () => {
 
   const [pacoteAberto, setPacoteAberto] = React.useState<number | null>(null);
   const [rankingAberto, setRankingAberto] = React.useState(false);
+  const [lojinhaAberta, setLojinhaAberta] = React.useState(false);
   const [whatsappOk, setWhatsappOk] = React.useState(false);
   const [figClicada, setFigClicada] = React.useState<FigurinhaType | null>(null);
 
@@ -151,6 +154,11 @@ export const AlbumPage: React.FC = () => {
         onClose={() => setRankingAberto(false)}
       />
 
+      <LojinhaModal
+        isOpen={lojinhaAberta}
+        onClose={() => setLojinhaAberta(false)}
+      />
+
       <AnimatePresence>
         {figClicada && (
           <OrigemFigurinhaModal
@@ -177,6 +185,14 @@ export const AlbumPage: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setLojinhaAberta(true)}
+            className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-[#0d1f35] px-4 py-2.5 font-bold text-emerald-400 transition-all hover:bg-emerald-500/10"
+          >
+            <ShoppingCart className="h-5 w-5" />
+            Lojinha
+          </button>
+
           <button
             onClick={() => setRankingAberto(true)}
             className="inline-flex items-center gap-2 rounded-xl border border-yellow-500/30 bg-[#0d1f35] px-4 py-2.5 font-bold text-yellow-400 transition-all hover:bg-yellow-500/10"

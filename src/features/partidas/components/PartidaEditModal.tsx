@@ -15,7 +15,7 @@ interface Props {
 
 interface EventoEditavel {
   id: string;
-  tipo: 'gol' | 'gol_contra';
+  tipo: 'gol' | 'gol_contra' | 'cartao_amarelo' | 'cartao_vermelho' | 'cartao_azul';
   jogador_id: number;
   time_id: number;
   assist_por_jogador_id?: number | null;
@@ -33,7 +33,7 @@ export function PartidaEditModal({ isOpen, onClose, partida }: Props) {
   const [addTimeId, setAddTimeId] = useState('');
   const [addAutorId, setAddAutorId] = useState('');
   const [addAssistId, setAddAssistId] = useState('sem_assist');
-  const [tipoGol, setTipoGol] = useState<'gol' | 'gol_contra'>('gol');
+  const [tipoEvento, setTipoEvento] = useState<EventoEditavel['tipo']>('gol');
   const [loaded, setLoaded] = useState(false);
 
   const { data: detalhes, isLoading } = useQuery({
@@ -47,10 +47,10 @@ export function PartidaEditModal({ isOpen, onClose, partida }: Props) {
   useEffect(() => {
     if (detalhes && !loaded) {
       const mapped: EventoEditavel[] = (detalhes.eventos || [])
-        .filter((e: any) => e.tipo === 'gol' || e.tipo === 'gol_contra')
+        .filter((e: any) => ['gol', 'gol_contra', 'cartao_amarelo', 'cartao_vermelho', 'cartao_azul'].includes(e.tipo))
         .map((e: any) => ({
           id: String(e.id),
-          tipo: e.tipo as 'gol' | 'gol_contra',
+          tipo: e.tipo as EventoEditavel['tipo'],
           jogador_id: Number(e.jogador_id),
           time_id: Number(e.time_id),
           assist_por_jogador_id: e.assist_por_jogador_id ? Number(e.assist_por_jogador_id) : null,
@@ -98,7 +98,7 @@ export function PartidaEditModal({ isOpen, onClose, partida }: Props) {
     const assist = asId ? lista.find((j: any) => j.jogador_id === asId) : null;
     setEventos(prev => [...prev, {
       id: `temp-${Date.now()}`,
-      tipo: tipoGol,
+      tipo: tipoEvento,
       time_id: tId,
       jogador_id: aId,
       assist_por_jogador_id: asId,
@@ -144,14 +144,8 @@ export function PartidaEditModal({ isOpen, onClose, partida }: Props) {
   const jogadoresSelect = Number(addTimeId) === detalhes?.partida.timeA_id
     ? elencoOrganizado.timeA : elencoOrganizado.timeB;
 
-  const eventosTimeA = eventos.filter(e =>
-    (e.tipo === 'gol' && e.time_id === detalhes?.partida.timeA_id) ||
-    (e.tipo === 'gol_contra' && e.time_id === detalhes?.partida.timeB_id)
-  );
-  const eventosTimeB = eventos.filter(e =>
-    (e.tipo === 'gol' && e.time_id === detalhes?.partida.timeB_id) ||
-    (e.tipo === 'gol_contra' && e.time_id === detalhes?.partida.timeA_id)
-  );
+  const eventosTimeA = eventos.filter(e => e.time_id === detalhes?.partida.timeA_id);
+  const eventosTimeB = eventos.filter(e => e.time_id === detalhes?.partida.timeB_id);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -181,16 +175,16 @@ export function PartidaEditModal({ isOpen, onClose, partida }: Props) {
               </div>
             </div>
 
-            {/* GOLS LADO A LADO — PRÉ-CARREGADOS */}
+            {/* EVENTOS LADO A LADO — PRÉ-CARREGADOS */}
             <div className="grid grid-cols-2 gap-2 mb-3">
-              <GolsColuna
+              <EventosColuna
                 titulo={detalhes.partida.timeA_nome}
                 eventos={eventosTimeA}
                 timeAId={detalhes.partida.timeA_id}
                 timeBId={detalhes.partida.timeB_id}
                 onRemove={handleRemove}
               />
-              <GolsColuna
+              <EventosColuna
                 titulo={detalhes.partida.timeB_nome}
                 eventos={eventosTimeB}
                 timeAId={detalhes.partida.timeA_id}
@@ -199,10 +193,10 @@ export function PartidaEditModal({ isOpen, onClose, partida }: Props) {
               />
             </div>
 
-            {/* FORMULÁRIO ADICIONAR GOL */}
+            {/* FORMULÁRIO ADICIONAR EVENTO */}
             <div className="bg-surfaceElevated p-4 rounded-lg border border-border space-y-3">
               <h4 className="text-xs font-bold text-accentPrimary uppercase flex items-center gap-2">
-                <Plus size={14} /> Adicionar Gol
+                <Plus size={14} /> Adicionar Evento
               </h4>
 
               <div className="grid grid-cols-2 gap-2">
@@ -216,13 +210,16 @@ export function PartidaEditModal({ isOpen, onClose, partida }: Props) {
                   </SelectContent>
                 </Select>
 
-                <Select value={tipoGol} onValueChange={(v: any) => setTipoGol(v)}>
+                <Select value={tipoEvento} onValueChange={(v: any) => setTipoEvento(v)}>
                   <SelectTrigger className="bg-surface border-border h-9 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="gol">⚽ Gol Normal</SelectItem>
                     <SelectItem value="gol_contra">🥅 Gol Contra</SelectItem>
+                    <SelectItem value="cartao_amarelo">🟨 Cartão Amarelo</SelectItem>
+                    <SelectItem value="cartao_vermelho">🟥 Cartão Vermelho</SelectItem>
+                    <SelectItem value="cartao_azul">🟦 Cartão Azul</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -239,7 +236,7 @@ export function PartidaEditModal({ isOpen, onClose, partida }: Props) {
                   </SelectContent>
                 </Select>
 
-                <Select value={addAssistId} onValueChange={setAddAssistId} disabled={!addTimeId || tipoGol === 'gol_contra'}>
+                <Select value={addAssistId} onValueChange={setAddAssistId} disabled={!addTimeId || tipoEvento !== 'gol'}>
                   <SelectTrigger className="bg-surface border-border h-9 text-xs">
                     <SelectValue placeholder="Assistência (opcional)" />
                   </SelectTrigger>
@@ -282,8 +279,8 @@ export function PartidaEditModal({ isOpen, onClose, partida }: Props) {
   );
 }
 
-// ── Coluna de gols de um time ────────────────────────────────────────────────
-function GolsColuna({ titulo, eventos, timeAId, timeBId, onRemove }: {
+// ── Coluna de eventos de um time ────────────────────────────────────────────────
+function EventosColuna({ titulo, eventos, timeAId, timeBId, onRemove }: {
   titulo: string;
   eventos: EventoEditavel[];
   timeAId: number;
@@ -305,12 +302,17 @@ function GolsColuna({ titulo, eventos, timeAId, timeBId, onRemove }: {
               className="flex items-center justify-between px-2 py-1.5 rounded bg-surface border border-borderLight text-xs"
             >
               <div className="flex items-center gap-1.5 min-w-0">
-                <span className="flex-shrink-0">{ev.tipo === 'gol_contra' ? '🥅' : '⚽'}</span>
+                <span className="flex-shrink-0">
+                  {ev.tipo === 'gol_contra' ? '🥅' : 
+                   ev.tipo === 'cartao_amarelo' ? '🟨' :
+                   ev.tipo === 'cartao_vermelho' ? '🟥' :
+                   ev.tipo === 'cartao_azul' ? '🟦' : '⚽'}
+                </span>
                 <div className="min-w-0">
                   <p className={`font-bold truncate leading-tight ${ev.tipo === 'gol_contra' ? 'text-red-400' : 'text-white'}`}>
                     {ev.nome_jogador}
                   </p>
-                  {ev.nome_assist && (
+                  {ev.nome_assist && ev.tipo === 'gol' && (
                     <p className="text-[9px] text-textMuted flex items-center gap-0.5 truncate">
                       <UserPlus size={8} /> {ev.nome_assist}
                     </p>

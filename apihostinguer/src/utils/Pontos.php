@@ -61,6 +61,14 @@ class Pontos
     const CARTOLENDAS_GOL_SOFRIDO     = -1.0;   // Penalidade por cada gol sofrido
 
     // ── Punições disciplinares ─────────────────────────────────
+    const PUNICAO_CARTAO_AMARELO_OVERALL   = -0.5;
+    const PUNICAO_CARTAO_AZUL_OVERALL      = -1.0;
+    const PUNICAO_CARTAO_VERMELHO_OVERALL  = -2.0;
+
+    const PUNICAO_CARTAO_AMARELO_CARTOLENDA  = -1.0;
+    const PUNICAO_CARTAO_AZUL_CARTOLENDA     = -2.0;
+    const PUNICAO_CARTAO_VERMELHO_CARTOLENDA = -4.0;
+
     const PUNICAO_LEVE           =  -5;  // Advertência / briga verbal
     const PUNICAO_MEDIA          = -10;  // Briga física / comportamento antidesportivo
     const PUNICAO_GRAVE          = -25;  // Expulsão de rodada / suspensão
@@ -268,6 +276,9 @@ class Pontos
                   + ({$isVit} * {$vit}) + ({$isEmp} * {$emp}) + ({$isDer} * {$der})
                   + (COALESCE({$epAlias}.gols_contra, 0) * {$gc})
             END
+            + (COALESCE({$epAlias}.cartoes_amarelos, 0) * " . self::PUNICAO_CARTAO_AMARELO_CARTOLENDA . ")
+            + (COALESCE({$epAlias}.cartoes_azuis, 0) * " . self::PUNICAO_CARTAO_AZUL_CARTOLENDA . ")
+            + (COALESCE({$epAlias}.cartoes_vermelhos, 0) * " . self::PUNICAO_CARTAO_VERMELHO_CARTOLENDA . ")
         ";
     }
 
@@ -426,6 +437,9 @@ class Pontos
                         OR ({$epAlias}.time_id={$cpAlias}.timeB_id AND {$cpAlias}.placar_timeB<{$cpAlias}.placar_timeA)
                       THEN {$der} ELSE 0 END)
             END
+            + (COALESCE({$epAlias}.cartoes_amarelos, 0) * " . self::PUNICAO_CARTAO_AMARELO_OVERALL . ")
+            + (COALESCE({$epAlias}.cartoes_azuis, 0) * " . self::PUNICAO_CARTAO_AZUL_OVERALL . ")
+            + (COALESCE({$epAlias}.cartoes_vermelhos, 0) * " . self::PUNICAO_CARTAO_VERMELHO_OVERALL . ")
         ";
     }
 

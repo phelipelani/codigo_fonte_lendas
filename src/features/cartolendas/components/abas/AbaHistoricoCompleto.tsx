@@ -69,8 +69,17 @@ function SubAbaValorizacao({ campeonatoId }: { campeonatoId: number }) {
 
   const jogadoresFiltrados = useMemo(() => {
     if (!histJogadores?.jogadores) return [];
-    let lista = histJogadores.jogadores;
+    
+    // Calcula totais baseados no historico inteiro
+    let lista = histJogadores.jogadores.map((j: any) => {
+      const valorizacao_total = j.rodadas?.reduce((sum: number, r: any) => sum + (r.variacao ?? 0), 0) ?? 0;
+      const ultimaRodada = j.rodadas?.[j.rodadas.length - 1];
+      const preco_atual = ultimaRodada?.preco ?? 10;
+      return { ...j, valorizacao_total, preco_atual };
+    });
+
     if (busca) lista = lista.filter((j: any) => j.nome?.toLowerCase().includes(busca.toLowerCase()));
+    
     // Filtrar por rodada selecionada: recalcular valorização para a rodada específica
     if (filtroRodada && lista.length > 0) {
       lista = lista.map((j: any) => {

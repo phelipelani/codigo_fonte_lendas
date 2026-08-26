@@ -49,6 +49,7 @@ export type Jogador = {
   fotoUrl?: string | null;
   avatarUrl?: string | null;
   avatar_url?: string | null;
+  usuario_id?: number | null;
   usuarioId?: number | null;
   usuario?: {
     role: "admin" | "user";

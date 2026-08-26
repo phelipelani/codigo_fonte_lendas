@@ -606,6 +606,9 @@ class StatsService
                 SUM({$sqlEmp})                AS empates,
                 SUM({$sqlDer})                AS derrotas,
                 SUM({$sqlCS})                 AS clean_sheets,
+                SUM(COALESCE(ep.cartoes_amarelos, 0))  AS cartoes_amarelos,
+                SUM(COALESCE(ep.cartoes_azuis, 0))     AS cartoes_azuis,
+                SUM(COALESCE(ep.cartoes_vermelhos, 0)) AS cartoes_vermelhos,
                 (SELECT COUNT(*) FROM campeonato_partidas gp
                  WHERE gp.status = 'finalizada'
                    AND (gp.goleiro_timeA_id = ep.jogador_id OR gp.goleiro_timeB_id = ep.jogador_id)
@@ -629,12 +632,19 @@ class StatsService
             $derrotas  = (int)$row['derrotas'];
             $isRecuado = (int)$row['joga_recuado'] === 1;
             $isGoleiro = (int)$row['total_como_goleiro'] > 0;
+            $ca        = (int)$row['cartoes_amarelos'];
+            $caz       = (int)$row['cartoes_azuis'];
+            $cv        = (int)$row['cartoes_vermelhos'];
 
             if ($isRecuado || $isGoleiro) {
                 $ptsPerformance = Pontos::calcularJogadorRecuado($cs, $vitorias, $empates, $derrotas);
             } else {
                 $ptsPerformance = Pontos::calcularJogadorLinha($gols, $assists, $cs, $vitorias, $empates, $derrotas);
             }
+            
+            $ptsPerformance += ($ca * Pontos::PUNICAO_CARTAO_AMARELO_OVERALL)
+                             + ($caz * Pontos::PUNICAO_CARTAO_AZUL_OVERALL)
+                             + ($cv * Pontos::PUNICAO_CARTAO_VERMELHO_OVERALL);
 
             $ptsTitulos = (int)$row['qtd_titulos'] * Pontos::TITULO_PONTOS_CORRIDOS;
 
@@ -689,6 +699,9 @@ class StatsService
                 COALESCE(SUM(ep.clean_sheet), 0)   AS clean_sheets,
                 COALESCE(SUM(ep.gols_contra), 0)   AS gols_contra,
                 COUNT(DISTINCT ep.partida_id)      AS jogos,
+                SUM(COALESCE(ep.cartoes_amarelos, 0)) AS cartoes_amarelos,
+                SUM(COALESCE(ep.cartoes_azuis, 0)) AS cartoes_azuis,
+                SUM(COALESCE(ep.cartoes_vermelhos, 0)) AS cartoes_vermelhos,
                 SUM({$sqlVit})  AS vitorias,
                 SUM({$sqlEmp})  AS empates,
                 SUM({$sqlDer})  AS derrotas,
@@ -733,6 +746,9 @@ class StatsService
                 'goleiro' AS posicao,
                 COUNT(DISTINCT ep.partida_id) AS jogos,
                 COALESCE(SUM(ep.clean_sheet), 0) AS clean_sheets,
+                SUM(COALESCE(ep.cartoes_amarelos, 0)) AS cartoes_amarelos,
+                SUM(COALESCE(ep.cartoes_azuis, 0)) AS cartoes_azuis,
+                SUM(COALESCE(ep.cartoes_vermelhos, 0)) AS cartoes_vermelhos,
                 SUM(CASE
                     WHEN cp.goleiro_timeA_id = ep.jogador_id THEN cp.placar_timeB
                     WHEN cp.goleiro_timeB_id = ep.jogador_id THEN cp.placar_timeA
@@ -749,7 +765,11 @@ class StatsService
                     SUM(ep.clean_sheet * {$pCS}
                         + CASE WHEN ({$this->sqlVitoria()}) = 1 THEN {$pV}
                                WHEN ({$this->sqlEmpate()})  = 1 THEN {$pE}
-                               ELSE {$pD} END)
+                               ELSE {$pD} END
+                        + (COALESCE(ep.cartoes_amarelos, 0) * " . Pontos::PUNICAO_CARTAO_AMARELO_OVERALL . ")
+                        + (COALESCE(ep.cartoes_azuis, 0) * " . Pontos::PUNICAO_CARTAO_AZUL_OVERALL . ")
+                        + (COALESCE(ep.cartoes_vermelhos, 0) * " . Pontos::PUNICAO_CARTAO_VERMELHO_OVERALL . ")
+                    )
                 , 2) AS pontos
             FROM campeonato_estatisticas_partida ep
             JOIN campeonato_partidas cp ON cp.id = ep.partida_id
@@ -791,6 +811,9 @@ class StatsService
                 COALESCE(SUM(ep.assistencias), 0)  AS assistencias,
                 COALESCE(SUM(ep.clean_sheet), 0)   AS clean_sheets,
                 COUNT(DISTINCT ep.partida_id)      AS jogos,
+                SUM(COALESCE(ep.cartoes_amarelos, 0)) AS cartoes_amarelos,
+                SUM(COALESCE(ep.cartoes_azuis, 0)) AS cartoes_azuis,
+                SUM(COALESCE(ep.cartoes_vermelhos, 0)) AS cartoes_vermelhos,
                 SUM({$sqlVit}) AS vitorias,
                 SUM({$sqlEmp}) AS empates,
                 SUM({$sqlDer}) AS derrotas,
@@ -800,6 +823,9 @@ class StatsService
                       + (CASE WHEN ({$sqlVit}) = 1 THEN {$pV}
                               WHEN ({$sqlEmp}) = 1 THEN {$pE}
                               ELSE {$pD} END)
+                      + (COALESCE(ep.cartoes_amarelos, 0) * " . Pontos::PUNICAO_CARTAO_AMARELO_OVERALL . ")
+                      + (COALESCE(ep.cartoes_azuis, 0) * " . Pontos::PUNICAO_CARTAO_AZUL_OVERALL . ")
+                      + (COALESCE(ep.cartoes_vermelhos, 0) * " . Pontos::PUNICAO_CARTAO_VERMELHO_OVERALL . ")
                     )
                 , 2) AS pontos
             FROM campeonato_estatisticas_partida ep

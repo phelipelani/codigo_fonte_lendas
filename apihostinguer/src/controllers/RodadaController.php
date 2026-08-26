@@ -3,32 +3,32 @@
  * Arquivo: src/controllers/RodadaController.php
  *
  * Rotas cobertas:
- * POST   /rodadas/liga/:ligaId            → createForLiga()
- * POST   /rodadas/campeonato/:campId      → createForCampeonato()
- * GET    /rodadas/liga/:ligaId            → listByLiga()
- * GET    /rodadas/campeonato/:campId      → listByCampeonato()
- * GET    /rodadas/:id                     → show()
- * PUT    /rodadas/:id                     → update()
- * DELETE /rodadas/:id                     → destroy()
- * POST   /rodadas/:id/finalizar           → finalizar()
+ * POST   /rodadas/liga/:ligaId            â†’ createForLiga()
+ * POST   /rodadas/campeonato/:campId      â†’ createForCampeonato()
+ * GET    /rodadas/liga/:ligaId            â†’ listByLiga()
+ * GET    /rodadas/campeonato/:campId      â†’ listByCampeonato()
+ * GET    /rodadas/:id                     â†’ show()
+ * PUT    /rodadas/:id                     â†’ update()
+ * DELETE /rodadas/:id                     â†’ destroy()
+ * POST   /rodadas/:id/finalizar           â†’ finalizar()
  *
- * GET    /rodadas/:id/jogadores           → jogadores()
- * POST   /rodadas/:id/sync-jogadores      → syncJogadores()
- * PUT    /jogadores/batch                 → updateJogadoresBatch()
+ * GET    /rodadas/:id/jogadores           â†’ jogadores()
+ * POST   /rodadas/:id/sync-jogadores      â†’ syncJogadores()
+ * PUT    /jogadores/batch                 â†’ updateJogadoresBatch()
  *
- * GET    /rodadas/:id/times              → getTimes()
- * POST   /rodadas/:id/times              → saveTimes()
+ * GET    /rodadas/:id/times              â†’ getTimes()
+ * POST   /rodadas/:id/times              â†’ saveTimes()
  *
- * POST   /rodadas/:id/partidas           → createPartida()  ← cria partida vazia
- * GET    /campeonatos/rodada/:id/partidas → getPartidas()   ← histórico
- * POST   /campeonatos/rodada/:id/partida  → salvarPartida() ← salva resultado completo
- * PUT    /partidas/:id/finalizar         → finalizarPartida()
- * GET    /partidas/:id/detalhes          → detalhesPartida()
- * PUT    /partidas/:id                   → editarPartida()
- * DELETE /partidas/:id                   → deletarPartida()
- * GET    /partidas/globais               → partidasGlobais()
+ * POST   /rodadas/:id/partidas           â†’ createPartida()  â† cria partida vazia
+ * GET    /campeonatos/rodada/:id/partidas â†’ getPartidas()   â† histÃ³rico
+ * POST   /campeonatos/rodada/:id/partida  â†’ salvarPartida() â† salva resultado completo
+ * PUT    /partidas/:id/finalizar         â†’ finalizarPartida()
+ * GET    /partidas/:id/detalhes          â†’ detalhesPartida()
+ * PUT    /partidas/:id                   â†’ editarPartida()
+ * DELETE /partidas/:id                   â†’ deletarPartida()
+ * GET    /partidas/globais               â†’ partidasGlobais()
  *
- * POST   /rodadas/:id/substituicao       → substituicao()
+ * POST   /rodadas/:id/substituicao       â†’ substituicao()
  */
 
 require_once __DIR__ . '/../../config/database.php';
@@ -52,10 +52,10 @@ class RodadaController
     public function createForLiga(int $ligaId): void
     {
         $liga = $this->db->fetchOne("SELECT id FROM ligas WHERE id = ?", [$ligaId]);
-        if (!$liga) throw new HttpError('Liga não encontrada.', 404);
+        if (!$liga) throw new HttpError('Liga nÃ£o encontrada.', 404);
 
         $input = $this->json();
-        if (empty($input['data'])) throw new HttpError('Data é obrigatória.', 400);
+        if (empty($input['data'])) throw new HttpError('Data Ã© obrigatÃ³ria.', 400);
 
         $this->db->execute(
             "INSERT INTO rodadas (liga_id, data, status) VALUES (?, ?, 'aberta')",
@@ -76,10 +76,10 @@ class RodadaController
     public function createForCampeonato(int $campId): void
     {
         $camp = $this->db->fetchOne("SELECT id FROM campeonatos WHERE id = ?", [$campId]);
-        if (!$camp) throw new HttpError('Campeonato não encontrado.', 404);
+        if (!$camp) throw new HttpError('Campeonato nÃ£o encontrado.', 404);
 
         $input = $this->json();
-        if (empty($input['data'])) throw new HttpError('Data é obrigatória.', 400);
+        if (empty($input['data'])) throw new HttpError('Data Ã© obrigatÃ³ria.', 400);
 
         $this->db->execute(
             "INSERT INTO rodadas (campeonato_id, data, status) VALUES (?, ?, 'aberta')",
@@ -133,6 +133,26 @@ class RodadaController
     }
 
     // =========================================================
+    // BUSCAR PREMIOS DA RODADA
+    // GET /rodadas/:id/premios
+    // =========================================================
+    public function getPremios(int $id): void
+    {
+        // Garante que a rodada existe
+        $this->getRodadaOr404($id);
+        
+        $premios = $this->db->fetchAll(
+            "SELECT p.*, j.nome as jogador_nome, j.foto_url 
+             FROM premios_rodada p 
+             JOIN jogadores j ON j.id = p.jogador_id 
+             WHERE p.rodada_id = ?",
+            [$id]
+        );
+        http_response_code(200);
+        echo json_encode($premios, JSON_UNESCAPED_UNICODE);
+    }
+
+    // =========================================================
     // ATUALIZAR RODADA
     // PUT /rodadas/:id   body: { data?, status? }
     // =========================================================
@@ -163,13 +183,13 @@ class RodadaController
     {
         $rodada = $this->getRodadaOr404($id);
 
-        // Busca partidas desta rodada para limpar estatísticas e eventos
+        // Busca partidas desta rodada para limpar estatÃ­sticas e eventos
         $partidas = $this->db->fetchAll(
             "SELECT id FROM campeonato_partidas WHERE rodada_id = ?", [$id]
         );
         $partidaIds = array_map(fn($p) => (int)$p['id'], $partidas);
 
-        // Limpa dados de partidas (estatísticas + eventos)
+        // Limpa dados de partidas (estatÃ­sticas + eventos)
         foreach ($partidaIds as $pid) {
             $this->db->execute("DELETE FROM campeonato_estatisticas_partida WHERE partida_id = ?", [$pid]);
             $this->db->execute("DELETE FROM campeonato_eventos_partida WHERE partida_id = ?", [$pid]);
@@ -213,10 +233,10 @@ class RodadaController
     {
         $rodada = $this->getRodadaOr404($id);
 
-        // Impede dupla finalização (evita duplicar pontos no ranking)
+        // Impede dupla finalizaÃ§Ã£o (evita duplicar pontos no ranking)
         if (($rodada['status'] ?? '') === 'finalizada') {
             http_response_code(400);
-            echo json_encode(['error' => 'Rodada já está finalizada.']);
+            echo json_encode(['error' => 'Rodada jÃ¡ estÃ¡ finalizada.']);
             return;
         }
 
@@ -225,22 +245,22 @@ class RodadaController
             [$id]
         );
 
-        // ── Salvar prêmios da rodada (MVP, Artilheiro, Garçom, etc.) ──
+        // â”€â”€ Salvar prÃªmios da rodada (MVP, Artilheiro, GarÃ§om, etc.) â”€â”€
         $this->salvarPremiosRodada($id);
 
-        // ── Cartolendas: carry-over automático (herda escalação anterior para quem não escalou) ──
+        // â”€â”€ Cartolendas: carry-over automÃ¡tico (herda escalaÃ§Ã£o anterior para quem nÃ£o escalou) â”€â”€
         $this->carryOverEscalacao($id);
 
-        // ── Cartolendas: calcular pontos dos times fantasy ──
+        // â”€â”€ Cartolendas: calcular pontos dos times fantasy â”€â”€
         $this->calcularPontosCartolendas($id);
 
-        // ── Cartolendas: atualizar preços dos jogadores ──
+        // â”€â”€ Cartolendas: atualizar preÃ§os dos jogadores â”€â”€
         $this->atualizarPrecosCartolendas($id);
 
-        // ── Cartolendas: calcular patrimônio dos técnicos ──
+        // â”€â”€ Cartolendas: calcular patrimÃ´nio dos tÃ©cnicos â”€â”€
         $this->calcularPatrimonioRodada($id);
 
-        // ── Cartolendas: disparar eventos em tempo real ──
+        // â”€â”€ Cartolendas: disparar eventos em tempo real â”€â”€
         CartolendaEventos::fire('rodada_finalizada', ['rodada_id' => $id]);
         CartolendaEventos::fire('precos_atualizados', ['rodada_id' => $id]);
         CartolendaEventos::fire('ranking_atualizado', ['rodada_id' => $id]);
@@ -250,13 +270,13 @@ class RodadaController
     }
 
     /**
-     * Calcula e salva os prêmios da rodada (MVP, Artilheiro, Garçom, Pé de Rato,
+     * Calcula e salva os prÃªmios da rodada (MVP, Artilheiro, GarÃ§om, PÃ© de Rato,
      * Melhor Goleiro, Melhor Zagueiro) na tabela premios_rodada.
-     * Usa Pontos.php como source of truth para cálculo de pontuação.
+     * Usa Pontos.php como source of truth para cÃ¡lculo de pontuaÃ§Ã£o.
      */
     private function salvarPremiosRodada(int $rodadaId): void
     {
-        // Remove prêmios anteriores desta rodada (caso re-finalize)
+        // Remove prÃªmios anteriores desta rodada (caso re-finalize)
         $this->db->execute(
             "DELETE FROM premios_rodada WHERE rodada_id = ?",
             [$rodadaId]
@@ -271,6 +291,9 @@ class RodadaController
                 SUM(ep.gols)          AS gols,
                 SUM(ep.assistencias)  AS assists,
                 SUM(ep.clean_sheet)   AS clean_sheets,
+                SUM(COALESCE(ep.cartoes_amarelos, 0)) AS amarelos,
+                SUM(COALESCE(ep.cartoes_azuis, 0))    AS azuis,
+                SUM(COALESCE(ep.cartoes_vermelhos, 0)) AS vermelhos,
                 SUM(CASE WHEN (ep.time_id = cp.timeA_id AND cp.placar_timeA > cp.placar_timeB)
                               OR (ep.time_id = cp.timeB_id AND cp.placar_timeB > cp.placar_timeA)
                          THEN 1 ELSE 0 END) AS vitorias,
@@ -293,7 +316,7 @@ class RodadaController
 
         if (empty($jogadores)) return;
 
-        // Calcula pontuação de cada jogador
+        // Calcula pontuaÃ§Ã£o de cada jogador
         $pontuados = [];
         foreach ($jogadores as $j) {
             $gols    = (int)$j['gols'];
@@ -302,6 +325,9 @@ class RodadaController
             $v       = (int)$j['vitorias'];
             $e       = (int)$j['empates'];
             $d       = (int)$j['derrotas'];
+            $am      = (int)$j['amarelos'];
+            $az      = (int)$j['azuis'];
+            $verm    = (int)$j['vermelhos'];
             $isRec   = (int)$j['joga_recuado'] === 1;
             $isGol   = (int)$j['is_goleiro'] > 0;
 
@@ -310,6 +336,11 @@ class RodadaController
             } else {
                 $pts = Pontos::calcularJogadorLinha($gols, $assists, 0, $v, $e, $d);
             }
+
+            // Desconta cartões
+            $pts += ($am * Pontos::PUNICAO_CARTAO_AMARELO_OVERALL);
+            $pts += ($az * Pontos::PUNICAO_CARTAO_AZUL_OVERALL);
+            $pts += ($verm * Pontos::PUNICAO_CARTAO_VERMELHO_OVERALL);
 
             $pontuados[] = [
                 'jogador_id' => (int)$j['jogador_id'],
@@ -323,7 +354,7 @@ class RodadaController
             ];
         }
 
-        // Helper: insere prêmio para TODOS os empatados no topo (ou fundo)
+        // Helper: insere prÃªmio para TODOS os empatados no topo (ou fundo)
         $insertTied = function (array $lista, string $tipo, string $campo, bool $asc = false) use ($rodadaId) {
             if (empty($lista)) return;
             $arr = array_values($lista);
@@ -338,30 +369,30 @@ class RodadaController
             }
         };
 
-        // ── MVP da Rodada (maior pontuação entre jogadores de LINHA) ──
+        // â”€â”€ MVP da Rodada (maior pontuaÃ§Ã£o entre jogadores de LINHA) â”€â”€
         $linhaParaMvp = array_values(array_filter($pontuados, fn($p) => !$p['is_goleiro']));
         if (empty($linhaParaMvp)) {
-            $linhaParaMvp = $pontuados; // fallback se só houver goleiros
+            $linhaParaMvp = $pontuados; // fallback se sÃ³ houver goleiros
         }
         $insertTied($linhaParaMvp, 'mvp_rodada', 'pts');
 
-        // ── Artilheiro da Rodada (mais gols) ──────────────────
+        // â”€â”€ Artilheiro da Rodada (mais gols) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         $artilheiros = array_values(array_filter($pontuados, fn($p) => $p['gols'] > 0));
         $insertTied($artilheiros, 'artilheiro_rodada', 'gols');
 
-        // ── Garçom da Rodada (mais assists) ───────────────────
+        // â”€â”€ GarÃ§om da Rodada (mais assists) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         $garcons = array_values(array_filter($pontuados, fn($p) => $p['assists'] > 0));
         $insertTied($garcons, 'garcom_rodada', 'assists');
 
-        // ── Melhor Goleiro da Rodada ──────────────────────────
+        // â”€â”€ Melhor Goleiro da Rodada â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         $goleiros = array_values(array_filter($pontuados, fn($p) => $p['is_goleiro']));
         $insertTied($goleiros, 'melhor_goleiro_rodada', 'pts');
 
-        // ── Melhor Zagueiro/Recuado da Rodada ─────────────────
+        // â”€â”€ Melhor Zagueiro/Recuado da Rodada â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         $recuados = array_values(array_filter($pontuados, fn($p) => $p['is_recuado'] && !$p['is_goleiro']));
         $insertTied($recuados, 'melhor_zagueiro_rodada', 'pts');
 
-        // ── Pé de Rato da Rodada (menor pontuação entre jogadores de linha) ──
+        // â”€â”€ PÃ© de Rato da Rodada (menor pontuaÃ§Ã£o entre jogadores de linha) â”€â”€
         $linha = array_values(array_filter($pontuados, fn($p) => !$p['is_goleiro'] && !$p['is_recuado']));
         if (count($linha) > 1) {
             $insertTied($linha, 'pe_de_rato_rodada', 'pts', true); // asc = menor pts
@@ -369,9 +400,9 @@ class RodadaController
     }
 
     /**
-     * Carry-over automático: para técnicos que escalaram na rodada anterior
-     * mas NÃO escalaram nesta rodada, herda a escalação anterior.
-     * Inspirado no Cartola FC — se o técnico não mexer, mantém o time.
+     * Carry-over automÃ¡tico: para tÃ©cnicos que escalaram na rodada anterior
+     * mas NÃƒO escalaram nesta rodada, herda a escalaÃ§Ã£o anterior.
+     * Inspirado no Cartola FC â€” se o tÃ©cnico nÃ£o mexer, mantÃ©m o time.
      */
     private function carryOverEscalacao(int $rodadaId): void
     {
@@ -393,7 +424,7 @@ class RodadaController
         if (!$rodadaAnterior) return; // primeira rodada, sem carry-over
         $rodadaAnteriorId = (int)$rodadaAnterior['id'];
 
-        // Busca técnicos que escalaram na rodada anterior
+        // Busca tÃ©cnicos que escalaram na rodada anterior
         $timesAnteriores = $this->db->fetchAll("
             SELECT usuario_id, id AS time_id, orcamento_gasto
             FROM cartolendas_times
@@ -402,7 +433,7 @@ class RodadaController
 
         if (empty($timesAnteriores)) return;
 
-        // Busca quem JÁ escalou nesta rodada
+        // Busca quem JÃ escalou nesta rodada
         $jaEscalaram = $this->db->fetchAll("
             SELECT usuario_id FROM cartolendas_times WHERE rodada_id = ?
         ", [$rodadaId]);
@@ -411,7 +442,7 @@ class RodadaController
         foreach ($timesAnteriores as $ta) {
             $userId = (int)$ta['usuario_id'];
 
-            // Pula se já escalou nesta rodada
+            // Pula se jÃ¡ escalou nesta rodada
             if (in_array($userId, $jaEscalaramIds)) continue;
 
             // Cria time nesta rodada
@@ -421,7 +452,7 @@ class RodadaController
             ", [$userId, $rodadaId, $ta['orcamento_gasto']]);
             $newTimeId = (int)$this->db->lastInsertId();
 
-            // Copia escalação da rodada anterior
+            // Copia escalaÃ§Ã£o da rodada anterior
             $escalacaoAnt = $this->db->fetchAll("
                 SELECT jogador_id, posicao, eh_reserva, preco_na_escalacao
                 FROM cartolendas_escalacao
@@ -435,7 +466,7 @@ class RodadaController
                 ", [$newTimeId, $esc['jogador_id'], $esc['posicao'], $esc['eh_reserva'], $esc['preco_na_escalacao']]);
             }
 
-            // Copia capitão
+            // Copia capitÃ£o
             $capAnt = $this->db->fetchOne("
                 SELECT jogador_id FROM cartolendas_capitao
                 WHERE cartolendas_time_id = ? AND rodada_id = ?
@@ -448,7 +479,7 @@ class RodadaController
                 ", [$newTimeId, $capAnt['jogador_id'], $rodadaId]);
             }
 
-            error_log("[Cartolendas] Carry-over: user {$userId} herdou escalação da rodada {$rodadaAnteriorId} → {$rodadaId} (time {$newTimeId})");
+            error_log("[Cartolendas] Carry-over: user {$userId} herdou escalaÃ§Ã£o da rodada {$rodadaAnteriorId} â†’ {$rodadaId} (time {$newTimeId})");
         }
     }
 
@@ -458,7 +489,7 @@ class RodadaController
      */
     private function calcularPontosCartolendas(int $rodadaId): void
     {
-        // Busca times Cartolendas que ainda não foram calculados
+        // Busca times Cartolendas que ainda nÃ£o foram calculados
         $times = $this->db->fetchAll("
             SELECT id, usuario_id
             FROM cartolendas_times
@@ -477,15 +508,15 @@ class RodadaController
 
         if (empty($partidas)) return;
 
-        // Monta mapa: jogador_id → stats agregadas (gols, assistencias, resultado)
+        // Monta mapa: jogador_id â†’ stats agregadas (gols, assistencias, resultado)
         $statsMap = [];
 
-        // Identifica jogadores que REALMENTE participaram (têm eventos ou são goleiros)
-        // Isso evita dar V/E/D a jogadores ausentes que estão no elenco
+        // Identifica jogadores que REALMENTE participaram (tÃªm eventos ou sÃ£o goleiros)
+        // Isso evita dar V/E/D a jogadores ausentes que estÃ£o no elenco
         $jogadoresComEvento = [];
         foreach ($partidas as $p) {
             $pid = (int)$p['id'];
-            // Jogadores com gol ou assistência (eventos)
+            // Jogadores com gol ou assistÃªncia (eventos)
             $eventos = $this->db->fetchAll("
                 SELECT DISTINCT jogador_id FROM campeonato_eventos_partida WHERE partida_id = ?
                 UNION
@@ -511,7 +542,7 @@ class RodadaController
             $resultadoA = $placarA > $placarB ? 'vitoria' : ($placarA === $placarB ? 'empate' : 'derrota');
             $resultadoB = $placarB > $placarA ? 'vitoria' : ($placarB === $placarA ? 'empate' : 'derrota');
 
-            // Clean sheet: time não sofreu gol
+            // Clean sheet: time nÃ£o sofreu gol
             $cleanSheetA = ($placarB === 0) ? 1 : 0;
             $cleanSheetB = ($placarA === 0) ? 1 : 0;
 
@@ -545,8 +576,8 @@ class RodadaController
                 $posicao     = $ep['posicao'];
                 $jogaRecuado = !empty($ep['joga_recuado']);
 
-                // Jogador de linha com 0 gols/assists e sem eventos → provavelmente ausente
-                // Não recebe V/E/D (fica com 0 pts no Cartolendas)
+                // Jogador de linha com 0 gols/assists e sem eventos â†’ provavelmente ausente
+                // NÃ£o recebe V/E/D (fica com 0 pts no Cartolendas)
                 $temContribuicao = ($gols > 0 || $assists > 0 || $ehGoleiro || $jogaRecuado || isset($jogadoresComEvento[$jid]));
 
                 // Calcula pontos usando Pontos.php
@@ -555,7 +586,7 @@ class RodadaController
                 $derrotas = $resultado === 'derrota' ? 1 : 0;
 
                 if (!$temContribuicao) {
-                    // Jogador sem contribuição → 0 pontos (provável ausente)
+                    // Jogador sem contribuiÃ§Ã£o â†’ 0 pontos (provÃ¡vel ausente)
                     $pts = 0.0;
                 } elseif ($posicao === 'goleiro' || $ehGoleiro) {
                     // Goleiro: CS valorizado + penalidade por gols sofridos
@@ -565,11 +596,11 @@ class RodadaController
                     // Zagueiro: CS + gols/assists super valorizados
                     $pts = Pontos::cartolendas_zagueiro($gols, $assists, $cleanSheet, $vitorias, $empates, $derrotas);
                 } else {
-                    // Linha: gols e assists são o foco
+                    // Linha: gols e assists sÃ£o o foco
                     $pts = Pontos::cartolendas_linha($gols, $assists, $vitorias, $empates, $derrotas);
                 }
 
-                // Acumula (jogador pode ter jogado múltiplas partidas na rodada)
+                // Acumula (jogador pode ter jogado mÃºltiplas partidas na rodada)
                 if (!isset($statsMap[$jid])) {
                     $statsMap[$jid] = 0.0;
                 }
@@ -577,8 +608,8 @@ class RodadaController
             }
         }
 
-        // ── Mapa de substituições do check-in ──
-        // Quando um jogador é substituído na rodada (ex: Lani → Luis),
+        // â”€â”€ Mapa de substituiÃ§Ãµes do check-in â”€â”€
+        // Quando um jogador Ã© substituÃ­do na rodada (ex: Lani â†’ Luis),
         // campeonato_rodada_elencos guarda jogador_original_id = Lani, jogador_id = Luis
         // Isso permite que no Cartolendas, quem escalou Lani receba os pontos de Luis.
         $subsRows = $this->db->fetchAll("
@@ -586,7 +617,7 @@ class RodadaController
             FROM campeonato_rodada_elencos
             WHERE rodada_id = ? AND jogador_original_id IS NOT NULL
         ", [$rodadaId]);
-        $subMap = []; // original_id → substituto_id
+        $subMap = []; // original_id â†’ substituto_id
         foreach ($subsRows as $sr) {
             $subMap[(int)$sr['jogador_original_id']] = (int)$sr['jogador_id'];
         }
@@ -596,14 +627,14 @@ class RodadaController
             $timeId  = (int)$time['id'];
             $userId  = (int)$time['usuario_id'];
 
-            // Busca escalação (titulares + reservas)
+            // Busca escalaÃ§Ã£o (titulares + reservas)
             $escalacao = $this->db->fetchAll("
                 SELECT jogador_id, eh_reserva
                 FROM cartolendas_escalacao
                 WHERE cartolendas_time_id = ?
             ", [$timeId]);
 
-            // Busca capitão
+            // Busca capitÃ£o
             $capRow = $this->db->fetchOne("
                 SELECT jogador_id FROM cartolendas_capitao
                 WHERE cartolendas_time_id = ? AND rodada_id = ?
@@ -621,17 +652,17 @@ class RodadaController
                 }
             }
 
-            // ── Calcula pontos de cada titular (com mapa de substituição) ──
-            $titularPontos = []; // jid → pts (já considerando substituição do check-in)
+            // â”€â”€ Calcula pontos de cada titular (com mapa de substituiÃ§Ã£o) â”€â”€
+            $titularPontos = []; // jid â†’ pts (jÃ¡ considerando substituiÃ§Ã£o do check-in)
             foreach ($titulares as $jid) {
-                // Se o jogador escalado foi substituído no check-in, usa os pontos do substituto
+                // Se o jogador escalado foi substituÃ­do no check-in, usa os pontos do substituto
                 $lookupId = $subMap[$jid] ?? $jid;
                 $pts = $statsMap[$lookupId] ?? 0.0;
                 $titularPontos[$jid] = $pts;
             }
 
-            // ── Nova lógica de reserva ──
-            // Reserva substitui o titular com MENOR pontuação,
+            // â”€â”€ Nova lÃ³gica de reserva â”€â”€
+            // Reserva substitui o titular com MENOR pontuaÃ§Ã£o,
             // mas SOMENTE se o reserva pontuou mais que esse titular.
             $reservaUsado       = false;
             $reservaJogId       = !empty($reservas) ? $reservas[0] : null;
@@ -642,7 +673,7 @@ class RodadaController
                 $lookupReserva = $subMap[$reservaJogId] ?? $reservaJogId;
                 $ptsReserva    = $statsMap[$lookupReserva] ?? 0.0;
 
-                // Encontra o titular com a menor pontuação
+                // Encontra o titular com a menor pontuaÃ§Ã£o
                 $menorPts = null;
                 $menorJid = null;
                 foreach ($titularPontos as $jid => $pts) {
@@ -657,7 +688,7 @@ class RodadaController
                     $titularSubstituido = $menorJid;
                     $reservaUsado = true;
 
-                    // Marca substituição na escalação
+                    // Marca substituiÃ§Ã£o na escalaÃ§Ã£o
                     $this->db->execute("
                         UPDATE cartolendas_escalacao
                         SET jogou = 0, substituido_por_id = ?
@@ -680,13 +711,13 @@ class RodadaController
                 $jogou    = isset($statsMap[$lookupId]);
                 $pts      = $titularPontos[$jid];
 
-                // Se titular foi substituído pela reserva → 0 pts (reserva assume)
+                // Se titular foi substituÃ­do pela reserva â†’ 0 pts (reserva assume)
                 if ($jid === $titularSubstituido) {
                     $pts   = 0.0;
                     $jogou = false;
                 }
 
-                // Capitão: pontos dobrados
+                // CapitÃ£o: pontos dobrados
                 if ($jid === $capitaoId && $jogou) {
                     $pts *= 2;
                 }
@@ -721,7 +752,7 @@ class RodadaController
                 WHERE id = ?
             ", [$totalPontos, $timeId]);
 
-            // Atualiza ranking global do usuário
+            // Atualiza ranking global do usuÃ¡rio
             $this->db->execute("
                 INSERT INTO cartolendas_ranking (usuario_id, pontos_total, rodadas_jogadas, melhor_rodada_pts)
                 VALUES (?, ?, 1, ?)
@@ -731,7 +762,7 @@ class RodadaController
                     melhor_rodada_pts = GREATEST(melhor_rodada_pts, VALUES(melhor_rodada_pts))
             ", [$userId, $totalPontos, $totalPontos]);
 
-            // Atualiza divisão baseada em pontos
+            // Atualiza divisÃ£o baseada em pontos
             $rankRow = $this->db->fetchOne("
                 SELECT pontos_total, lendas_coins FROM cartolendas_ranking WHERE usuario_id = ?
             ", [$userId]);
@@ -746,26 +777,26 @@ class RodadaController
                     UPDATE cartolendas_ranking SET divisao = ? WHERE usuario_id = ?
                 ", [$divisao, $userId]);
 
-                // Salva snapshot do saldo LC no time para tracking de evolução
+                // Salva snapshot do saldo LC no time para tracking de evoluÃ§Ã£o
                 $saldoLC = (float)($rankRow['lendas_coins'] ?? 100.0);
                 $this->db->execute("
                     UPDATE cartolendas_times SET saldo_lc_apos = ? WHERE id = ?
                 ", [$saldoLC, $timeId]);
             }
 
-            // ── PATRIMÔNIO: soma dos preços atuais dos jogadores escalados ──
-            // Busca preços atualizados (após atualizarPrecosCartolendas rodar)
-            // Como esta função roda ANTES de atualizarPrecos, usamos um callback
-            // que será chamado depois. Por ora, salvamos o timeId para calcular depois.
-            // O patrimônio será calculado no recalcularCartolendas e no finalizar.
+            // â”€â”€ PATRIMÃ”NIO: soma dos preÃ§os atuais dos jogadores escalados â”€â”€
+            // Busca preÃ§os atualizados (apÃ³s atualizarPrecosCartolendas rodar)
+            // Como esta funÃ§Ã£o roda ANTES de atualizarPrecos, usamos um callback
+            // que serÃ¡ chamado depois. Por ora, salvamos o timeId para calcular depois.
+            // O patrimÃ´nio serÃ¡ calculado no recalcularCartolendas e no finalizar.
         }
     }
 
     /**
-     * Atualiza preços dos jogadores após finalizar rodada.
-     * Fórmula: variação = (pontos_rodada - média_geral) × 0.5
-     * Limites: variação ±3.00 por rodada, preço entre 5.00 e 25.00
-     * Jogador que não jogou: -0.50
+     * Atualiza preÃ§os dos jogadores apÃ³s finalizar rodada.
+     * FÃ³rmula: variaÃ§Ã£o = (pontos_rodada - mÃ©dia_geral) Ã— 0.5
+     * Limites: variaÃ§Ã£o Â±3.00 por rodada, preÃ§o entre 5.00 e 25.00
+     * Jogador que nÃ£o jogou: -0.50
      */
     private function atualizarPrecosCartolendas(int $rodadaId): void
     {
@@ -775,11 +806,11 @@ class RodadaController
         $campeonatoId = (int)$rodadaInfo['campeonato_id'];
 
         // Busca jogadores que REALMENTE participaram:
-        // 1. Têm eventos (gol, assistência) OU
-        // 2. São goleiros designados OU
-        // 3. São recuados com stats OU
-        // 4. Têm gols ou assistências nas stats
-        // Isso evita dar valorização a jogadores ausentes
+        // 1. TÃªm eventos (gol, assistÃªncia) OU
+        // 2. SÃ£o goleiros designados OU
+        // 3. SÃ£o recuados com stats OU
+        // 4. TÃªm gols ou assistÃªncias nas stats
+        // Isso evita dar valorizaÃ§Ã£o a jogadores ausentes
         $jogadoresComEvento = $this->db->fetchAll("
             SELECT DISTINCT ev.jogador_id
             FROM campeonato_eventos_partida ev
@@ -796,8 +827,8 @@ class RodadaController
             SELECT goleiro_timeB_id FROM campeonato_partidas WHERE rodada_id = ? AND status = 'finalizada' AND goleiro_timeB_id IS NOT NULL
         ", [$rodadaId, $rodadaId, $rodadaId, $rodadaId]);
 
-        // Também inclui TODOS os jogadores que têm estatísticas nas partidas
-        // (inclui jogadores de linha que jogaram mas não fizeram gol/assist)
+        // TambÃ©m inclui TODOS os jogadores que tÃªm estatÃ­sticas nas partidas
+        // (inclui jogadores de linha que jogaram mas nÃ£o fizeram gol/assist)
         $jogadoresComStats = $this->db->fetchAll("
             SELECT DISTINCT ep.jogador_id
             FROM campeonato_estatisticas_partida ep
@@ -816,7 +847,7 @@ class RodadaController
         if (empty($jogadoresQueJogaram)) return;
 
         // Calcula pontos REAIS de cada jogador nesta rodada baseado na performance em partidas
-        // (NÃO usa cartolendas_escalacao — isso daria pontos de substitutos ao jogador original)
+        // (NÃƒO usa cartolendas_escalacao â€” isso daria pontos de substitutos ao jogador original)
         $partidas = $this->db->fetchAll("
             SELECT id, timeA_id, timeB_id, placar_timeA, placar_timeB,
                    goleiro_timeA_id, goleiro_timeB_id
@@ -849,7 +880,7 @@ class RodadaController
             foreach ($estatisticas as $ep) {
                 $jid = (int)$ep['jogador_id'];
 
-                // Só calcula pontos para quem REALMENTE jogou
+                // SÃ³ calcula pontos para quem REALMENTE jogou
                 if (!isset($jogadoresQueJogaram[$jid])) continue;
 
                 $timeId = (int)$ep['time_id'];
@@ -890,7 +921,7 @@ class RodadaController
 
         if (empty($pontosReais)) return;
 
-        // Calcula média geral da rodada (baseada nos pontos REAIS dos jogadores que jogaram)
+        // Calcula mÃ©dia geral da rodada (baseada nos pontos REAIS dos jogadores que jogaram)
         $somaTotal = 0.0;
         $countTotal = 0;
         foreach ($pontosReais as $jid => $pts) {
@@ -900,7 +931,7 @@ class RodadaController
 
         $mediaGeral = $countTotal > 0 ? $somaTotal / $countTotal : 0.0;
 
-        // Busca rodada anterior DO MESMO CAMPEONATO para pegar preço base
+        // Busca rodada anterior DO MESMO CAMPEONATO para pegar preÃ§o base
         $rodadaAnterior = $this->db->fetchOne("
             SELECT id FROM rodadas
             WHERE id < ? AND campeonato_id = ? AND status = 'finalizada'
@@ -908,17 +939,33 @@ class RodadaController
         ", [$rodadaId, $campeonatoId]);
         $rodadaAnteriorId = $rodadaAnterior ? (int)$rodadaAnterior['id'] : null;
 
-        // Busca apenas jogadores inscritos no campeonato (via elencos dos times)
-        $todosJogadores = $this->db->fetchAll("
+        // Busca jogadores inscritos no campeonato, os que jogaram esta rodada, e os que tinham preco na rodada anterior
+        $jids = [];
+        $inscritos = $this->db->fetchAll("
             SELECT DISTINCT ce.jogador_id AS id
             FROM campeonato_elencos ce
             WHERE ce.campeonato_id = ?
         ", [$campeonatoId]);
+        foreach ($inscritos as $j) $jids[(int)$j['id']] = true;
+
+        if ($rodadaAnteriorId) {
+            $prev = $this->db->fetchAll("SELECT jogador_id FROM cartolendas_precos WHERE rodada_id = ?", [$rodadaAnteriorId]);
+            foreach ($prev as $p) $jids[(int)$p['jogador_id']] = true;
+        }
+
+        foreach ($pontosReais as $jid => $pts) {
+            $jids[(int)$jid] = true;
+        }
+
+        $todosJogadores = [];
+        foreach ($jids as $jid => $v) {
+            $todosJogadores[] = ['id' => $jid];
+        }
 
         foreach ($todosJogadores as $jog) {
             $jid = (int)$jog['id'];
 
-            // Preço anterior (da rodada anterior, ou 10.00 se primeira rodada)
+            // PreÃ§o anterior (da rodada anterior, ou 10.00 se primeira rodada)
             $precoAnterior = 10.00;
             if ($rodadaAnteriorId) {
                 $precoRow = $this->db->fetchOne("
@@ -930,41 +977,42 @@ class RodadaController
                 }
             }
 
-            // Calcula variação — baseada na performance REAL do jogador
-            // Fator 0.3 (era 0.5) porque pontos Cartolendas são maiores
+            // Calcula variaÃ§Ã£o â€” baseada na performance REAL do jogador
+            // Fator 0.3 (era 0.5) porque pontos Cartolendas sÃ£o maiores
             if (isset($pontosReais[$jid])) {
-                // Jogador jogou — variação baseada em performance real vs média
-                $variacao = ($pontosReais[$jid] - $mediaGeral) * 0.3;
+                // Expectativa Cartola: Preco / 2.5
+                $expectativa = $precoAnterior / 2.5;
+                $variacao = ($pontosReais[$jid] - $expectativa) * 0.3;
             } else {
-                // Jogador não jogou nesta rodada (inclui substituídos) — leve desvalorização
-                $variacao = -0.50;
+                // Nao jogou = variacao zero
+                $variacao = 0.00;
             }
 
-            // Limita variação: máximo ±5.00 por rodada (era ±3.00)
+            // Limita variaÃ§Ã£o: mÃ¡ximo Â±5.00 por rodada (era Â±3.00)
             $variacao = max(-5.00, min(5.00, $variacao));
 
-            // Calcula novo preço com limites: 3.00 a 35.00 (era 5.00 a 25.00)
+            // Calcula novo preÃ§o com limites: 3.00 a 35.00 (era 5.00 a 25.00)
             $novoPreco = $precoAnterior + $variacao;
             $novoPreco = max(3.00, min(35.00, $novoPreco));
 
-            // Variação real (pode ser diferente da calculada por causa dos limites)
+            // VariaÃ§Ã£o real (pode ser diferente da calculada por causa dos limites)
             $variacaoReal = round($novoPreco - $precoAnterior, 2);
 
-            // Calcula média de pontos (média ponderada com histórico)
+            // Calcula mÃ©dia de pontos (mÃ©dia ponderada com histÃ³rico)
             $mediaRow = $this->db->fetchOne("
                 SELECT AVG(pontos_rodada) AS media
                 FROM cartolendas_precos
                 WHERE jogador_id = ? AND pontos_rodada IS NOT NULL
             ", [$jid]);
             $mediaHistorica = $mediaRow && $mediaRow['media'] !== null ? (float)$mediaRow['media'] : 0.0;
-            // Só atribui pontos se o jogador realmente jogou
+            // SÃ³ atribui pontos se o jogador realmente jogou
             $pontosRodadaAtual = isset($pontosReais[$jid]) ? $pontosReais[$jid] : 0.0;
-            // Média simples: (histórica + atual) / 2, ou só atual se não tem histórico
+            // MÃ©dia simples: (histÃ³rica + atual) / 2, ou sÃ³ atual se nÃ£o tem histÃ³rico
             $mediaPontos = $mediaHistorica > 0
                 ? round(($mediaHistorica + $pontosRodadaAtual) / 2, 2)
                 : round($pontosRodadaAtual, 2);
 
-            // Upsert preço para esta rodada
+            // Upsert preÃ§o para esta rodada
             $this->db->execute("
                 INSERT INTO cartolendas_precos (jogador_id, rodada_id, preco, variacao, pontos_rodada, media_pontos)
                 VALUES (?, ?, ?, ?, ?, ?)
@@ -975,7 +1023,7 @@ class RodadaController
                     media_pontos = VALUES(media_pontos)
             ", [$jid, $rodadaId, round($novoPreco, 2), $variacaoReal, $pontosRodadaAtual, $mediaPontos]);
 
-            // Registra histórico de preços
+            // Registra histÃ³rico de preÃ§os
             $this->db->execute("
                 INSERT INTO cartolendas_historico_precos (jogador_id, rodada_id, preco_antes, preco_depois, variacao)
                 VALUES (?, ?, ?, ?, ?)
@@ -984,7 +1032,7 @@ class RodadaController
     }
 
     // =========================================================
-    // RECALCULAR CARTOLENDAS — recalcula pontos e preços
+    // RECALCULAR CARTOLENDAS â€” recalcula pontos e preÃ§os
     // para TODAS as rodadas finalizadas (corrige dados antigos)
     // =========================================================
     public function recalcularCartolendas(): array
@@ -1004,23 +1052,23 @@ class RodadaController
 
         $log[] = count($rodadas) . ' rodadas finalizadas encontradas.';
 
-        // 2. Reset: marca todos os cartolendas_times como não calculados
+        // 2. Reset: marca todos os cartolendas_times como nÃ£o calculados
         $this->db->execute("UPDATE cartolendas_times SET calculado = 0, total_pontos = 0");
         $log[] = 'Reset: calculado = 0 em todos os cartolendas_times.';
 
         // 3. Reset: zera ranking global para recalcular do zero
         // IMPORTANTE: lendas_coins volta para 100.00 (valor inicial) para acumular deltas do zero
         $this->db->execute("UPDATE cartolendas_ranking SET pontos_total = 0, rodadas_jogadas = 0, melhor_rodada_pts = 0, lendas_coins = 100.00, patrimonio = 0, patrimonio_anterior = 0");
-        $log[] = 'Reset: ranking zerado para recalcular (incluindo lendas_coins → 100).';
+        $log[] = 'Reset: ranking zerado para recalcular (incluindo lendas_coins â†’ 100).';
 
-        // 4. Reset: apaga todos os preços e histórico para recalcular na ordem correta
+        // 4. Reset: apaga todos os preÃ§os e histÃ³rico para recalcular na ordem correta
         $this->db->execute("DELETE FROM cartolendas_precos");
         $this->db->execute("DELETE FROM cartolendas_historico_precos");
-        $log[] = 'Reset: preços e histórico de preços apagados.';
+        $log[] = 'Reset: preÃ§os e histÃ³rico de preÃ§os apagados.';
 
-        // 5. Reset: limpa pontos e flags de escalação
+        // 5. Reset: limpa pontos e flags de escalaÃ§Ã£o
         $this->db->execute("UPDATE cartolendas_escalacao SET pontos_obtidos = 0, jogou = 0, substituido_por_id = NULL");
-        $log[] = 'Reset: escalações zeradas.';
+        $log[] = 'Reset: escalaÃ§Ãµes zeradas.';
 
         // 6. Recalcula cada rodada na ordem
         foreach ($rodadas as $rod) {
@@ -1030,13 +1078,13 @@ class RodadaController
             $this->calcularPontosCartolendas($rodId);
             $this->atualizarPrecosCartolendas($rodId);
 
-            // 6b. Calcula patrimônio de cada time nesta rodada
+            // 6b. Calcula patrimÃ´nio de cada time nesta rodada
             $this->calcularPatrimonioRodada($rodId);
 
             $log[] = "Rodada {$dataRod} (id={$rodId}): recalculada.";
         }
 
-        // 7. Recalcula divisões
+        // 7. Recalcula divisÃµes
         $rankings = $this->db->fetchAll("SELECT usuario_id, pontos_total FROM cartolendas_ranking");
         foreach ($rankings as $r) {
             $pts = (float)$r['pontos_total'];
@@ -1046,14 +1094,14 @@ class RodadaController
             elseif ($pts >= 100) $divisao = 'Prata';
             $this->db->execute("UPDATE cartolendas_ranking SET divisao = ? WHERE usuario_id = ?", [$divisao, (int)$r['usuario_id']]);
         }
-        $log[] = 'Divisões recalculadas.';
+        $log[] = 'DivisÃµes recalculadas.';
 
         return ['success' => true, 'log' => $log];
     }
 
     // =========================================================
-    // PATRIMÔNIO — Calcula o valor total do time de cada técnico
-    // baseado nos preços atualizados dos jogadores escalados
+    // PATRIMÃ”NIO â€” Calcula o valor total do time de cada tÃ©cnico
+    // baseado nos preÃ§os atualizados dos jogadores escalados
     // =========================================================
     private function calcularPatrimonioRodada(int $rodadaId): void
     {
@@ -1067,7 +1115,7 @@ class RodadaController
             $timeId = (int)$time['id'];
             $userId = (int)$time['usuario_id'];
 
-            // Busca preços atuais (pós-rodada) E preço na escalação (pré-rodada) dos jogadores
+            // Busca preÃ§os atuais (pÃ³s-rodada) E preÃ§o na escalaÃ§Ã£o (prÃ©-rodada) dos jogadores
             $escalacao = $this->db->fetchAll("
                 SELECT e.jogador_id,
                        COALESCE(p.preco, 10.00) AS preco_atual,
@@ -1078,7 +1126,7 @@ class RodadaController
             ", [$rodadaId, $timeId]);
 
             $patrimonio = 0.0;
-            $valorAntes = 0.0; // quanto os jogadores valiam na escalação
+            $valorAntes = 0.0; // quanto os jogadores valiam na escalaÃ§Ã£o
             $valorDepois = 0.0; // quanto valem agora
 
             foreach ($escalacao as $esc) {
@@ -1089,7 +1137,7 @@ class RodadaController
                 $valorAntes  += $precoCompra;
                 $valorDepois += $precoAtual;
 
-                // Salva preco_apos_rodada em cada escalação (para histórico)
+                // Salva preco_apos_rodada em cada escalaÃ§Ã£o (para histÃ³rico)
                 $this->db->execute("
                     UPDATE cartolendas_escalacao
                     SET preco_apos_rodada = ?
@@ -1097,12 +1145,12 @@ class RodadaController
                 ", [$precoAtual, $timeId, (int)$esc['jogador_id']]);
             }
 
-            // ── Reajuste da verba (lendas_coins) ──
+            // â”€â”€ Reajuste da verba (lendas_coins) â”€â”€
             // Se seus jogadores valorizaram, sua verba sobe.
             // Se desvalorizaram, cai. Estilo Cartola FC.
             //
-            // Fórmula: lendas_coins += (valor_depois - valor_antes)
-            // Ex: comprou por 95, jogadores agora valem 103 → +8 LC de verba
+            // FÃ³rmula: lendas_coins += (valor_depois - valor_antes)
+            // Ex: comprou por 95, jogadores agora valem 103 â†’ +8 LC de verba
             $deltaValorizacao = round($valorDepois - $valorAntes, 2);
 
             if ($deltaValorizacao != 0) {
@@ -1116,12 +1164,12 @@ class RodadaController
                 error_log("[Cartolendas] Reajuste verba user {$userId}: antes={$valorAntes} depois={$valorDepois} delta={$deltaValorizacao}");
             }
 
-            // Salva patrimônio no time
+            // Salva patrimÃ´nio no time
             $this->db->execute("
                 UPDATE cartolendas_times SET patrimonio_apos = ? WHERE id = ?
             ", [round($patrimonio, 2), $timeId]);
 
-            // Atualiza patrimônio no ranking global
+            // Atualiza patrimÃ´nio no ranking global
             $this->db->execute("
                 UPDATE cartolendas_ranking SET patrimonio = ? WHERE usuario_id = ?
             ", [round($patrimonio, 2), $userId]);
@@ -1152,7 +1200,7 @@ class RodadaController
     // =========================================================
     // SYNC JOGADORES
     // POST /rodadas/:id/sync-jogadores   body: { nomes: [] }
-    // Encontra ou cria jogadores, vincula à rodada
+    // Encontra ou cria jogadores, vincula Ã  rodada
     // =========================================================
     public function syncJogadores(int $id): void
     {
@@ -1160,9 +1208,9 @@ class RodadaController
         $input = $this->json();
         $nomes = $input['nomes'] ?? [];
 
-        if (empty($nomes)) throw new HttpError('nomes[] é obrigatório.', 400);
+        if (empty($nomes)) throw new HttpError('nomes[] Ã© obrigatÃ³rio.', 400);
 
-        // Remove vínculos antigos
+        // Remove vÃ­nculos antigos
         $this->db->execute("DELETE FROM rodada_jogadores WHERE rodada_id = ?", [$id]);
 
         $jogadores = []; $novos = 0; $existentes = 0;
@@ -1193,7 +1241,7 @@ class RodadaController
                 $novos++;
             }
 
-            // Vincula à rodada
+            // Vincula Ã  rodada
             $this->db->execute(
                 "INSERT IGNORE INTO rodada_jogadores (rodada_id, jogador_id) VALUES (?, ?)",
                 [$id, $jogador['id']]
@@ -1219,7 +1267,7 @@ class RodadaController
         $input = $this->json();
         $jogadores = $input['jogadores'] ?? [];
 
-        if (empty($jogadores)) throw new HttpError('jogadores[] é obrigatório.', 400);
+        if (empty($jogadores)) throw new HttpError('jogadores[] Ã© obrigatÃ³rio.', 400);
 
         foreach ($jogadores as $j) {
             if (empty($j['id'])) continue;
@@ -1275,7 +1323,7 @@ class RodadaController
         $input = $this->json();
         $times = $input['times'] ?? [];
 
-        if (empty($times)) throw new HttpError('times[] é obrigatório.', 400);
+        if (empty($times)) throw new HttpError('times[] Ã© obrigatÃ³rio.', 400);
 
         // Limpa times anteriores
         $this->db->execute("DELETE FROM rodada_times WHERE rodada_id = ?", [$id]);
@@ -1310,7 +1358,7 @@ class RodadaController
         $campId = (int)($rodada['campeonato_id'] ?? 0);
 
         if ($campId) {
-            // Rodada de campeonato → campeonato_partidas
+            // Rodada de campeonato â†’ campeonato_partidas
             $this->db->execute(
                 "INSERT INTO campeonato_partidas
                     (campeonato_id, rodada_id, fase, timeA_id, timeB_id, status)
@@ -1318,7 +1366,7 @@ class RodadaController
                 [$campId, $id]
             );
         } else {
-            // Rodada de liga → tabela legada
+            // Rodada de liga â†’ tabela legada
             $this->db->execute(
                 "INSERT INTO partidas (rodada_id, status) VALUES (?, 'em_andamento')",
                 [$id]
@@ -1339,7 +1387,7 @@ class RodadaController
     public function finalizarPartida(int $id): void
     {
         $partida = $this->db->fetchOne("SELECT * FROM campeonato_partidas WHERE id = ?", [$id]);
-        if (!$partida) throw new HttpError('Partida não encontrada.', 404);
+        if (!$partida) throw new HttpError('Partida nÃ£o encontrada.', 404);
 
         $input   = $this->json();
         $placarA = (int)($input['placar_timeA'] ?? $input['placar_time1'] ?? 0);
@@ -1360,13 +1408,13 @@ class RodadaController
             WHERE id = ?
         ", [$placarA, $placarB, $penA, $penB, $timeAId, $timeBId, $id]);
 
-        // Salva estatísticas individuais
+        // Salva estatÃ­sticas individuais
         $this->db->execute("DELETE FROM campeonato_estatisticas_partida WHERE partida_id = ?", [$id]);
 
         $jogTime1 = $input['jogadores_time1'] ?? $input['timeA_jogadores'] ?? [];
         $jogTime2 = $input['jogadores_time2'] ?? $input['timeB_jogadores'] ?? [];
 
-        // Calcula clean_sheet: time não sofreu gol
+        // Calcula clean_sheet: time nÃ£o sofreu gol
         $csTimeA = ($placarB == 0) ? 1 : 0;
         $csTimeB = ($placarA == 0) ? 1 : 0;
 
@@ -1374,12 +1422,15 @@ class RodadaController
             foreach ($grupo as $j) {
                 $jogId = (int)($j['jogador_id'] ?? $j['id'] ?? 0);
                 if (!$jogId) continue;
+                $ca = (int)($j['cartoes_amarelos'] ?? 0);
+                $caz = (int)($j['cartoes_azuis'] ?? 0);
+                $cv = (int)($j['cartoes_vermelhos'] ?? 0);
                 $this->db->execute("
                     INSERT INTO campeonato_estatisticas_partida
-                        (partida_id, jogador_id, time_id, gols, assistencias, clean_sheet, gols_contra)
-                    VALUES (?, ?, ?, ?, ?, ?, 0)
-                    ON DUPLICATE KEY UPDATE gols = VALUES(gols), assistencias = VALUES(assistencias), clean_sheet = VALUES(clean_sheet), gols_contra = VALUES(gols_contra)
-                ", [$id, $jogId, $timeId, (int)($j['gols'] ?? 0), (int)($j['assistencias'] ?? 0), $cs]);
+                        (partida_id, jogador_id, time_id, gols, assistencias, clean_sheet, gols_contra, cartoes_amarelos, cartoes_azuis, cartoes_vermelhos)
+                    VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
+                    ON DUPLICATE KEY UPDATE gols = VALUES(gols), assistencias = VALUES(assistencias), clean_sheet = VALUES(clean_sheet), gols_contra = VALUES(gols_contra), cartoes_amarelos = VALUES(cartoes_amarelos), cartoes_azuis = VALUES(cartoes_azuis), cartoes_vermelhos = VALUES(cartoes_vermelhos)
+                ", [$id, $jogId, $timeId, (int)($j['gols'] ?? 0), (int)($j['assistencias'] ?? 0), $cs, $ca, $caz, $cv]);
             }
         }
 
@@ -1390,13 +1441,13 @@ class RodadaController
             if ($golId) {
                 $this->db->execute("
                     INSERT IGNORE INTO campeonato_estatisticas_partida
-                        (partida_id, jogador_id, time_id, gols, assistencias, clean_sheet, gols_contra)
-                    VALUES (?, ?, ?, 0, 0, ?, 0)
+                        (partida_id, jogador_id, time_id, gols, assistencias, clean_sheet, gols_contra, cartoes_amarelos, cartoes_azuis, cartoes_vermelhos)
+                    VALUES (?, ?, ?, 0, 0, ?, 0, 0, 0, 0)
                 ", [$id, $golId, $tId, $cs]);
             }
         }
 
-        // Avanço automático no mata-mata
+        // AvanÃ§o automÃ¡tico no mata-mata
         if (($partida['fase'] ?? '') === 'mata_mata') {
             $this->avancarVencedorMataMata($partida, $placarA, $placarB, $penA, $penB);
         }
@@ -1406,7 +1457,7 @@ class RodadaController
     }
 
     // =========================================================
-    // GET PARTIDAS DA RODADA (histórico)
+    // GET PARTIDAS DA RODADA (histÃ³rico)
     // GET /campeonatos/rodada/:id/partidas
     // =========================================================
     public function getPartidas(int $rodadaId): void
@@ -1441,39 +1492,21 @@ class RodadaController
     public function salvarPartida(int $rodadaId): void
     {
         $rodada  = $this->getRodadaOr404($rodadaId);
+        
+        // Congelar mercados de apostas desta rodada
+        $this->db->execute("UPDATE bets_mercados SET status = 'pausado' WHERE rodada_id = ? AND status = 'aberto'", [$rodadaId]);
+
         $input   = $this->json();
 
         $campId      = (int)($rodada['campeonato_id'] ?? 0);
         $timeAId     = (int)($input['timeA_id'] ?? 0);
         $timeBId     = (int)($input['timeB_id'] ?? 0);
-        $placarA     = (int)($input['placar_timeA'] ?? 0);
-        $placarB     = (int)($input['placar_timeB'] ?? 0);
-        $duracao     = (int)($input['duracao_segundos'] ?? 0);
-        $goleiroA    = !empty($input['goleiro_timeA_id']) ? (int)$input['goleiro_timeA_id'] : null;
-        $goleiroB    = !empty($input['goleiro_timeB_id']) ? (int)$input['goleiro_timeB_id'] : null;
-        $jogadoresA  = $input['timeA_jogadores'] ?? [];
-        $jogadoresB  = $input['timeB_jogadores'] ?? [];
-
-        if (!$campId) throw new HttpError('Rodada não pertence a um campeonato.', 400);
-        if (!$timeAId || !$timeBId) throw new HttpError('timeA_id e timeB_id são obrigatórios.', 400);
-
-        // Insere na tabela correta: campeonato_partidas
-        $this->db->execute("
-            INSERT INTO campeonato_partidas
-                (campeonato_id, rodada_id, fase,
-                 timeA_id, timeB_id,
-                 placar_timeA, placar_timeB,
-                 duracao_segundos,
-                 goleiro_timeA_id, goleiro_timeB_id,
-                 fim_em, status)
-            VALUES (?, ?, 'futlendao', ?, ?, ?, ?, ?, ?, ?, NOW(), 'finalizada')
-        ", [$campId, $rodadaId, $timeAId, $timeBId, $placarA, $placarB, $duracao, $goleiroA, $goleiroB]);
-
-        $partidaId = (int)$this->db->lastInsertId();
-
-        // Conta gols e assistências por jogador a partir dos eventos
+        // Conta gols, assistências e cartões por jogador a partir dos eventos
         $golsPorJogador = [];
         $assistPorJogador = [];
+        $amarelosPorJogador = [];
+        $azuisPorJogador = [];
+        $vermelhosPorJogador = [];
         foreach ($input['eventos'] ?? [] as $e) {
             $jogId = (int)($e['jogador_id'] ?? 0);
             if (!$jogId) continue;
@@ -1489,15 +1522,68 @@ class RodadaController
                 $aId = (int)$e['assist_por_jogador_id'];
                 $assistPorJogador[$aId] = ($assistPorJogador[$aId] ?? 0) + 1;
             }
+            if ($tipo === 'cartao_amarelo') {
+                $amarelosPorJogador[$jogId] = ($amarelosPorJogador[$jogId] ?? 0) + 1;
+            }
+            if ($tipo === 'cartao_azul') {
+                $azuisPorJogador[$jogId] = ($azuisPorJogador[$jogId] ?? 0) + 1;
+            }
+            if ($tipo === 'cartao_vermelho') {
+                $vermelhosPorJogador[$jogId] = ($vermelhosPorJogador[$jogId] ?? 0) + 1;
+            }
+        }
+        $placarA     = (int)($input['placar_timeA'] ?? 0);
+        $placarB     = (int)($input['placar_timeB'] ?? 0);
+        $duracao     = (int)($input['duracao_segundos'] ?? 0);
+        $goleiroA    = !empty($input['goleiro_timeA_id']) ? (int)$input['goleiro_timeA_id'] : null;
+        $goleiroB    = !empty($input['goleiro_timeB_id']) ? (int)$input['goleiro_timeB_id'] : null;
+        $jogadoresA  = $input['timeA_jogadores'] ?? [];
+        $jogadoresB  = $input['timeB_jogadores'] ?? [];
+
+        if (!$campId) throw new HttpError('Rodada nÃ£o pertence a um campeonato.', 400);
+        if (!$timeAId || !$timeBId) throw new HttpError('timeA_id e timeB_id sÃ£o obrigatÃ³rios.', 400);
+
+        // Insere na tabela correta: campeonato_partidas
+        $this->db->execute("
+            INSERT INTO campeonato_partidas
+                (campeonato_id, rodada_id, fase,
+                 timeA_id, timeB_id,
+                 placar_timeA, placar_timeB,
+                 duracao_segundos,
+                 goleiro_timeA_id, goleiro_timeB_id,
+                 fim_em, status)
+            VALUES (?, ?, 'futlendao', ?, ?, ?, ?, ?, ?, ?, NOW(), 'finalizada')
+        ", [$campId, $rodadaId, $timeAId, $timeBId, $placarA, $placarB, $duracao, $goleiroA, $goleiroB]);
+
+        $partidaId = (int)$this->db->lastInsertId();
+
+        // Conta gols e assistÃªncias por jogador a partir dos eventos
+        $golsPorJogador = [];
+        $assistPorJogador = [];
+        foreach ($input['eventos'] ?? [] as $e) {
+            $jogId = (int)($e['jogador_id'] ?? 0);
+            if (!$jogId) continue;
+            $tipo = $e['tipo'] ?? '';
+            if ($tipo === 'gol' || $tipo === 'gol_contra') {
+                $golsPorJogador[$jogId] = ($golsPorJogador[$jogId] ?? 0) + 1;
+            }
+            // AssistÃªncia pode vir como evento separado ou como campo no evento de gol
+            if ($tipo === 'assistencia') {
+                $assistPorJogador[$jogId] = ($assistPorJogador[$jogId] ?? 0) + 1;
+            }
+            if (!empty($e['assist_por_jogador_id'])) {
+                $aId = (int)$e['assist_por_jogador_id'];
+                $assistPorJogador[$aId] = ($assistPorJogador[$aId] ?? 0) + 1;
+            }
         }
 
-        // Salva estatísticas em campeonato_estatisticas_partida
+        // Salva estatÃ­sticas em campeonato_estatisticas_partida
         $this->db->execute(
             "DELETE FROM campeonato_estatisticas_partida WHERE partida_id = ?",
             [$partidaId]
         );
 
-        // Calcula clean_sheet: time não sofreu gol
+        // Calcula clean_sheet: time nÃ£o sofreu gol
         $csTimeA = ($placarB == 0) ? 1 : 0;
         $csTimeB = ($placarA == 0) ? 1 : 0;
 
@@ -1517,23 +1603,26 @@ class RodadaController
                 // Prioriza contagem dos eventos, fallback para dados do jogador
                 $gols   = $golsPorJogador[$jogId] ?? (int)($j['gols'] ?? 0);
                 $assist = $assistPorJogador[$jogId] ?? (int)($j['assistencias'] ?? 0);
+                $ca = $amarelosPorJogador[$jogId] ?? (int)($j['cartoes_amarelos'] ?? 0);
+                $caz = $azuisPorJogador[$jogId] ?? (int)($j['cartoes_azuis'] ?? 0);
+                $cv = $vermelhosPorJogador[$jogId] ?? (int)($j['cartoes_vermelhos'] ?? 0);
                 $gc = $golsContraMap[$jogId] ?? 0;
                 $this->db->execute("
                     INSERT INTO campeonato_estatisticas_partida
-                        (partida_id, jogador_id, time_id, gols, assistencias, clean_sheet, gols_contra)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                    ON DUPLICATE KEY UPDATE gols = VALUES(gols), assistencias = VALUES(assistencias), clean_sheet = VALUES(clean_sheet), gols_contra = VALUES(gols_contra)
-                ", [$partidaId, $jogId, $timeId, $gols, $assist, $cs, $gc]);
+                        (partida_id, jogador_id, time_id, gols, assistencias, clean_sheet, gols_contra, cartoes_amarelos, cartoes_azuis, cartoes_vermelhos)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON DUPLICATE KEY UPDATE gols = VALUES(gols), assistencias = VALUES(assistencias), clean_sheet = VALUES(clean_sheet), gols_contra = VALUES(gols_contra), cartoes_amarelos = VALUES(cartoes_amarelos), cartoes_azuis = VALUES(cartoes_azuis), cartoes_vermelhos = VALUES(cartoes_vermelhos)
+                ", [$partidaId, $jogId, $timeId, $gols, $assist, $cs, $gc, $ca, $caz, $cv]);
             }
         }
 
-        // Garante que goleiros tenham registro em stats (podem não estar no array de jogadores)
+        // Garante que goleiros tenham registro em stats (podem nÃ£o estar no array de jogadores)
         foreach ([[$goleiroA, $timeAId, $csTimeA], [$goleiroB, $timeBId, $csTimeB]] as [$golId, $timeId, $cs]) {
             if ($golId) {
                 $this->db->execute("
                     INSERT IGNORE INTO campeonato_estatisticas_partida
-                        (partida_id, jogador_id, time_id, gols, assistencias, clean_sheet, gols_contra)
-                    VALUES (?, ?, ?, 0, 0, ?, 0)
+                        (partida_id, jogador_id, time_id, gols, assistencias, clean_sheet, gols_contra, cartoes_amarelos, cartoes_azuis, cartoes_vermelhos)
+                    VALUES (?, ?, ?, 0, 0, ?, 0, 0, 0, 0)
                 ", [$partidaId, $golId, $timeId, $cs]);
             }
         }
@@ -1564,7 +1653,7 @@ class RodadaController
     }
 
     // =========================================================
-    // DETALHES DA PARTIDA (para edição de súmula)
+    // DETALHES DA PARTIDA (para ediÃ§Ã£o de sÃºmula)
     // GET /partidas/:id/detalhes
     // =========================================================
     public function detalhesPartida(int $id): void
@@ -1578,9 +1667,9 @@ class RodadaController
             LEFT JOIN times t2 ON t2.id = p.timeB_id
             WHERE p.id = ?
         ", [$id]);
-        if (!$partida) throw new HttpError('Partida não encontrada.', 404);
+        if (!$partida) throw new HttpError('Partida nÃ£o encontrada.', 404);
 
-        // Busca elenco via estatísticas da partida
+        // Busca elenco via estatÃ­sticas da partida
         $elenco = $this->db->fetchAll("
             SELECT j.id AS jogador_id, j.nome, j.posicao,
                    ep.time_id,
@@ -1590,7 +1679,7 @@ class RodadaController
             WHERE ep.partida_id = ?
         ", [$partida['timeA_id'], $id]);
 
-        // Se elenco vazio via estatísticas, busca via campeonato_rodada_elencos
+        // Se elenco vazio via estatÃ­sticas, busca via campeonato_rodada_elencos
         if (empty($elenco)) {
             $rodadaId = (int)$partida['rodada_id'];
             $elenco = $this->db->fetchAll("
@@ -1602,6 +1691,56 @@ class RodadaController
                 WHERE cre.rodada_id = ? AND cre.time_id IN (?, ?)
             ", [$partida['timeA_id'], $rodadaId, $partida['timeA_id'], $partida['timeB_id']]);
         }
+
+        $rodadaId = (int)$partida['rodada_id'];
+        $cartoesAcumulados = $this->db->fetchAll("
+            SELECT ep.jogador_id, 
+                   SUM(COALESCE(ep.cartoes_amarelos, 0)) as total_amarelos,
+                   SUM(COALESCE(ep.cartoes_azuis, 0)) as total_azuis,
+                   SUM(COALESCE(ep.cartoes_vermelhos, 0)) as total_vermelhos
+            FROM campeonato_estatisticas_partida ep
+            JOIN campeonato_partidas p ON p.id = ep.partida_id
+            WHERE p.rodada_id = ? AND p.id != ?
+            GROUP BY ep.jogador_id
+        ", [$rodadaId, $id]);
+
+        $cartoesMap = [];
+        foreach ($cartoesAcumulados as $c) {
+            $cartoesMap[(int)$c['jogador_id']] = $c;
+        }
+
+        foreach ($elenco as &$j) {
+            $jid = (int)$j['jogador_id'];
+            $j['cartoes_amarelos_rodada']  = (int)($cartoesMap[$jid]['total_amarelos'] ?? 0);
+            $j['cartoes_azuis_rodada']     = (int)($cartoesMap[$jid]['total_azuis'] ?? 0);
+            $j['cartoes_vermelhos_rodada'] = (int)($cartoesMap[$jid]['total_vermelhos'] ?? 0);
+        }
+        unset($j);
+
+        $rodadaId = (int)$partida['rodada_id'];
+        $cartoesAcumulados = $this->db->fetchAll("
+            SELECT ep.jogador_id, 
+                   SUM(COALESCE(ep.cartoes_amarelos, 0)) as total_amarelos,
+                   SUM(COALESCE(ep.cartoes_azuis, 0)) as total_azuis,
+                   SUM(COALESCE(ep.cartoes_vermelhos, 0)) as total_vermelhos
+            FROM campeonato_estatisticas_partida ep
+            JOIN campeonato_partidas p ON p.id = ep.partida_id
+            WHERE p.rodada_id = ? AND p.id != ?
+            GROUP BY ep.jogador_id
+        ", [$rodadaId, $id]);
+
+        $cartoesMap = [];
+        foreach ($cartoesAcumulados as $c) {
+            $cartoesMap[(int)$c['jogador_id']] = $c;
+        }
+
+        foreach ($elenco as &$j) {
+            $jid = (int)$j['jogador_id'];
+            $j['cartoes_amarelos_rodada']  = (int)($cartoesMap[$jid]['total_amarelos'] ?? 0);
+            $j['cartoes_azuis_rodada']     = (int)($cartoesMap[$jid]['total_azuis'] ?? 0);
+            $j['cartoes_vermelhos_rodada'] = (int)($cartoesMap[$jid]['total_vermelhos'] ?? 0);
+        }
+        unset($j);
 
         // Separa em timeA e timeB para o frontend
         $timeA = array_values(array_filter($elenco, fn($j) => $j['lado'] === 'timeA'));
@@ -1620,7 +1759,7 @@ class RodadaController
             ORDER BY ev.minuto ASC
         ", [$id]);
 
-        // Monta mapa jogador→time a partir do elenco para corrigir time_id=0
+        // Monta mapa jogadorâ†’time a partir do elenco para corrigir time_id=0
         $jogadorTimeMap = [];
         foreach ($elenco as $j) {
             $jogadorTimeMap[(int)$j['jogador_id']] = (int)$j['time_id'];
@@ -1650,7 +1789,7 @@ class RodadaController
     public function editarPartida(int $id): void
     {
         $partida = $this->db->fetchOne("SELECT * FROM campeonato_partidas WHERE id = ?", [$id]);
-        if (!$partida) throw new HttpError('Partida não encontrada.', 404);
+        if (!$partida) throw new HttpError('Partida nÃ£o encontrada.', 404);
 
         $input   = $this->json();
         $placarA = (int)($input['placar_timeA'] ?? $partida['placar_timeA']);
@@ -1674,7 +1813,7 @@ class RodadaController
                 $timeId = (int)($e['time_id'] ?? 0);
                 if (!$jogId) continue;
 
-                // Resolve time_id=0 → usa timeA como fallback
+                // Resolve time_id=0 â†’ usa timeA como fallback
                 if ($timeId === 0) {
                     $timeId = $timeAId;
                 }
@@ -1692,14 +1831,24 @@ class RodadaController
                 if (!isset($stats[$key])) $stats[$key] = ['jogador_id' => $jogId, 'time_id' => $timeId, 'gols' => 0, 'assistencias' => 0];
                 if (in_array($e['tipo'] ?? 'gol', ['gol', 'gol_contra'])) $stats[$key]['gols']++;
 
+                if (($e['tipo'] ?? '') === 'cartao_amarelo') {
+                    $stats[$key]['cartoes_amarelos'] = ($stats[$key]['cartoes_amarelos'] ?? 0) + 1;
+                }
+                if (($e['tipo'] ?? '') === 'cartao_vermelho') {
+                    $stats[$key]['cartoes_vermelhos'] = ($stats[$key]['cartoes_vermelhos'] ?? 0) + 1;
+                }
+                if (($e['tipo'] ?? '') === 'cartao_azul') {
+                    $stats[$key]['cartoes_azuis'] = ($stats[$key]['cartoes_azuis'] ?? 0) + 1;
+                }
+
                 if ($assistId) {
                     $aKey = "{$assistId}_{$timeId}";
-                    if (!isset($stats[$aKey])) $stats[$aKey] = ['jogador_id' => $assistId, 'time_id' => $timeId, 'gols' => 0, 'assistencias' => 0];
+                    if (!isset($stats[$aKey])) $stats[$aKey] = ['jogador_id' => $assistId, 'time_id' => $timeId, 'gols' => 0, 'assistencias' => 0, 'cartoes_amarelos' => 0, 'cartoes_vermelhos' => 0, 'cartoes_azuis' => 0];
                     $stats[$aKey]['assistencias']++;
                 }
             }
 
-            // Re-insere estatísticas dos jogadores dos elencos (para não perder quem não fez gol)
+            // Re-insere estatÃ­sticas dos jogadores dos elencos (para nÃ£o perder quem nÃ£o fez gol)
             $rodadaId = (int)$partida['rodada_id'];
             $elencoJogadores = $this->db->fetchAll("
                 SELECT jogador_id, time_id FROM campeonato_rodada_elencos
@@ -1715,18 +1864,21 @@ class RodadaController
                 }
             }
 
-            // Calcula clean_sheet: time não sofreu gol
+            // Calcula clean_sheet: time nÃ£o sofreu gol
             $csTimeA = ($placarB == 0) ? 1 : 0;
             $csTimeB = ($placarA == 0) ? 1 : 0;
 
             foreach ($stats as $s) {
                 $cs = ($s['time_id'] === $timeAId) ? $csTimeA : $csTimeB;
+                $ca = (int)($s['cartoes_amarelos'] ?? 0);
+                $caz = (int)($s['cartoes_azuis'] ?? 0);
+                $cv = (int)($s['cartoes_vermelhos'] ?? 0);
                 $this->db->execute("
                     INSERT INTO campeonato_estatisticas_partida
-                        (partida_id, jogador_id, time_id, gols, assistencias, clean_sheet)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                    ON DUPLICATE KEY UPDATE gols = VALUES(gols), assistencias = VALUES(assistencias), clean_sheet = VALUES(clean_sheet)
-                ", [$id, $s['jogador_id'], $s['time_id'], $s['gols'], $s['assistencias'], $cs]);
+                        (partida_id, jogador_id, time_id, gols, assistencias, clean_sheet, cartoes_amarelos, cartoes_azuis, cartoes_vermelhos)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON DUPLICATE KEY UPDATE gols = VALUES(gols), assistencias = VALUES(assistencias), clean_sheet = VALUES(clean_sheet), cartoes_amarelos = VALUES(cartoes_amarelos), cartoes_azuis = VALUES(cartoes_azuis), cartoes_vermelhos = VALUES(cartoes_vermelhos)
+                ", [$id, $s['jogador_id'], $s['time_id'], $s['gols'], $s['assistencias'], $cs, $ca, $caz, $cv]);
             }
         }
 
@@ -1737,14 +1889,14 @@ class RodadaController
     public function deletarPartida(int $id): void
     {
         $partida = $this->db->fetchOne("SELECT id FROM campeonato_partidas WHERE id = ?", [$id]);
-        if (!$partida) throw new HttpError('Partida não encontrada.', 404);
+        if (!$partida) throw new HttpError('Partida nÃ£o encontrada.', 404);
 
         $this->db->execute("DELETE FROM campeonato_eventos_partida WHERE partida_id = ?", [$id]);
         $this->db->execute("DELETE FROM campeonato_estatisticas_partida WHERE partida_id = ?", [$id]);
         $this->db->execute("DELETE FROM campeonato_partidas WHERE id = ?", [$id]);
 
         http_response_code(200);
-        echo json_encode(['success' => true, 'message' => 'Partida excluída.']);
+        echo json_encode(['success' => true, 'message' => 'Partida excluÃ­da.']);
     }
 
     public function partidasGlobais(): void
@@ -1776,7 +1928,7 @@ class RodadaController
     }
 
     // =========================================================
-    // SUBSTITUIÇÃO NA RODADA
+    // SUBSTITUIÃ‡ÃƒO NA RODADA
     // POST /rodadas/:id/substituicao
     // body: { time_id, jogador_sai_id, jogador_entra_id }
     // =========================================================
@@ -1790,10 +1942,10 @@ class RodadaController
         $timeId         = (int)($input['time_id']          ?? 0);
 
         if (!$jogadorSaiId || !$jogadorEntraId) {
-            throw new HttpError('jogador_sai_id e jogador_entra_id são obrigatórios.', 400);
+            throw new HttpError('jogador_sai_id e jogador_entra_id sÃ£o obrigatÃ³rios.', 400);
         }
 
-        // Rodada de campeonato → altera campeonato_rodada_elencos
+        // Rodada de campeonato â†’ altera campeonato_rodada_elencos
         if (!empty($rodada['campeonato_id'])) {
             $updated = $this->db->execute("
                 UPDATE campeonato_rodada_elencos
@@ -1802,7 +1954,7 @@ class RodadaController
             ", [$jogadorEntraId, $jogadorSaiId, $id, $timeId, $jogadorSaiId]);
 
             if ($updated === 0) {
-                throw new HttpError('Jogador não encontrado nessa rodada/time.', 404);
+                throw new HttpError('Jogador nÃ£o encontrado nessa rodada/time.', 404);
             }
 
             http_response_code(200);
@@ -1810,7 +1962,7 @@ class RodadaController
             return;
         }
 
-        // Rodada de liga → altera rodada_times (fluxo antigo)
+        // Rodada de liga â†’ altera rodada_times (fluxo antigo)
         $this->db->execute("
             UPDATE rodada_times
             SET jogador_id = ?
@@ -1825,12 +1977,12 @@ class RodadaController
     // ELENCO DA RODADA (usado pelo useElencoRodada)
     // GET /rodadas/:id/elenco
     //
-    // Lógica:
+    // LÃ³gica:
     // 1. Busca a rodada para saber o campeonato_id
     // 2. Se for rodada de campeonato:
-    //    a. Se campeonato_rodada_elencos ainda está vazio para essa rodada,
+    //    a. Se campeonato_rodada_elencos ainda estÃ¡ vazio para essa rodada,
     //       copia automaticamente do campeonato_elencos (elenco base)
-    //    b. Retorna campeonato_rodada_elencos (já com substituições aplicadas)
+    //    b. Retorna campeonato_rodada_elencos (jÃ¡ com substituiÃ§Ãµes aplicadas)
     // 3. Se for rodada de liga: retorna rodada_times (fluxo antigo)
     // =========================================================
     public function elenco(int $id): void
@@ -1841,7 +1993,7 @@ class RodadaController
         if (!empty($rodada['campeonato_id'])) {
             $campId = (int)$rodada['campeonato_id'];
 
-            // Verifica se já existe elenco para essa rodada
+            // Verifica se jÃ¡ existe elenco para essa rodada
             $count = $this->db->fetchOne(
                 "SELECT COUNT(*) AS c FROM campeonato_rodada_elencos WHERE rodada_id = ?",
                 [$id]
@@ -1901,6 +2053,7 @@ class RodadaController
             ", [$campId, $id]);
 
             http_response_code(200);
+            $this->addCartoesRodada($elenco, $id);
             echo json_encode($elenco, JSON_UNESCAPED_UNICODE);
             return;
         }
@@ -1926,16 +2079,44 @@ class RodadaController
         ", [$id]);
 
         http_response_code(200);
+        $this->addCartoesRodada($elenco, $id);
         echo json_encode($elenco, JSON_UNESCAPED_UNICODE);
     }
 
     // =========================================================
     // HELPERS
     // =========================================================
+
+    private function addCartoesRodada(array &$elenco, int $rodadaId): void
+    {
+        $cartoesAcumulados = $this->db->fetchAll("
+            SELECT ep.jogador_id, 
+                   SUM(COALESCE(ep.cartoes_amarelos, 0)) as total_amarelos,
+                   SUM(COALESCE(ep.cartoes_azuis, 0)) as total_azuis,
+                   SUM(COALESCE(ep.cartoes_vermelhos, 0)) as total_vermelhos
+            FROM campeonato_estatisticas_partida ep
+            JOIN campeonato_partidas p ON p.id = ep.partida_id
+            WHERE p.rodada_id = ?
+            GROUP BY ep.jogador_id
+        ", [$rodadaId]);
+
+        $cartoesMap = [];
+        foreach ($cartoesAcumulados as $c) {
+            $cartoesMap[(int)$c['jogador_id']] = $c;
+        }
+
+        foreach ($elenco as &$j) {
+            $jid = (int)$j['jogador_id'];
+            $j['cartoes_amarelos_rodada']  = (int)($cartoesMap[$jid]['total_amarelos'] ?? 0);
+            $j['cartoes_azuis_rodada']     = (int)($cartoesMap[$jid]['total_azuis'] ?? 0);
+            $j['cartoes_vermelhos_rodada'] = (int)($cartoesMap[$jid]['total_vermelhos'] ?? 0);
+        }
+    }
+
     private function getRodadaOr404(int $id): array
     {
         $rodada = $this->db->fetchOne("SELECT * FROM rodadas WHERE id = ?", [$id]);
-        if (!$rodada) throw new HttpError('Rodada não encontrada.', 404);
+        if (!$rodada) throw new HttpError('Rodada nÃ£o encontrada.', 404);
         return $rodada;
     }
 
@@ -1951,7 +2132,7 @@ class RodadaController
     }
 
     // =========================================================
-    // AVANÇO AUTOMÁTICO DO VENCEDOR NO MATA-MATA
+    // AVANÃ‡O AUTOMÃTICO DO VENCEDOR NO MATA-MATA
     // =========================================================
 
     private function avancarVencedorMataMata(array $partida, int $placarA, int $placarB, ?int $penA, ?int $penB): void
@@ -1977,11 +2158,11 @@ class RodadaController
             $vencedorId = $timeBId;
             $perdedorId = $timeAId;
         } else {
-            // Empate sem penaltis — não é possível avançar
+            // Empate sem penaltis â€” nÃ£o Ã© possÃ­vel avanÃ§ar
             return;
         }
 
-        // Configurações do campeonato
+        // ConfiguraÃ§Ãµes do campeonato
         $camp = $this->db->fetchOne(
             "SELECT tem_repescagem, tem_terceiro_lugar FROM campeonatos WHERE id = ?",
             [$campeonatoId]
@@ -1989,25 +2170,25 @@ class RodadaController
         $temRepescagem    = (bool)($camp['tem_repescagem'] ?? false);
         $temTerceiroLugar = (bool)($camp['tem_terceiro_lugar'] ?? false);
 
-        // ── Double Elimination (Repescagem) ──
+        // â”€â”€ Double Elimination (Repescagem) â”€â”€
         if ($temRepescagem) {
             if ($faseMata === 'semifinal' && $bracket === 'upper') {
-                // Vencedor → grand_final timeA
+                // Vencedor â†’ grand_final timeA
                 $this->colocarTimeNoSlot($campeonatoId, 'grand_final', 'upper', $vencedorId, 'timeA_id');
-                // Perdedor → lower_r2 timeB (enfrenta vencedor do lower_r1)
+                // Perdedor â†’ lower_r2 timeB (enfrenta vencedor do lower_r1)
                 $this->colocarTimeNoSlot($campeonatoId, 'lower_r2', 'lower', $perdedorId, 'timeB_id');
             } elseif ($faseMata === 'lower_r1' && $bracket === 'lower') {
-                // Vencedor → lower_r2 timeA
+                // Vencedor â†’ lower_r2 timeA
                 $this->colocarTimeNoSlot($campeonatoId, 'lower_r2', 'lower', $vencedorId, 'timeA_id');
             } elseif ($faseMata === 'lower_r2' && $bracket === 'lower') {
-                // Vencedor → grand_final timeB
+                // Vencedor â†’ grand_final timeB
                 $this->colocarTimeNoSlot($campeonatoId, 'grand_final', 'upper', $vencedorId, 'timeB_id');
             }
-            // grand_final: sem avanço
+            // grand_final: sem avanÃ§o
             return;
         }
 
-        // ── Single Elimination ──
+        // â”€â”€ Single Elimination â”€â”€
 
         if ($faseMata === 'quartas') {
             // Buscar todas as semifinais ordenadas
@@ -2018,7 +2199,7 @@ class RodadaController
                 [$campeonatoId]
             );
 
-            // quartas 1,2 → primeira semi; quartas 3,4 → segunda semi
+            // quartas 1,2 â†’ primeira semi; quartas 3,4 â†’ segunda semi
             $semiIdx = ($ordem <= 2) ? 0 : 1;
             $slot    = ($ordem % 2 === 1) ? 'timeA_id' : 'timeB_id';
 
@@ -2030,7 +2211,7 @@ class RodadaController
             }
 
         } elseif ($faseMata === 'semifinal') {
-            // Vencedor → final
+            // Vencedor â†’ final
             $final = $this->db->fetchOne(
                 "SELECT id, timeA_id, timeB_id FROM campeonato_partidas
                  WHERE campeonato_id = ? AND fase = 'mata_mata' AND fase_mata_mata = 'final'
@@ -2063,7 +2244,7 @@ class RodadaController
                 }
             }
         }
-        // final / terceiro_lugar: sem avanço necessário
+        // final / terceiro_lugar: sem avanÃ§o necessÃ¡rio
     }
 
     /**

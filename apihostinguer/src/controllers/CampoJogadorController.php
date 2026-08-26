@@ -139,8 +139,8 @@ class CampoJogadorController
         if (!isset($extByType[$type])) {
             throw new HttpError('Tipo não permitido. Use JPEG, PNG ou WEBP.', 400);
         }
-        if ($file['size'] > 5 * 1024 * 1024) {
-            throw new HttpError('Máximo 5MB.', 400);
+        if ($file['size'] > 15 * 1024 * 1024) {
+            throw new HttpError('Máximo 15MB.', 400);
         }
 
         // Pasta de uploads na raiz do site (fora do rewrite da /api), servida estaticamente

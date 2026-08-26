@@ -2,6 +2,7 @@
 import { lazy } from "react";
 import { Routes, Route } from "react-router-dom";
 import { LoginPage } from "@/features/auth/routes/LoginPage";
+import { BetsPage } from '@/features/bets/pages/BetsPage';
 import { ProtectedRoute } from "./ProtectedRoute";
 import { AppLayout } from "@/components/shared/AppLayout";
 import { AtivarContaPage } from "@/features/auth/routes/AtivarContaPage";
@@ -38,6 +39,7 @@ const AlbumPage = lazy(() => import("@/features/album/routes/AlbumPage").then(m 
 const AlbumAdminPage = lazy(() => import("@/features/album/routes/AlbumAdminPage").then(m => ({ default: m.AlbumAdminPage })));
 const MuralPage = lazy(() => import("@/features/album/routes/MuralPage").then(m => ({ default: m.MuralPage })));
 const FinanceiroPage = lazy(() => import("@/features/financeiro/routes/FinanceiroPage").then(m => ({ default: m.FinanceiroPage })));
+const BetsAdminPage = lazy(() => import("@/features/bets/pages/BetsAdminPage").then(m => ({ default: m.BetsAdminPage })));
 
 export const AppRoutes = () => {
   return (
@@ -81,6 +83,9 @@ export const AppRoutes = () => {
           {/* Álbum de Figurinhas */}
           <Route path="/album" element={<AlbumPage />} />
           <Route path="/album/mural" element={<MuralPage />} />
+
+          {/* Lendas Bets */}
+          <Route path="/bets" element={<BetsPage />} />
         </Route>
       </Route>
 
@@ -110,6 +115,9 @@ export const AppRoutes = () => {
           
           {/* Financeiro — Mercado Pago */}
           <Route path="/financeiro" element={<FinanceiroPage />} />
+          
+          {/* Lendas Bets — Administração e Estatísticas */}
+          <Route path="/bets/admin" element={<BetsAdminPage />} />
         </Route>
       </Route>
 

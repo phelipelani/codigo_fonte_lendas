@@ -24,7 +24,10 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       useAuthStore.getState().logout();
-      window.location.replace('/login');
+      // Não redireciona se já estiver tentando logar
+      if (!window.location.pathname.includes('/login') && !error.config?.url?.includes('/auth/login')) {
+         window.location.replace('/login');
+      }
     }
     return Promise.reject(error);
   },

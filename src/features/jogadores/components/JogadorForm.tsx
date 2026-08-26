@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/Input"
 import { Checkbox } from "@/components/ui/Checkbox"
 import { Jogador } from "@/@types"
 import { JogadorPhotoUpload } from "./JogadorPhotoUpload_S3"
+import { useUsuariosAlbum } from "@/features/album/api/albumApi"
 
 // Schema de Validação
 export const JogadorFormSchema = z.object({
@@ -42,6 +43,7 @@ export const JogadorFormSchema = z.object({
     .max(10, { message: "Nível deve ser no máximo 10." }),
   joga_recuado: z.boolean().default(false),
   foto_url: z.string().optional(),
+  usuario_id: z.coerce.number().optional().nullable(),
 })
 
 // Tipos de Props do Componente
@@ -68,11 +70,14 @@ export function JogadorForm({
       nivel: defaultValues?.nivel || 0,
       joga_recuado: !!defaultValues?.joga_recuado,
       foto_url: defaultValues?.foto_url || "",
+      usuario_id: defaultValues?.usuario_id || null,
     },
   })
 
   // Watch do nome para usar no upload
   const playerName = form.watch('nome') || 'Jogador';
+  const { data: dataUsuarios } = useUsuariosAlbum();
+  const usuarios = dataUsuarios?.usuarios || [];
 
   return (
     <Form {...form}>
@@ -191,29 +196,65 @@ export function JogadorForm({
             {/* Divisor */}
             <div className="divider" />
 
-            {/* Campo Joga Recuado (Checkbox) */}
-            <FormField
-              control={form.control}
-              name="joga_recuado"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-lg border border-borderLight bg-surface/50 p-4 transition-colors hover:bg-surface">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel className="cursor-pointer text-base">
-                      🛡️ Defensor (Joga Recuado)
-                    </FormLabel>
-                    <FormDescription>
-                      Marque se este jogador for zagueiro/defensor (para bônus de clean sheet).
+            {/* Grid: Recuado e Conta de Usuario */}
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 items-center">
+              {/* Campo Joga Recuado (Checkbox) */}
+              <FormField
+                control={form.control}
+                name="joga_recuado"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-lg border border-borderLight bg-surface/50 p-4 transition-colors hover:bg-surface h-full">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel className="cursor-pointer text-base">
+                        🛡️ Defensor (Joga Recuado)
+                      </FormLabel>
+                      <FormDescription>
+                        Marque se este jogador for zagueiro/defensor (para bônus de clean sheet).
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+
+              {/* Vínculo de Usuário */}
+              <FormField
+                control={form.control}
+                name="usuario_id"
+                render={({ field }) => (
+                  <FormItem className="h-full rounded-lg border border-borderLight bg-surface/50 p-4 transition-colors hover:bg-surface">
+                    <FormLabel>Vincular Conta de Usuário (App)</FormLabel>
+                    <Select
+                      onValueChange={(val) => field.onChange(val === "0" ? null : Number(val))}
+                      value={field.value ? String(field.value) : "0"}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um usuário" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="0">Sem conta vinculada</SelectItem>
+                        {usuarios.map((u) => (
+                          <SelectItem key={u.id} value={String(u.id)}>
+                            {u.username}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription className="text-xs">
+                      Atrele uma conta do app para o jogador ver seu perfil.
                     </FormDescription>
-                  </div>
-                </FormItem>
-              )}
-            />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
           </div>
         </div>
 

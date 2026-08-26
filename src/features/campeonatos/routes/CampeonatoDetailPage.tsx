@@ -64,7 +64,7 @@ const TabelaClassificacao = memo(({ campeonatoId, showFilter = true }: { campeon
   });
 
   const rodadasOrdenadas = useMemo(
-    () => rodadas ? [...rodadas].sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime()) : [],
+    () => rodadas ? [...rodadas].sort((a, b) => new Date(a.data.replace(/-/g, '/')).getTime() - new Date(b.data.replace(/-/g, '/')).getTime()) : [],
     [rodadas]
   );
 
@@ -143,7 +143,7 @@ const RodadasList = memo(({ campeonatoId, isFinalizado }: { campeonatoId: number
 
   // useMemo DEVE ficar antes de qualquer return condicional (Rules of Hooks)
   const rodadasOrdenadas = useMemo(
-    () => rodadas ? [...rodadas].sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime()) : [],
+    () => rodadas ? [...rodadas].sort((a, b) => new Date(a.data.replace(/-/g, '/')).getTime() - new Date(b.data.replace(/-/g, '/')).getTime()) : [],
     [rodadas]
   );
 

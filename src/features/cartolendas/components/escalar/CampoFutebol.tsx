@@ -70,8 +70,8 @@ export function CampoFutebol({ escalacao, capitaoId, jogadorObrigatorioId, onRem
 
       {/* Jogadores */}
       <div className="relative z-10 flex flex-col justify-between py-7 gap-5" style={{ minHeight: 440 }}>
-        {/* Formação: 2-2-2 + GOL */}
-        <Row jogs={linha.slice(4, 6)} slots={2} label="ATA" posLabel="ATA" />
+        {/* Linhas de linha */}
+        <Row jogs={linha.slice(4, 5)} slots={1} label="ATA" posLabel="ATA" />
         <Row jogs={linha.slice(2, 4)} slots={2} label="MEI" posLabel="MEI" />
         <Row jogs={linha.slice(0, 2)} slots={2} label="DEF" posLabel="ZAG" />
         <div className="flex justify-center">

@@ -238,6 +238,11 @@ class JogadorController
             $params[] = $input['foto_url'] ?? $input['fotoUrl'];
         }
 
+        if (array_key_exists('usuario_id', $input) || array_key_exists('usuarioId', $input)) {
+            $fields[] = 'usuario_id = ?';
+            $params[] = $input['usuario_id'] ?? $input['usuarioId'];
+        }
+
         if (empty($fields)) {
             throw new HttpError('Nenhum campo para atualizar.', 400);
         }

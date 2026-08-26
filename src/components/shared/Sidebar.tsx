@@ -45,6 +45,7 @@ const navLinks = [
   { to: '/ligas', icon: <NavIcon src={icLigas} alt="Ligas" />, label: 'Ligas', adminOnly: true },
   { to: '/campeonatos', icon: <NavIcon src={icCampeonatos} alt="Campeonatos" />, label: 'Campeonatos' },
   { to: '/cartolendas', icon: <NavIcon src={icCartolendas} alt="Cartolendas" />, label: 'Cartolendas', highlight: true },
+  { to: '/bets', icon: <Zap size={22} />, label: 'Lendas Bets', highlight: 'green' as const },
   { to: '/partidas', icon: <NavIcon src={icPartidas} alt="Partidas" />, label: 'Partidas' },
   { to: '/hall-da-fama', icon: <NavIcon src={icHallDaFama} alt="Hall da Fama" />, label: 'Hall da Fama' },
   { to: '/times', icon: <NavIcon src={icTimes} alt="Times" />, label: 'Times', adminOnly: true },

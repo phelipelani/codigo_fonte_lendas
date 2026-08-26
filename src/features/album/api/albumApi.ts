@@ -1,4 +1,4 @@
-﻿// Arquivo: src/features/album/api/albumApi.ts
+// Arquivo: src/features/album/api/albumApi.ts
 //
 // Hooks React Query para o Album de Figurinhas.
 
@@ -114,6 +114,22 @@ export const useAbrirPacote = () => {
       qc.invalidateQueries({ queryKey: ['album', 'pacotes'] });
       qc.invalidateQueries({ queryKey: ['album', 'meu'] });
       toast.error(e?.response?.data?.message ?? 'Erro ao abrir pacote');
+    },
+  });
+};
+
+export const useComprarPacote = () => {
+  const qc = useQueryClient();
+  return useMutation<{ message: string; novo_saldo: number }, any, void>({
+    mutationFn: async () => (await api.post('/album/pacotes/comprar')).data,
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['album', 'pacotes'] });
+      qc.invalidateQueries({ queryKey: ['album', 'meu'] });
+      qc.invalidateQueries({ queryKey: ['bets_carteira'] }); // Update Lendacoins
+      toast.success(data?.message ?? 'Pacote comprado com sucesso!');
+    },
+    onError: (e: any) => {
+      toast.error(e?.response?.data?.message ?? 'Erro ao comprar pacote');
     },
   });
 };
@@ -311,7 +327,15 @@ export const useRetirarTroca = () => {
   return useMutation({
     mutationFn: async (id: number) =>
       (await api.delete(`/album/mural/${id}`)).data,
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
+      // Optimistic update: remove a oferta do cache local imediatamente
+      qc.setQueryData<{ ok: boolean; trocas: TrocaMural[] }>(['album', 'mural'], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          trocas: old.trocas.filter((t) => t.id !== variables),
+        };
+      });
       qc.invalidateQueries({ queryKey: ['album', 'mural'] });
       toast.success('Oferta retirada do mural.');
     },
@@ -339,11 +363,18 @@ export const useExecutarTroca = () => {
     }) =>
       (await api.post(`/album/mural/${trocaId}/trocar`, { figurinha_oferecida_id }))
         .data,
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
+      // Optimistic update: remove a troca do mural instantaneamente da tela
+      qc.setQueryData<{ ok: boolean; trocas: TrocaMural[] }>(['album', 'mural'], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          trocas: old.trocas.filter((t) => t.id !== variables.trocaId),
+        };
+      });
+
       // Invalida tudo do album (inventario, mural, album completo)
       qc.invalidateQueries({ queryKey: ['album'] });
-      // ForÃ§a refetch imediato do mural para a figurinha trocada sumir na hora
-      qc.refetchQueries({ queryKey: ['album', 'mural'] });
       toast.success(data?.message ?? 'Troca realizada!');
     },
     onError: (e: any) =>

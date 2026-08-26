@@ -29,6 +29,7 @@ import LastMatchHero from "../components/LastMatchHero";
 import ActiveCampCard from "../components/ActiveCampCard";
 import HeroSpotlightCard from "../components/HeroSpotlightCard";
 import QuickActionButton from "../components/QuickActionButton";
+import VideoLobbyCard from "../components/VideoLobbyCard";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 // =============================================================================
@@ -157,11 +158,11 @@ export function DashboardPage() {
         <div className="lg:col-span-2 flex flex-col gap-4 sm:gap-6">
           <section>
             <SectionHeader
-              icon={Zap}
-              label="Último Resultado"
-              iconClass="text-cyan-400"
+              icon={Play}
+              label="Destaque da Semana"
+              iconClass="text-red-500"
             />
-            <LastMatchHero />
+            <VideoLobbyCard videoId={analytics?.config?.youtube_video_id} />
           </section>
 
           <section>
@@ -248,34 +249,12 @@ export function DashboardPage() {
           )}
 
           <section>
-            <SectionHeader icon={Star} label="Acesso Rápido" />
-            {/* 4 colunas em mobile, 2 no desktop lateral */}
-            <div className="grid grid-cols-4 lg:grid-cols-2 gap-2">
-              <QuickActionButton
-                to="/campeonatos/novo"
-                icon={Trophy}
-                label="Novo Camp"
-                color="amber"
-              />
-              <QuickActionButton
-                to="/jogadores"
-                icon={Users}
-                label="Jogadores"
-                color="emerald"
-              />
-              <QuickActionButton
-                to="/times"
-                icon={Shield}
-                label="Times"
-                color="cyan"
-              />
-              <QuickActionButton
-                to="/analytics"
-                icon={Activity}
-                label="Analytics"
-                color="violet"
-              />
-            </div>
+            <SectionHeader
+              icon={Zap}
+              label="Último Resultado"
+              iconClass="text-cyan-400"
+            />
+            <LastMatchHero />
           </section>
 
           {totais.total_jogos > 0 && (

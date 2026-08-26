@@ -654,41 +654,11 @@ class CartolendaLigaController {
     public function mercado(int $rodadaId): void {
         $campeonatoId = (int)($_GET['campeonato_id'] ?? 0);
 
-        // Busca a última rodada finalizada DO MESMO CAMPEONATO para preços atualizados
-        // Se a rodada pedida já está finalizada e tem preços, usa ela mesma
-        $precoRodadaId = $rodadaId;
-
-        // Verifica se a rodada pedida tem preços
-        $temPrecos = $this->pdo->prepare("
-            SELECT COUNT(*) FROM cartolendas_precos WHERE rodada_id = ?
-        ");
-        $temPrecos->execute([$rodadaId]);
-
-        if ((int)$temPrecos->fetchColumn() === 0) {
-            // Rodada pedida não tem preços — busca última finalizada do campeonato
-            $rodadaInfo = $this->pdo->prepare("SELECT campeonato_id FROM rodadas WHERE id = ?");
-            $rodadaInfo->execute([$rodadaId]);
-            $rodInfo = $rodadaInfo->fetch(PDO::FETCH_ASSOC);
-            $campId = $rodInfo ? (int)$rodInfo['campeonato_id'] : $campeonatoId;
-
-            if ($campId > 0) {
-                $ultimaFinalizada = $this->pdo->prepare("
-                    SELECT id FROM rodadas
-                    WHERE campeonato_id = ? AND status = 'finalizada'
-                    ORDER BY data DESC, id DESC LIMIT 1
-                ");
-                $ultimaFinalizada->execute([$campId]);
-            } else {
-                $ultimaFinalizada = $this->pdo->prepare("
-                    SELECT id FROM rodadas
-                    WHERE status = 'finalizada'
-                    ORDER BY data DESC, id DESC LIMIT 1
-                ");
-                $ultimaFinalizada->execute();
-            }
-            $ufRow = $ultimaFinalizada->fetch(PDO::FETCH_ASSOC);
-            if ($ufRow) $precoRodadaId = (int)$ufRow['id'];
-        }
+        // Busca preço da última rodada finalizada para obter os valores corretos
+        $ufRow = $this->pdo->query("
+            SELECT id FROM rodadas WHERE status = 'finalizada' ORDER BY data DESC, id DESC LIMIT 1
+        ")->fetch(PDO::FETCH_ASSOC);
+        $precoRodadaId = $ufRow ? (int)$ufRow['id'] : $rodadaId;
 
         if ($campeonatoId > 0) {
             // Filtra jogadores inscritos no campeonato + TODOS os goleiros
@@ -702,11 +672,13 @@ class CartolendaLigaController {
                 WHERE j.id IN (
                     SELECT ce.jogador_id FROM campeonato_elencos ce WHERE ce.campeonato_id = ?
                     UNION
+                    SELECT tj.jogador_id FROM time_jogadores tj JOIN campeonato_times ct ON ct.time_id = tj.time_id WHERE ct.campeonato_id = ?
+                    UNION
                     SELECT g.id FROM jogadores g WHERE g.posicao = 'goleiro'
                 )
                 ORDER BY j.nome ASC
             ");
-            $st->execute([$precoRodadaId, $campeonatoId]);
+            $st->execute([$precoRodadaId, $campeonatoId, $campeonatoId]);
         } else {
             // Fallback: todos os jogadores
             $st = $this->pdo->prepare("
@@ -830,12 +802,12 @@ class CartolendaLigaController {
             $this->error('Janela de escalação fechada. A rodada já está em andamento.'); return;
         }
 
-        // Validar composição: 1 goleiro + 6 linha (titulares) + 1 reserva = 8 jogadores
+        // Validar composição: 1 goleiro + 5 linha (titulares) + 1 reserva = 7 jogadores
         $titulares = array_values(array_filter($jogadores, fn($j) => empty($j['eh_reserva'])));
         $reservas  = array_values(array_filter($jogadores, fn($j) => !empty($j['eh_reserva'])));
 
-        if (count($jogadores) > 8) { $this->error('Máximo 8 jogadores (7 titulares + 1 reserva)'); return; }
-        if (count($titulares) !== 7) { $this->error('São necessários exatamente 7 titulares (1 goleiro + 6 linha)'); return; }
+        if (count($jogadores) > 7) { $this->error('Máximo 7 jogadores (6 titulares + 1 reserva)'); return; }
+        if (count($titulares) !== 6) { $this->error('São necessários exatamente 6 titulares (1 goleiro + 5 linha)'); return; }
         if (count($reservas) > 1) { $this->error('Máximo 1 reserva'); return; }
 
         // Buscar posições dos jogadores
@@ -848,7 +820,7 @@ class CartolendaLigaController {
             $posicoes[(int)$row['id']] = $row['posicao'];
         }
 
-        // Contar goleiros entre titulares: exatamente 1 goleiro + 6 linha
+        // Contar goleiros entre titulares: exatamente 1 goleiro + 5 linha
         $goleirosCount = 0;
         $linhaCount    = 0;
         foreach ($titulares as $j) {
@@ -859,7 +831,7 @@ class CartolendaLigaController {
         }
 
         if ($goleirosCount !== 1) { $this->error('Precisa de exatamente 1 goleiro titular'); return; }
-        if ($linhaCount !== 6)    { $this->error('Precisa de exatamente 6 jogadores de linha titulares'); return; }
+        if ($linhaCount !== 5)    { $this->error('Precisa de exatamente 5 jogadores de linha titulares'); return; }
 
         // Validar orçamento (usa preço da última rodada finalizada)
         $ufRow = $this->pdo->query("
@@ -1137,7 +1109,12 @@ class CartolendaLigaController {
         $inscritoFilter = '';
         $paramsBase = [$rodadaId];
         if ($campeonatoId > 0) {
-            $inscritoFilter = ' AND p.jogador_id IN (SELECT ce.jogador_id FROM campeonato_elencos ce WHERE ce.campeonato_id = ?)';
+            $inscritoFilter = ' AND p.jogador_id IN (
+                SELECT ce.jogador_id FROM campeonato_elencos ce WHERE ce.campeonato_id = ?
+                UNION
+                SELECT tj.jogador_id FROM time_jogadores tj JOIN campeonato_times ct ON ct.time_id = tj.time_id WHERE ct.campeonato_id = ?
+            )';
+            $paramsBase[] = $campeonatoId;
             $paramsBase[] = $campeonatoId;
         }
 

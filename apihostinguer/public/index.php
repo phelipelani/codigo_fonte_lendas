@@ -66,6 +66,7 @@ require_once __DIR__ . '/../src/controllers/NotificacoesController.php';
 require_once __DIR__ . '/../src/controllers/StatsController.php';
 require_once __DIR__ . '/../src/controllers/LigaController.php';
 require_once __DIR__ . '/../src/controllers/AlbumController.php';
+require_once __DIR__ . '/../src/controllers/BetsController.php';
 
 // Tratamento de erros
 function sendApiError(Throwable $e): void
@@ -439,6 +440,11 @@ try {
         AuthMiddleware::handle();
         (new RodadaController())->show((int)$m[1]); exit;
     }
+    // GET /rodadas/:id/premios
+    if (preg_match('#^/rodadas/(\d+)/premios$#', $path, $m) && $method === 'GET') {
+        AuthMiddleware::handle();
+        (new RodadaController())->getPremios((int)$m[1]); exit;
+    }
     if (preg_match('#^/rodadas/(\d+)$#', $path, $m) && $method === 'PUT') {
         AuthMiddleware::isAdmin();
         (new RodadaController())->update((int)$m[1]); exit;
@@ -586,6 +592,37 @@ try {
     if ($path === '/analytics/panoramica' && $method === 'GET') {
         AuthMiddleware::handle();
         cachedJsonRoute('analytics_panoramica', fn() => (new AnalyticsController())->panoramica());
+    }
+
+    // GET /recalc-cartoes (TEMPORARY SCRIPT)
+    if ($path === '/recalc-cartoes' && $method === 'GET') {
+        $db = Database::getInstance();
+        $partidas = $db->fetchAll('SELECT id FROM campeonato_partidas');
+        foreach ($partidas as $p) {
+            $eventos = $db->fetchAll('SELECT * FROM campeonato_eventos_partida WHERE partida_id = ?', [$p['id']]);
+            $amarelos = []; $azuis = []; $vermelhos = [];
+            foreach ($eventos as $e) {
+                if ($e['tipo'] === 'cartao_amarelo') $amarelos[$e['jogador_id']] = ($amarelos[$e['jogador_id']] ?? 0) + 1;
+                if ($e['tipo'] === 'cartao_azul') $azuis[$e['jogador_id']] = ($azuis[$e['jogador_id']] ?? 0) + 1;
+                if ($e['tipo'] === 'cartao_vermelho') $vermelhos[$e['jogador_id']] = ($vermelhos[$e['jogador_id']] ?? 0) + 1;
+            }
+            foreach (array_unique(array_merge(array_keys($amarelos), array_keys($azuis), array_keys($vermelhos))) as $jogId) {
+                $ca = $amarelos[$jogId] ?? 0;
+                $caz = $azuis[$jogId] ?? 0;
+                $cv = $vermelhos[$jogId] ?? 0;
+                if ($ca > 0 || $caz > 0 || $cv > 0) {
+                    $db->execute('UPDATE campeonato_estatisticas_partida SET cartoes_amarelos = ?, cartoes_azuis = ?, cartoes_vermelhos = ? WHERE partida_id = ? AND jogador_id = ?', [$ca, $caz, $cv, $p['id'], $jogId]);
+                }
+            }
+        }
+        jsonResponse(['success' => true, 'message' => 'Cartões recalculados com sucesso.']);
+    }
+
+    // GET /fix-iago (TEMPORARY SCRIPT)
+    if ($path === '/fix-iago' && $method === 'GET') {
+        $db = Database::getInstance();
+        $db->execute("UPDATE usuarios SET email = ? WHERE username LIKE '%Iago%' AND id > 0 LIMIT 1", ['yago.decastilho.9@gmail.com']);
+        jsonResponse(['success' => true, 'message' => 'Email do Iago atualizado com sucesso.']);
     }
 
     // GET /analytics/geral
@@ -1487,6 +1524,10 @@ try {
         AuthMiddleware::handle();
         (new AlbumController())->meusPacotes(); exit;
     }
+    if ($path === '/album/pacotes/comprar' && $method === 'POST') {
+        AuthMiddleware::handle();
+        (new AlbumController())->comprarPacote(); exit;
+    }
     if (preg_match('#^/album/pacotes/(\d+)/abrir$#', $path, $m) && $method === 'POST') {
         AuthMiddleware::handle();
         (new AlbumController())->abrirPacote((int)$m[1]); exit;
@@ -1770,6 +1811,92 @@ try {
         }
 
         throw new HttpError("Rota /campo não encontrada: [{$method}] {$path}", 404);
+    }
+
+    // =========================================================
+    // LENDAS BETS
+    // =========================================================
+    if ($path === '/bets/carteira' && $method === 'GET') {
+        AuthMiddleware::handle();
+        (new BetsController())->getCarteira();
+        exit;
+    }
+    // Rotas Públicas / App
+    if ($path === '/bets/ranking' && $method === 'GET') {
+        (new BetsController())->getRanking();
+        exit;
+    }
+    if ($path === '/bets/mercados' && $method === 'GET') {
+        (new BetsController())->getMercados();
+        exit;
+    }
+    if ($path === '/bets/apostar' && $method === 'POST') {
+        AuthMiddleware::handle();
+        (new BetsController())->fazerAposta();
+        exit;
+    }
+    if ($path === '/bets/historico' && $method === 'GET') {
+        AuthMiddleware::handle();
+        (new BetsController())->getHistoricoApostas();
+        exit;
+    }
+    if ($path === '/bets/admin/criar-mercado' && $method === 'POST') {
+        AuthMiddleware::isAdmin();
+        (new BetsController())->adminCriarMercadoGols();
+        exit;
+    }
+    if ($path === '/bets/admin/stats-times' && $method === 'GET') {
+        AuthMiddleware::isAdmin();
+        (new BetsController())->adminGetStatsTimes();
+        exit;
+    }
+    if ($path === '/bets/admin/stats-goleiros' && $method === 'GET') {
+        AuthMiddleware::isAdmin();
+        (new BetsController())->adminGetStatsGoleiros();
+        exit;
+    }
+    if ($path === '/bets/admin/criar-mercado-goleiro' && $method === 'POST') {
+        AuthMiddleware::isAdmin();
+        (new BetsController())->adminCriarMercadoGoleiro();
+        exit;
+    }
+
+    // Rotas de Gestão de Mercados (Admin)
+    if ($path === '/bets/admin/mercados' && $method === 'GET') {
+        AuthMiddleware::isAdmin();
+        (new BetsController())->adminGetMercados();
+        exit;
+    }
+    if ($path === '/bets/admin/mercados/novo' && $method === 'POST') {
+        AuthMiddleware::isAdmin();
+        (new BetsController())->adminCriarMercadoGenerico();
+        exit;
+    }
+    if (preg_match('#^/bets/admin/mercados/(\d+)$#', $path, $matches) && $method === 'DELETE') {
+        AuthMiddleware::isAdmin();
+        (new BetsController())->adminExcluirMercado($matches[1]);
+        exit;
+    }
+    if (preg_match('#^/bets/admin/mercados/(\d+)/status$#', $path, $matches) && $method === 'PUT') {
+        AuthMiddleware::isAdmin();
+        (new BetsController())->adminAtualizarMercadoStatus($matches[1]);
+        exit;
+    }
+    if (preg_match('#^/bets/admin/opcoes/(\d+)$#', $path, $matches) && $method === 'PUT') {
+        AuthMiddleware::isAdmin();
+        (new BetsController())->adminAtualizarOpcao($matches[1]);
+        exit;
+    }
+    if ($path === '/bets/admin/add-saldo' && $method === 'POST') {
+        AuthMiddleware::isAdmin();
+        (new BetsController())->adminAddSaldo();
+        exit;
+    }
+
+    if (preg_match('#^/bets/admin/apurar/(\d+)$#', $path, $matches) && $method === 'POST') {
+        AuthMiddleware::isAdmin();
+        (new BetsController())->adminApurarRodada($matches[1]);
+        exit;
     }
 
     // =========================================================

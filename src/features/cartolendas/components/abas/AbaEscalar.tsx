@@ -106,7 +106,7 @@ export function AbaEscalar({ campeonatoId }: { campeonatoId: number }) {
   const qtdGoleiros = escalacaoLocal.filter(e => e.posicao === 'goleiro' && !e.eh_reserva).length;
   const qtdLinha = escalacaoLocal.filter(e => e.posicao === 'linha' && !e.eh_reserva).length;
   const qtdReservas = escalacaoLocal.filter(e => e.eh_reserva).length;
-  const completo = qtdGoleiros === 1 && qtdLinha === 6;
+  const completo = qtdGoleiros === 1 && qtdLinha === 5;
   const escaladosIds = useMemo(() => new Set(escalacaoLocal.map(e => e.jogador_id)), [escalacaoLocal]);
 
   // ── Mercado filtrado ──
@@ -135,7 +135,7 @@ export function AbaEscalar({ campeonatoId }: { campeonatoId: number }) {
       return;
     }
     const isGol = j.posicao === 'goleiro';
-    let ehReserva = (isGol && qtdGoleiros >= 1) || (!isGol && qtdLinha >= 6);
+    let ehReserva = (isGol && qtdGoleiros >= 1) || (!isGol && qtdLinha >= 5);
     if (ehReserva && qtdReservas >= 1) { toast.error('Máximo 1 reserva'); return; }
     setEscalacaoLocal(prev => [...prev, { ...j, jogador_id: j.id, posicao: isGol ? 'goleiro' : 'linha', eh_reserva: ehReserva }]);
   }, [mercadoFechado, escaladosIds, custo, saldoRestante, qtdGoleiros, qtdLinha, qtdReservas]);
@@ -272,8 +272,8 @@ export function AbaEscalar({ campeonatoId }: { campeonatoId: number }) {
         <span className={cn('px-3 py-1.5 rounded-lg font-bold border', qtdGoleiros === 1 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-white/5 text-white/30 border-white/10')}>
           {qtdGoleiros === 1 ? '✓' : '○'} 1 Goleiro
         </span>
-        <span className={cn('px-3 py-1.5 rounded-lg font-bold border', qtdLinha === 6 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-white/5 text-white/30 border-white/10')}>
-          {qtdLinha}/6 Linha
+        <span className={cn('px-3 py-1.5 rounded-lg font-bold border', qtdLinha === 5 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-white/[0.03] border-white/10 text-white/50')}>
+          {qtdLinha}/5 Linha
         </span>
         <span className={cn('px-3 py-1.5 rounded-lg font-bold border', qtdReservas === 1 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-white/5 text-white/30 border-white/10')}>
           {qtdReservas}/1 Reserva

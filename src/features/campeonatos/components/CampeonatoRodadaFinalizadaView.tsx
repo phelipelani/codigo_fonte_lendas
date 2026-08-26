@@ -351,7 +351,7 @@ const ModalResumoRodada = ({
   rodadaId: number;
 }) => {
   // Busca eventos de todas as partidas em paralelo
-  const { data: todosEventos, isLoading } = useQuery<EventoPartida[]>({
+  const { data: todosEventos, isLoading: loadingEventos } = useQuery<EventoPartida[]>({
     queryKey: ['rodada', rodadaId, 'todos-eventos-resumo'],
     queryFn: async () => {
       if (!partidas?.length) return [];
@@ -372,40 +372,33 @@ const ModalResumoRodada = ({
     staleTime: 1000 * 60 * 5,
   });
 
+  // Busca prêmios da rodada diretamente do backend (que já tem os pontos com penalidades)
+  const { data: premiosData, isLoading: loadingPremios } = useQuery<any[]>({
+    queryKey: ['rodada', rodadaId, 'premios-resumo'],
+    queryFn: async () => {
+      if (!rodadaId) return [];
+      const res = await api.get(`/rodadas/${rodadaId}/premios`);
+      return res.data;
+    },
+    enabled: isOpen && !!rodadaId,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const isLoading = loadingEventos || loadingPremios;
+
   const destaques = React.useMemo(() => {
-    if (!todosEventos || !partidas?.length) return null;
+    if (!premiosData || !partidas?.length) return null;
 
-    const golsPorJogador: Record<number, { nome: string; total: number }> = {};
-    const assistsPorJogador: Record<number, { nome: string; total: number }> = {};
-    const golsContraPorJogador: Record<number, { nome: string; total: number }> = {};
-    const participacoes: Record<number, { nome: string; total: number }> = {};
+    // Converte os prêmios do backend
+    const getPremio = (tipo: string) => {
+      const p = premiosData.find(x => x.tipo_premio === tipo);
+      return p ? { id: p.jogador_id, nome: p.jogador_nome, pts: p.pontuacao } : null;
+    };
 
-    todosEventos.forEach(e => {
-      if (e.tipo === 'gol') {
-        if (!golsPorJogador[e.jogador_id]) golsPorJogador[e.jogador_id] = { nome: e.jogador_nome, total: 0 };
-        golsPorJogador[e.jogador_id].total++;
-        if (!participacoes[e.jogador_id]) participacoes[e.jogador_id] = { nome: e.jogador_nome, total: 0 };
-        participacoes[e.jogador_id].total++;
-        if (e.assist_por_jogador_id && e.assist_por_nome) {
-          if (!assistsPorJogador[e.assist_por_jogador_id])
-            assistsPorJogador[e.assist_por_jogador_id] = { nome: e.assist_por_nome, total: 0 };
-          assistsPorJogador[e.assist_por_jogador_id].total++;
-          if (!participacoes[e.assist_por_jogador_id])
-            participacoes[e.assist_por_jogador_id] = { nome: e.assist_por_nome, total: 0 };
-          participacoes[e.assist_por_jogador_id].total++;
-        }
-      }
-      if (e.tipo === 'gol_contra') {
-        if (!golsContraPorJogador[e.jogador_id])
-          golsContraPorJogador[e.jogador_id] = { nome: e.jogador_nome, total: 0 };
-        golsContraPorJogador[e.jogador_id].total++;
-      }
-    });
-
-    const artilheiro = Object.values(golsPorJogador).sort((a, b) => b.total - a.total)[0] ?? null;
-    const garcom     = Object.values(assistsPorJogador).sort((a, b) => b.total - a.total)[0] ?? null;
-    const peDeRato   = Object.values(golsContraPorJogador).sort((a, b) => b.total - a.total)[0] ?? null;
-    const mvp        = Object.values(participacoes).sort((a, b) => b.total - a.total)[0] ?? null;
+    const artilheiro = getPremio('artilheiro_rodada');
+    const garcom     = getPremio('garcom_rodada');
+    const peDeRato   = getPremio('pe_de_rato_rodada');
+    const mvp        = getPremio('mvp_rodada');
 
     // Melhor time por vitórias, depois por gols
     const golsPorTime: Record<number, { nome: string; gols: number; vitorias: number }> = {};
@@ -423,7 +416,36 @@ const ModalResumoRodada = ({
       .sort((a, b) => b.vitorias - a.vitorias || b.gols - a.gols)[0] ?? null;
 
     return { artilheiro, garcom, mvp, peDeRato, melhorTime };
-  }, [todosEventos, partidas]);
+  }, [premiosData, partidas]);
+
+  const getCartoesHtml = React.useCallback((jogadorId?: number) => {
+    if (!jogadorId || !todosEventos) return null;
+    const amarelos = todosEventos.filter(e => e.jogador_id === jogadorId && e.tipo === 'cartao_amarelo').length;
+    const azuis = todosEventos.filter(e => e.jogador_id === jogadorId && e.tipo === 'cartao_azul').length;
+    const vermelhos = todosEventos.filter(e => e.jogador_id === jogadorId && e.tipo === 'cartao_vermelho').length;
+
+    if (amarelos === 0 && azuis === 0 && vermelhos === 0) return null;
+
+    return (
+      <span className="inline-flex items-center gap-1 ml-2">
+        {amarelos > 0 && (
+          <span className="w-2.5 h-3.5 bg-yellow-400 rounded-sm shadow-sm flex items-center justify-center text-[8px] text-yellow-900 font-bold">
+            {amarelos > 1 ? amarelos : ''}
+          </span>
+        )}
+        {azuis > 0 && (
+          <span className="w-2.5 h-3.5 bg-blue-500 rounded-sm shadow-sm flex items-center justify-center text-[8px] text-blue-900 font-bold">
+            {azuis > 1 ? azuis : ''}
+          </span>
+        )}
+        {vermelhos > 0 && (
+          <span className="w-2.5 h-3.5 bg-red-500 rounded-sm shadow-sm flex items-center justify-center text-[8px] text-red-100 font-bold">
+            {vermelhos > 1 ? vermelhos : ''}
+          </span>
+        )}
+      </span>
+    );
+  }, [todosEventos]);
 
   const cards = React.useMemo(() => [
     {
@@ -432,7 +454,7 @@ const ModalResumoRodada = ({
       emoji: '⭐',
       icon: <Sparkles size={18} className="text-amber-400" />,
       valor: destaques?.mvp ?? null,
-      stat: destaques?.mvp ? `${destaques.mvp.total} participações` : null,
+      stat: destaques?.mvp ? `${destaques.mvp.pts} pts` : null,
       bg: 'from-amber-500/20 to-yellow-500/10',
       border: 'border-amber-500/40',
       color: 'text-amber-300',
@@ -445,7 +467,7 @@ const ModalResumoRodada = ({
       icon: <Target size={18} className="text-emerald-400" />,
       valor: destaques?.artilheiro ?? null,
       stat: destaques?.artilheiro
-        ? `${destaques.artilheiro.total} gol${destaques.artilheiro.total !== 1 ? 's' : ''}`
+        ? `${destaques.artilheiro.pts} pts`
         : null,
       bg: 'from-emerald-500/20 to-teal-500/10',
       border: 'border-emerald-500/40',
@@ -459,7 +481,7 @@ const ModalResumoRodada = ({
       icon: <Footprints size={18} className="text-cyan-400" />,
       valor: destaques?.garcom ?? null,
       stat: destaques?.garcom
-        ? `${destaques.garcom.total} assistência${destaques.garcom.total !== 1 ? 's' : ''}`
+        ? `${destaques.garcom.pts} pts`
         : null,
       bg: 'from-cyan-500/20 to-blue-500/10',
       border: 'border-cyan-500/40',
@@ -487,7 +509,7 @@ const ModalResumoRodada = ({
       icon: <Zap size={18} className="text-red-400" />,
       valor: destaques?.peDeRato ?? null,
       stat: destaques?.peDeRato
-        ? `${destaques.peDeRato.total} gol${destaques.peDeRato.total !== 1 ? 's' : ''} contra`
+        ? `${destaques.peDeRato.pts} pts`
         : null,
       bg: 'from-red-500/20 to-orange-500/10',
       border: 'border-red-500/40',
@@ -543,16 +565,19 @@ const ModalResumoRodada = ({
                 <div className="w-10 h-10 rounded-xl bg-black/30 flex items-center justify-center flex-shrink-0 text-xl">
                   {card.valor ? card.emoji : '—'}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <span className="text-[10px] text-white/40 uppercase font-bold tracking-wider block">
-                    {card.label}
-                  </span>
-                  <span className={cn('font-black text-sm truncate block', card.color)}>
-                    {card.valor ? card.valor.nome : 'Nenhum registro'}
-                  </span>
-                  {card.stat && (
-                    <span className="text-[11px] text-white/40">{card.stat}</span>
-                  )}
+                <div className="flex-1 min-w-0 flex items-center">
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[10px] text-white/40 uppercase font-bold tracking-wider block">
+                      {card.label}
+                    </span>
+                    <span className={cn('font-black text-sm truncate flex items-center', card.color)}>
+                      {card.valor ? card.valor.nome : 'Nenhum registro'}
+                      {card.valor && getCartoesHtml(card.valor.id)}
+                    </span>
+                    {card.stat && (
+                      <span className="text-[11px] text-white/40 block">{card.stat}</span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex-shrink-0">{card.icon}</div>
               </motion.div>

@@ -25,16 +25,28 @@ const EditProfileModal = React.memo(function EditProfileModal({
   onSave,
   isPending,
 }: EditProfileModalProps) {
+  const [isUploadingFoto, setIsUploadingFoto] = React.useState(false);
+
   const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('foto', file);
+    
+    setIsUploadingFoto(true);
     try {
-      const res = await api.post('/upload/foto', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-      setEditFoto(res.data.url || res.data.foto_url || URL.createObjectURL(file));
-    } catch {
-      setEditFoto(URL.createObjectURL(file));
+      // Removemos o Content-Type manual para que o axios/fetch gerencie o boundary corretamente.
+      const res = await api.post('/upload/foto', formData);
+      if (res.data?.url || res.data?.foto_url) {
+        setEditFoto(res.data.url || res.data.foto_url);
+      } else {
+        throw new Error("URL da foto não retornada pelo servidor.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.error || err.message || "Erro ao fazer upload da foto. Tente novamente.");
+    } finally {
+      setIsUploadingFoto(false);
     }
   }, [setEditFoto]);
 
@@ -77,7 +89,11 @@ const EditProfileModal = React.memo(function EditProfileModal({
           {/* Preview da foto atual */}
           <div className="flex items-center gap-4 p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
             <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0" style={{ border: `2px solid ${acc}30` }}>
-              {editFoto ? (
+              {isUploadingFoto ? (
+                <div className="w-full h-full flex flex-col items-center justify-center text-[10px]" style={{ background: `${acc}10`, color: acc }}>
+                  Upload...
+                </div>
+              ) : editFoto ? (
                 <img src={editFoto} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center" style={{ background: `${acc}10` }}>
@@ -133,7 +149,7 @@ const EditProfileModal = React.memo(function EditProfileModal({
             </button>
             <button
               onClick={onSave}
-              disabled={isPending}
+              disabled={isPending || isUploadingFoto}
               className="flex-1 py-3 rounded-xl text-sm font-black transition-all disabled:opacity-50"
               style={{ background: `linear-gradient(135deg, ${acc}, ${acc}CC)`, color: '#000', boxShadow: `0 4px 15px ${acc}30` }}
             >

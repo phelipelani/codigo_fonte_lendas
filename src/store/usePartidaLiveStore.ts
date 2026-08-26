@@ -6,7 +6,7 @@ import { TimeEmPartida } from '@/@types/partida';
 // Tipo para os eventos locais
 export type EventoLocal = {
   id: string;
-  tipo: 'gol' | 'gol_contra' | 'assistencia';
+  tipo: 'gol' | 'gol_contra' | 'assistencia' | 'cartao_amarelo' | 'cartao_azul' | 'cartao_vermelho';
   jogador_id: number;
   nome_jogador: string;
   time_id: number;

@@ -261,6 +261,15 @@ class AnalyticsController
                 }
             }
         }
+        $youtubeVideoId = 'dQw4w9WgXcQ'; // Rick Roll default
+        try {
+            $configRow = $this->db->fetchOne("SELECT valor FROM configuracoes_app WHERE chave = 'youtube_video_id'");
+            if ($configRow && !empty($configRow['valor'])) {
+                $youtubeVideoId = $configRow['valor'];
+            }
+        } catch (\Throwable $e) {
+            // Se a tabela ainda não existir no banco de produção, ignora e usa o default.
+        }
 
         http_response_code(200);
         echo json_encode([
@@ -270,6 +279,9 @@ class AnalyticsController
                 'total_assistencias'  => $totalAssistencias,
                 'media_gols'          => $mediaGols,
                 'total_jogadores'     => $totalJogadores,
+            ],
+            'config' => [
+                'youtube_video_id' => $youtubeVideoId,
             ],
             'evolucao' => $evolucao,
             'rankings' => [

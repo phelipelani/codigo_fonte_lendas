@@ -339,6 +339,7 @@ const DistribuirTab: React.FC = () => {
   const [busca, setBusca] = React.useState('');
   const [presentes, setPresentes] = React.useState<Set<number>>(new Set());
   const [motivo, setMotivo] = React.useState('');
+  const [quantidade, setQuantidade] = React.useState<number>(1);
 
   const usuarios = data?.usuarios ?? [];
   const filtrados = React.useMemo(() => {
@@ -367,7 +368,7 @@ const DistribuirTab: React.FC = () => {
 
   const distribuir = () => {
     const distribuicao: DistribuicaoItem[] = Array.from(presentes).map(
-      (id) => ({ usuario_id: id, quantidade: 1, tipo: 'racha' })
+      (id) => ({ usuario_id: id, quantidade, tipo: 'racha' })
     );
     if (distribuicao.length === 0) return;
     distribuirMut.mutate(
@@ -379,8 +380,8 @@ const DistribuirTab: React.FC = () => {
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-cyan-500/20 bg-[#0a1628]/40 p-3 text-xs text-cyan-100/60">
-        Marque os jogadores que estiveram no racha. Cada presente recebe{' '}
-        <strong className="text-amber-300">1 pacote</strong> fechado.
+        Marque os jogadores que receberão os pacotes. Cada selecionado recebe{' '}
+        <strong className="text-amber-300">{quantidade} pacote(s)</strong> fechado(s).
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -393,12 +394,23 @@ const DistribuirTab: React.FC = () => {
             className="pl-9"
           />
         </div>
-        <Input
-          value={motivo}
-          onChange={(e) => setMotivo(e.target.value)}
-          placeholder="Motivo (ex: Racha 20/05)"
-          className="sm:max-w-xs"
-        />
+        
+        <div className="flex items-center gap-2">
+          <Input
+            type="number"
+            min={1}
+            value={quantidade}
+            onChange={(e) => setQuantidade(Math.max(1, parseInt(e.target.value) || 1))}
+            className="w-20"
+            title="Quantidade de pacotes por jogador"
+          />
+          <Input
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            placeholder="Motivo (ex: Racha 20/05)"
+            className="sm:max-w-[200px]"
+          />
+        </div>
       </div>
 
       <div className="flex items-center justify-between">
@@ -472,7 +484,7 @@ const DistribuirTab: React.FC = () => {
           <strong className="text-amber-300 tabular-nums">
             {totalPresentes}
           </strong>{' '}
-          → {totalPresentes} pacote(s)
+          → {totalPresentes * quantidade} pacote(s) no total
         </span>
         <Button
           onClick={distribuir}

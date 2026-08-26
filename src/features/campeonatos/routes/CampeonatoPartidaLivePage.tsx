@@ -391,6 +391,18 @@ export const CampeonatoPartidaLivePage = () => {
     setModalAssist({ isOpen: true, autorId: jogador.id, timeId });
   };
 
+  const handleCartaoClick = (jogador: { id: number; nome: string }, timeId: number, tipoCartao: 'cartao_amarelo' | 'cartao_azul' | 'cartao_vermelho') => {
+    if (!store.isRunning) { toast.error("Inicie o cronômetro!"); return; }
+    const novoEvento: EventoLocal = {
+      id: Math.random().toString(36), tipo: tipoCartao,
+      jogador_id: jogador.id, nome_jogador: jogador.nome, time_id: timeId,
+      tempo: formatTempo(store.getSegundosAtuais()), tempo_segundos: store.getSegundosAtuais()
+    };
+    store.addEvento(novoEvento);
+    const cartaoNome = tipoCartao === 'cartao_amarelo' ? 'Amarelo' : tipoCartao === 'cartao_azul' ? 'Azul' : 'Vermelho';
+    toast.success(`Cartão ${cartaoNome} para ${jogador.nome}!`);
+  };
+
   // Handler para abrir modal de substituição
   const handleJogadorClick = (jogador: { id: number; nome: string }, timeSlot: 'A' | 'B') => {
     if (store.isRunning) {
@@ -727,14 +739,38 @@ export const CampeonatoPartidaLivePage = () => {
                   <button 
                     onClick={() => handleJogadorClick(j, 'A')}
                     className={cn(
-                      "text-xs font-bold truncate max-w-[65px] sm:max-w-[100px] text-left transition-colors",
+                      "text-xs font-bold truncate max-w-[65px] sm:max-w-[100px] text-left transition-colors flex items-center gap-1",
                       !store.isRunning ? "text-amber-400 hover:text-amber-300 cursor-pointer" : "text-white cursor-default"
                     )}
                     title={!store.isRunning ? "Clique para substituir" : ""}
                   >
-                    {j.nome}
+                    <span className="truncate">{j.nome}</span>
+                    <div className="flex gap-0.5">
+                      {j.cartoes_vermelhos_rodada > 0 && (
+                        <span className="inline-flex items-center" title="Cartões Vermelhos na Rodada">
+                          <div className="w-2.5 h-3.5 bg-red-500 rounded-sm inline-block shadow-sm"></div>
+                          {j.cartoes_vermelhos_rodada > 1 && <span className="text-[9px] ml-0.5 text-red-400 font-normal">{j.cartoes_vermelhos_rodada}</span>}
+                        </span>
+                      )}
+                      {((j.cartoes_azuis_rodada || 0) + Math.floor((j.cartoes_amarelos_rodada || 0) / 2)) > 0 && (
+                        <span className="inline-flex items-center" title="Cartões Azuis na Rodada">
+                          <div className="w-2.5 h-3.5 bg-blue-500 rounded-sm inline-block shadow-sm"></div>
+                          {((j.cartoes_azuis_rodada || 0) + Math.floor((j.cartoes_amarelos_rodada || 0) / 2)) > 1 && <span className="text-[9px] ml-0.5 text-blue-400 font-normal">{((j.cartoes_azuis_rodada || 0) + Math.floor((j.cartoes_amarelos_rodada || 0) / 2))}</span>}
+                        </span>
+                      )}
+                      {((j.cartoes_amarelos_rodada || 0) % 2) > 0 && (
+                        <span className="inline-flex items-center" title="Cartões Amarelos na Rodada">
+                          <div className="w-2.5 h-3.5 bg-yellow-400 rounded-sm inline-block shadow-sm"></div>
+                        </span>
+                      )}
+                    </div>
                   </button>
                   <div className="flex gap-1 items-center">
+                    <div className="flex gap-0.5 mr-1">
+                       <button onClick={() => handleCartaoClick(j, store.timeA!.numero, 'cartao_amarelo')} className="w-3 h-4 sm:w-4 sm:h-5 bg-yellow-400 rounded-sm border border-black/50 opacity-80 hover:opacity-100 transition-opacity" title="Cartão Amarelo" />
+                       <button onClick={() => handleCartaoClick(j, store.timeA!.numero, 'cartao_azul')} className="w-3 h-4 sm:w-4 sm:h-5 bg-blue-500 rounded-sm border border-black/50 opacity-80 hover:opacity-100 transition-opacity" title="Cartão Azul" />
+                       <button onClick={() => handleCartaoClick(j, store.timeA!.numero, 'cartao_vermelho')} className="w-3 h-4 sm:w-4 sm:h-5 bg-red-500 rounded-sm border border-black/50 opacity-80 hover:opacity-100 transition-opacity" title="Cartão Vermelho" />
+                    </div>
                     <Button size="icon" variant="ghost" className="h-6 w-6 text-red-400 hover:bg-red-500/10" onClick={() => removeUltimoEventoDoJogador(j.id)}>
                       <Minus size={14} />
                     </Button>
@@ -758,14 +794,38 @@ export const CampeonatoPartidaLivePage = () => {
                   <button 
                     onClick={() => handleJogadorClick(j, 'B')}
                     className={cn(
-                      "text-xs font-bold truncate max-w-[65px] sm:max-w-[100px] text-left transition-colors",
+                      "text-xs font-bold truncate max-w-[65px] sm:max-w-[100px] text-left transition-colors flex items-center gap-1",
                       !store.isRunning ? "text-amber-400 hover:text-amber-300 cursor-pointer" : "text-white cursor-default"
                     )}
                     title={!store.isRunning ? "Clique para substituir" : ""}
                   >
-                    {j.nome}
+                    <span className="truncate">{j.nome}</span>
+                    <div className="flex gap-0.5">
+                      {j.cartoes_vermelhos_rodada > 0 && (
+                        <span className="inline-flex items-center" title="Cartões Vermelhos na Rodada">
+                          <div className="w-2.5 h-3.5 bg-red-500 rounded-sm inline-block shadow-sm"></div>
+                          {j.cartoes_vermelhos_rodada > 1 && <span className="text-[9px] ml-0.5 text-red-400 font-normal">{j.cartoes_vermelhos_rodada}</span>}
+                        </span>
+                      )}
+                      {((j.cartoes_azuis_rodada || 0) + Math.floor((j.cartoes_amarelos_rodada || 0) / 2)) > 0 && (
+                        <span className="inline-flex items-center" title="Cartões Azuis na Rodada">
+                          <div className="w-2.5 h-3.5 bg-blue-500 rounded-sm inline-block shadow-sm"></div>
+                          {((j.cartoes_azuis_rodada || 0) + Math.floor((j.cartoes_amarelos_rodada || 0) / 2)) > 1 && <span className="text-[9px] ml-0.5 text-blue-400 font-normal">{((j.cartoes_azuis_rodada || 0) + Math.floor((j.cartoes_amarelos_rodada || 0) / 2))}</span>}
+                        </span>
+                      )}
+                      {((j.cartoes_amarelos_rodada || 0) % 2) > 0 && (
+                        <span className="inline-flex items-center" title="Cartões Amarelos na Rodada">
+                          <div className="w-2.5 h-3.5 bg-yellow-400 rounded-sm inline-block shadow-sm"></div>
+                        </span>
+                      )}
+                    </div>
                   </button>
                   <div className="flex gap-1 items-center">
+                    <div className="flex gap-0.5 mr-1">
+                       <button onClick={() => handleCartaoClick(j, store.timeB!.numero, 'cartao_amarelo')} className="w-3 h-4 sm:w-4 sm:h-5 bg-yellow-400 rounded-sm border border-black/50 opacity-80 hover:opacity-100 transition-opacity" title="Cartão Amarelo" />
+                       <button onClick={() => handleCartaoClick(j, store.timeB!.numero, 'cartao_azul')} className="w-3 h-4 sm:w-4 sm:h-5 bg-blue-500 rounded-sm border border-black/50 opacity-80 hover:opacity-100 transition-opacity" title="Cartão Azul" />
+                       <button onClick={() => handleCartaoClick(j, store.timeB!.numero, 'cartao_vermelho')} className="w-3 h-4 sm:w-4 sm:h-5 bg-red-500 rounded-sm border border-black/50 opacity-80 hover:opacity-100 transition-opacity" title="Cartão Vermelho" />
+                    </div>
                     <Button size="icon" variant="ghost" className="h-6 w-6 text-red-400 hover:bg-red-500/10" onClick={() => removeUltimoEventoDoJogador(j.id)}>
                       <Minus size={14} />
                     </Button>
@@ -783,7 +843,7 @@ export const CampeonatoPartidaLivePage = () => {
         {/* Histórico de eventos */}
         {store.eventos.length > 0 && (
           <div className="h-20 sm:h-24 bg-black/60 backdrop-blur-md rounded-xl p-1.5 sm:p-2 mx-1 sm:mx-2 mb-2 overflow-y-auto text-xs space-y-1 border border-cyan-500/10">
-            {store.eventos.filter(e => e.tipo === 'gol' || e.tipo === 'gol_contra').slice().reverse().map((e) => {
+            {store.eventos.slice().reverse().map((e) => {
               let textoAssistencia = "";
               if (e.assist_por) {
                 const timeAssist = (e.time_id === store.timeA?.numero ? store.timeA : store.timeB);
@@ -794,12 +854,21 @@ export const CampeonatoPartidaLivePage = () => {
                 }
                 if (nomeAssist) textoAssistencia = ` 👟 ${nomeAssist}`;
               }
+
+              const isCartao = e.tipo.startsWith('cartao_');
+              const corCartao = e.tipo === 'cartao_amarelo' ? 'bg-yellow-400' : e.tipo === 'cartao_azul' ? 'bg-blue-500' : 'bg-red-500';
+
               return (
                 <div key={e.id} className="flex justify-between items-center text-cyan-100/60 hover:bg-white/5 p-1 rounded group">
                   <div className="flex gap-2 items-center truncate">
-                    <span className={e.tipo === 'gol_contra' ? "text-red-400" : "text-white"}>
-                      ⚽ {e.nome_jogador} <span className="text-cyan-100/40">({e.time_id === store.timeA?.numero ? store.timeA?.nome : store.timeB?.nome})</span>
-                      <span className="text-cyan-400 font-medium">{textoAssistencia}</span>
+                    <span className={e.tipo === 'gol_contra' ? "text-red-400" : "text-white flex items-center gap-1"}>
+                      {isCartao ? (
+                         <div className={`w-2.5 h-3.5 rounded-sm ${corCartao} inline-block shadow-sm mr-1`}></div>
+                      ) : (
+                         "⚽"
+                      )} 
+                      {e.nome_jogador} <span className="text-cyan-100/40">({e.time_id === store.timeA?.numero ? store.timeA?.nome : store.timeB?.nome})</span>
+                      {!isCartao && <span className="text-cyan-400 font-medium">{textoAssistencia}</span>}
                     </span>
                   </div>
                   <div className="flex gap-2 items-center flex-shrink-0">

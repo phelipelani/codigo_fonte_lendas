@@ -69,7 +69,7 @@ class ConviteController
 
         // Insere novo convite
         $this->db->execute(
-            'INSERT INTO convites (token, jogador_id, role, usado, expira_em) VALUES (?, ?, ?, 0, ?)',
+            'INSERT INTO convites (token, jogador_id, role, usado, expira_em, criado_em) VALUES (?, ?, ?, 0, ?, NOW())',
             [$token, (int) $jogadorId, $role, $expiraEm]
         );
 
