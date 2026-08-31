@@ -17,7 +17,7 @@ export function LojinhaModal({ isOpen, onClose }: Props) {
   });
 
   const comprarMutation = useComprarPacote();
-  const precoLendacoins = 10;
+  const precoLendacoins = 75;
 
   const handleComprar = () => {
     if (confirm(`Confirmar a compra de 1 pacote por ${precoLendacoins} Lendacoins?`)) {
