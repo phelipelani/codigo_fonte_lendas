@@ -133,7 +133,7 @@ class AlbumController
             throw new HttpError('Nada para atualizar.', 400);
         }
         $vals[] = $id;
-        $this->db->execute('UPDATE album_paginas SET ' . implode(', ', $sets) . ' WHERE usuario_id = ?', $vals);
+        $this->db->execute('UPDATE album_paginas SET ' . implode(', ', $sets) . ' WHERE id = ?', $vals);
         $this->ok(['message' => 'Página atualizada.']);
     }
 
@@ -206,13 +206,13 @@ class AlbumController
             throw new HttpError('Nada para atualizar.', 400);
         }
         $vals[] = $id;
-        $this->db->execute('UPDATE album_figurinhas SET ' . implode(', ', $sets) . ' WHERE usuario_id = ?', $vals);
+        $this->db->execute('UPDATE album_figurinhas SET ' . implode(', ', $sets) . ' WHERE id = ?', $vals);
         $this->ok(['message' => 'Figurinha atualizada.']);
     }
 
     public function deletarFigurinha(int $id): void
     {
-        $this->db->execute('UPDATE album_figurinhas SET ativa = 0 WHERE usuario_id = ?', [$id]);
+        $this->db->execute('UPDATE album_figurinhas SET ativa = 0 WHERE id = ?', [$id]);
         $this->ok(['message' => 'Figurinha desativada.']);
     }
 
@@ -356,7 +356,7 @@ class AlbumController
             
             if (!$carteira || (float)$carteira['saldo'] < $precoPacote) {
                 $this->db->rollBack();
-                $this->error('Saldo de Lendacoins insuficiente. Você precisa de ' . $precoPacote . ' Lendacoins para comprar 1 pacote.', 400);
+                throw new HttpError('Saldo de Lendacoins insuficiente. Você precisa de ' . $precoPacote . ' Lendacoins para comprar 1 pacote.', 400);
                 return;
             }
             
@@ -399,7 +399,7 @@ class AlbumController
         $uid = $this->authUserId();
 
         $pacote = $this->db->fetchOne(
-            'SELECT * FROM album_pacotes WHERE usuario_id = ? AND usuario_id = ? LIMIT 1',
+            'SELECT * FROM album_pacotes WHERE id = ? AND usuario_id = ? LIMIT 1',
             [$pacoteId, $uid]
         );
         if (!$pacote) {
@@ -445,13 +445,13 @@ class AlbumController
                     [$pacoteId, $figId, $eraRepetida]
                 );
 
-                $fig = $this->db->fetchOne('SELECT * FROM album_figurinhas WHERE usuario_id = ?', [$figId]);
+                $fig = $this->db->fetchOne('SELECT * FROM album_figurinhas WHERE id = ?', [$figId]);
                 $fig['era_repetida'] = (bool)$eraRepetida;
                 $resultado[] = $fig;
             }
 
             $this->db->execute(
-                "UPDATE album_pacotes SET status = 'aberto', aberto_em = NOW() WHERE usuario_id = ?",
+                "UPDATE album_pacotes SET status = 'aberto', aberto_em = NOW() WHERE id = ?",
                 [$pacoteId]
             );
 
@@ -576,7 +576,7 @@ class AlbumController
     public function getWhatsapp(): void
     {
         $uid  = $this->authUserId();
-        $user = $this->db->fetchOne('SELECT whatsapp FROM usuarios WHERE usuario_id = ?', [$uid]);
+        $user = $this->db->fetchOne('SELECT whatsapp FROM usuarios WHERE id = ?', [$uid]);
         $this->ok(['whatsapp' => $user['whatsapp'] ?? null]);
     }
 
@@ -592,7 +592,7 @@ class AlbumController
         // Normaliza para 55DDDNNNNNNNNN
         $num = $this->normalizarTelefone($raw);
 
-        $this->db->execute('UPDATE usuarios SET whatsapp = ? WHERE usuario_id = ?', [$num, $uid]);
+        $this->db->execute('UPDATE usuarios SET whatsapp = ? WHERE id = ?', [$num, $uid]);
         $this->ok(['whatsapp' => $num, 'message' => 'WhatsApp vinculado!']);
     }
 
@@ -683,10 +683,10 @@ class AlbumController
         if ($row) {
             $nova = (int)$row['quantidade'] + $delta;
             if ($nova <= 0) {
-                $this->db->execute('DELETE FROM album_inventario WHERE usuario_id = ?', [$row['id']]);
+                $this->db->execute('DELETE FROM album_inventario WHERE id = ?', [$row['id']]);
             } else {
                 $this->db->execute(
-                    'UPDATE album_inventario SET quantidade = ? WHERE usuario_id = ?',
+                    'UPDATE album_inventario SET quantidade = ? WHERE id = ?',
                     [$nova, $row['id']]
                 );
             }
@@ -786,7 +786,7 @@ class AlbumController
     public function retirarTroca(int $id): void
     {
         $uid   = $this->authUserId();
-        $troca = $this->db->fetchOne('SELECT * FROM album_trocas WHERE usuario_id = ?', [$id]);
+        $troca = $this->db->fetchOne('SELECT * FROM album_trocas WHERE id = ?', [$id]);
         if (!$troca) {
             throw new HttpError('Oferta nao encontrada.', 404);
         }
@@ -796,7 +796,7 @@ class AlbumController
         if ($troca['status'] !== 'disponivel') {
             throw new HttpError('Essa oferta nao esta mais disponivel.', 409);
         }
-        $this->db->execute("UPDATE album_trocas SET status = 'cancelada' WHERE usuario_id = ?", [$id]);
+        $this->db->execute("UPDATE album_trocas SET status = 'cancelada' WHERE id = ?", [$id]);
         $this->ok(['message' => 'Oferta retirada do mural.']);
     }
 
@@ -866,7 +866,7 @@ class AlbumController
         try {
             // Trava a linha da troca contra corrida
             $troca = $this->db->fetchOne(
-                'SELECT * FROM album_trocas WHERE usuario_id = ? FOR UPDATE',
+                'SELECT * FROM album_trocas WHERE id = ? FOR UPDATE',
                 [$id]
             );
             if (!$troca) {
@@ -919,7 +919,7 @@ class AlbumController
             $this->db->execute(
                 "UPDATE album_trocas
                  SET status = 'concluida', recebedor_id = ?, figurinha_recebida_id = ?, concluido_em = NOW()
-                 WHERE usuario_id = ?",
+                 WHERE id = ?",
                 [$uid, $figOferecidaId, $id]
             );
 
@@ -934,15 +934,15 @@ class AlbumController
 
         // Notificacao in-app ao ofertante (fora da transacao)
         try {
-            $figMural = $this->db->fetchOne('SELECT nome FROM album_figurinhas WHERE usuario_id = ?', [(int)$troca['figurinha_id']]);
-            $figRec   = $this->db->fetchOne('SELECT nome FROM album_figurinhas WHERE usuario_id = ?', [$figOferecidaId]);
-            $clic     = $this->db->fetchOne('SELECT username FROM usuarios WHERE usuario_id = ?', [$uid]);
+            $figMural = $this->db->fetchOne('SELECT nome FROM album_figurinhas WHERE id = ?', [(int)$troca['figurinha_id']]);
+            $figRec   = $this->db->fetchOne('SELECT nome FROM album_figurinhas WHERE id = ?', [$figOferecidaId]);
+            $clic     = $this->db->fetchOne('SELECT username FROM usuarios WHERE id = ?', [$uid]);
             NotificacoesController::criar(
                 $this->db,
                 (int)$troca['ofertante_id'],
                 'album_troca',
                 'Troca realizada!',
-                "{$clic['username']} pegou \[Suario_id\]{$figMural['nome']}\[Suario_id\] e te deu \[Suario_id\]{$figRec['nome']}\[Suario_id\].",
+                "{$clic['username']} pegou \"{$figMural['nome']}\" e te deu \"{$figRec['nome']}\".",
                 ['troca_id' => $id]
             );
         } catch (\Throwable $e) {
@@ -1004,7 +1004,7 @@ class AlbumController
 
         $fig = $this->db->fetchOne(
             'SELECT id, numero, nome, `time`, raridade, imagem_url
-             FROM album_figurinhas WHERE usuario_id = ?',
+             FROM album_figurinhas WHERE id = ?',
             [$figId]
         );
         if (!$fig) {
