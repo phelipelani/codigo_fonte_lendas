@@ -925,7 +925,7 @@ class BetsController {
                 $this->pdo->prepare("UPDATE bets_mercados SET status = 'resolvido', resultado_real = ? WHERE id = ?")->execute([$realResult, $mercado['id']]);
             }
 
-            $stmtBilhetes = $this->pdo->prepare("SELECT DISTINCT bb.* FROM bets_bilhetes bb JOIN bets_bilhete_opcoes bbo ON bb.id = bbo.bilhete_id JOIN bets_opcoes bo ON bbo.opcao_id = bo.id JOIN bets_mercados bm ON bo.mercado_id = bm.id WHERE bm.rodada_id = ? AND bb.status = 'pendente'");
+            $stmtBilhetes = $this->pdo->prepare("SELECT DISTINCT bb.* FROM bets_bilhetes bb JOIN bets_bilhete_opcoes bbo ON bb.id = bbo.bilhete_id JOIN bets_opcoes bo ON bbo.opcao_id = bo.id JOIN bets_mercados bm ON bo.mercado_id = bm.id WHERE bm.rodada_id = ?");
             $stmtBilhetes->execute([$rodadaId]);
             $bilhetes = $stmtBilhetes->fetchAll(PDO::FETCH_ASSOC);
 

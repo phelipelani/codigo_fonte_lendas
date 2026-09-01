@@ -105,7 +105,7 @@
 
             // 2. Resolver os bilhetes
             // Pegamos todos os bilhetes da rodada
-            $stmtBilhetes = $this->pdo->prepare("SELECT * FROM bets_bilhetes WHERE rodada_id = ?");
+            $stmtBilhetes = $this->pdo->prepare("SELECT DISTINCT bb.* FROM bets_bilhetes bb JOIN bets_bilhete_opcoes bbo ON bb.id = bbo.bilhete_id JOIN bets_opcoes bo ON bbo.opcao_id = bo.id JOIN bets_mercados bm ON bo.mercado_id = bm.id WHERE bm.rodada_id = ?");
             $stmtBilhetes->execute([$rodadaId]);
             $bilhetes = $stmtBilhetes->fetchAll(PDO::FETCH_ASSOC);
 
