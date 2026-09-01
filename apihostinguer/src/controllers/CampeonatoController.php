@@ -1070,8 +1070,8 @@ class CampeonatoController
     private function calcularClassificacao(int $campeonatoId, ?int $rodadaId = null): array
     {
         $whereRodada = $rodadaId ? "AND cp.rodada_id <= {$rodadaId}" : '';
-        $pV = Pontos::VITORIAS;
-        $pE = Pontos::EMPATES;
+        $pV = 3;
+        $pE = 1;
 
         $rows = $this->db->fetchAll("
             SELECT
@@ -1128,7 +1128,7 @@ class CampeonatoController
                 'gols_pro'       => (int)$r['gols_pro'],
                 'gols_contra'    => (int)$r['gols_contra'],
                 'saldo_gols'     => $saldo,
-                'aproveitamento' => $jogos > 0 ? round(((int)$r['pontos'] / ($jogos * Pontos::VITORIAS)) * 100, 1) : 0,
+                'aproveitamento' => $jogos > 0 ? round(((int)$r['pontos'] / ($jogos * 3)) * 100, 1) : 0,
             ];
         }, $rows, array_keys($rows)));
     }
