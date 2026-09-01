@@ -218,6 +218,43 @@ class AnalyticsController
         $destaqueRodada = null;
         $peDeRatoRodada = null;
 
+        // historico de campeonatos e campeoes
+        $historico = $this->db->fetchAll("
+            SELECT
+                c.id,
+                c.nome,
+                CASE WHEN c.formato = 'liga' THEN 'pontos_corridos' WHEN c.formato = 'copa' THEN 'mata_mata' ELSE c.formato END AS formato,
+                c.data,
+                t.nome AS campeao_nome
+            FROM campeonatos c
+            LEFT JOIN times t ON t.id = c.time_campeao_id
+            WHERE c.status = 'finalizado'
+            ORDER BY c.data DESC
+        ");
+
+        $campeoesRaw = $this->db->fetchAll("
+            SELECT
+                t.id,
+                t.nome,
+                t.logo_url AS escudo_url,
+                CASE WHEN c.formato = 'liga' THEN 'pontos_corridos' WHEN c.formato = 'copa' THEN 'mata_mata' ELSE c.formato END AS formato,
+                COUNT(c.id) AS titulos
+            FROM campeonatos c
+            JOIN times t ON t.id = c.time_campeao_id
+            WHERE c.status = 'finalizado' AND c.time_campeao_id IS NOT NULL
+            GROUP BY t.id, formato
+        ");
+        $campeoes = [];
+        foreach ($campeoesRaw as $row) {
+            $campeoes[] = [
+                'id' => (int)$row['id'],
+                'nome' => $row['nome'],
+                'escudo_url' => $row['escudo_url'],
+                'formato' => $row['formato'],
+                'titulos' => (int)$row['titulos']
+            ];
+        }
+
         if ($destaques['rodada_id']) {
             // Buscar meta da rodada para nr_rodada, campeonato_nome, camp_ativo
             $rodadaId = (int)$destaques['rodada_id'];
@@ -300,6 +337,8 @@ class AnalyticsController
             'rankingPontuacao' => $rankingPontuacao,
             'destaqueRodada'   => $destaqueRodada,
             'peDeRatoRodada'   => $peDeRatoRodada,
+            'historico'        => $historico,
+            'campeoes'         => $campeoes,
         ], JSON_UNESCAPED_UNICODE);
         } catch (\Throwable $e) {
             error_log('[analytics/geral] ERROR: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
