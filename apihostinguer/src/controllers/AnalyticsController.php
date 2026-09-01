@@ -278,7 +278,9 @@ class AnalyticsController
                 t.nome,
                 t.logo_url AS escudo_url,
                 CASE WHEN c.formato = 'liga' THEN 'pontos_corridos' WHEN c.formato = 'copa' THEN 'mata_mata' ELSE c.formato END AS formato,
-                COUNT(c.id) AS titulos
+                COUNT(c.id) AS titulos,
+                GROUP_CONCAT(c.nome SEPARATOR '||') AS nomes_campeonatos,
+                GROUP_CONCAT(c.data SEPARATOR '||') AS datas_campeonatos
             FROM campeonatos c
             JOIN times t ON t.id = c.time_campeao_id
             WHERE c.status = 'finalizado' OR c.time_campeao_id IS NOT NULL
@@ -286,12 +288,28 @@ class AnalyticsController
         ");
         $campeoes = [];
         foreach ($campeoesRaw as $row) {
+            $nomes = explode('||', $row['nomes_campeonatos']);
+            $datas = explode('||', $row['datas_campeonatos']);
+            $conquistas = [];
+            for ($i = 0; $i < count($nomes); $i++) {
+                if (!empty($nomes[$i])) {
+                    $conquistas[] = [
+                        'nome' => $nomes[$i],
+                        'data' => $datas[$i] ?? ''
+                    ];
+                }
+            }
+            // Sort conquistas by date desc
+            usort($conquistas, function($a, $b) {
+                return strcmp($b['data'], $a['data']);
+            });
             $campeoes[] = [
                 'id' => (int)$row['id'],
                 'nome' => $row['nome'],
                 'escudo_url' => $row['escudo_url'],
                 'formato' => $row['formato'],
-                'titulos' => (int)$row['titulos']
+                'titulos' => (int)$row['titulos'],
+                'conquistas' => $conquistas
             ];
         }
 
