@@ -12,9 +12,9 @@ class Pontos
     // ── Pontuação por partida ──────────────────────────────────
     const GOLS         =  1.5;
     const ASSISTENCIAS =  1.0;
-    const CLEAN_SHEET  =  0.5;   // Defensor / Goleiro (jogo sem sofrer gol)
+    const CLEAN_SHEET  =  1.0;   // Defensor / Goleiro (jogo sem sofrer gol)
     const VITORIAS     =  3.0;
-    const EMPATES      =  1.0;
+    const EMPATES      =  1.5;
     const DERROTAS     = -1.0;
     const GOL_CONTRA   = -3.0;   // Punição automática (gol contra)
 
@@ -24,7 +24,7 @@ class Pontos
     const GARCOM_RODADA          =  2;  // Garçom da Semana
     const MELHOR_GOLEIRO_RODADA  =  2;  // Melhor Goleiro da Semana
     const MELHOR_ZAGUEIRO_RODADA =  2;  // Melhor Zagueiro da Semana
-    const PE_DE_RATO_RODADA      = -2;  // Pé de Rato da Semana
+    const PE_DE_RATO_RODADA      = -4;  // Pé de Rato da Semana
 
     // ── Prêmios de CAMPEONATO ────────────────────────────────
     const TITULO_PONTOS_CORRIDOS = 100; // Campeão de Liga

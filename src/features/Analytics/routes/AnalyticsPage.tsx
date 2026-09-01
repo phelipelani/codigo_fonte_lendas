@@ -10,11 +10,11 @@ import {
 import icEstatisticas from '@/assets/icones/estatisticas.webp';
 import PageTitle from '@/components/shared/PageTitle';
 import AnimatedTabs, { type TabItem } from '@/components/shared/AnimatedTabs';
-import { AnalyticsGeralView } from "../components/AnalyticsGeralView";
+import { AnalyticsGeralPage } from "../components/geral/AnalyticsGeralPage";
 import { AnalyticsRivalidadesView } from "../components/AnalyticsRivalidadesView";
 import { AnalyticsTimeView } from "../components/AnalyticsTimeView";
-import { AnalyticsJogadorView } from "../components/AnalyticsJogadorView";
-import { AnalyticsSinergiaView } from "../components/AnalyticsSinergiaView";
+import { PlayerPage } from "../components/jogador/PlayerPage";
+import { SynergyPage } from "../components/sinergia/SynergyPage";
 
 type TabType = "geral" | "jogador" | "time" | "sinergia" | "duplas";
 
@@ -32,10 +32,10 @@ export function AnalyticsPage() {
 
   const content = useMemo(() => {
     switch (activeTab) {
-      case "geral": return <AnalyticsGeralView />;
-      case "jogador": return <AnalyticsJogadorView />;
+      case "geral": return <AnalyticsGeralPage />;
+      case "jogador": return <PlayerPage />;
       case "time": return <AnalyticsTimeView />;
-      case "sinergia": return <AnalyticsSinergiaView />;
+      case "sinergia": return <SynergyPage />;
       case "duplas": return <AnalyticsRivalidadesView />;
       default: return null;
     }

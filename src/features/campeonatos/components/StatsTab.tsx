@@ -566,15 +566,19 @@ export function StatsTab({ campeonatoId }: Props) {
   const rodadasFinalizadas = useMemo(
     () => (rodadas ?? [])
       .filter((r: any) => r.status === 'finalizada')
-      .sort((a: any, b: any) => new Date(a.data.replace(' ', 'T')).getTime() - new Date(b.data.replace(' ', 'T')).getTime()),
+      .sort((a: any, b: any) => new Date(a.data.replace(/-/g, '/')).getTime() - new Date(b.data.replace(/-/g, '/')).getTime()),
     [rodadas],
   );
 
-  // Usa T12:00 para evitar problema de timezone (date-only é interpretado como UTC meia-noite)
+  // Usa string padrao e replace para formatar no Safari
   const fmtDate = useCallback((s: string) => {
     if (!s) return '';
-    const d = new Date(s.length === 10 ? s + 'T12:00:00' : s.replace(' ', 'T'));
-    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    try {
+      const parts = s.split(' ')[0].split('-');
+      if (parts.length === 3) return `${parts[2]}/${parts[1]}`;
+      const d = new Date(s.replace(/-/g, '/'));
+      return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    } catch(e) { return s; }
   }, []);
   const rodadaAtual = rodadas?.find((r: any) => r.id === rodadaSelecionada);
   const rodadaLabel = rodadaSelecionada ? `Rodada ${fmtDate(rodadaAtual?.data ?? '')}` : 'Todas as Rodadas';

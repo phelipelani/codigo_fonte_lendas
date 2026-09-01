@@ -34,7 +34,10 @@ class CampeonatoController
                 c.time_campeao_id, c.foto_campiao_url,
                 t.nome  AS time_campeao_nome,
                 t.logo_url AS time_campeao_logo,
-                COUNT(DISTINCT ct.time_id) AS total_times_inscritos
+                COUNT(DISTINCT ct.time_id) AS total_times_inscritos,
+                (SELECT MAX(data) FROM rodadas r WHERE r.campeonato_id = c.id) as data_fim,
+                (SELECT COUNT(*) FROM rodadas r WHERE r.campeonato_id = c.id) as total_rodadas,
+                (SELECT COUNT(*) FROM rodadas r WHERE r.campeonato_id = c.id AND r.status IN ('finalizada', 'em_andamento')) as rodadas_completas
             FROM campeonatos c
             LEFT JOIN times t  ON t.id  = c.time_campeao_id
             LEFT JOIN campeonato_times ct ON ct.campeonato_id = c.id
@@ -1044,6 +1047,9 @@ class CampeonatoController
             'id'                    => (int)$c['id'],
             'nome'                  => $c['nome'],
             'data'                  => $c['data'],
+            'data_fim'              => $c['data_fim'] ?? null,
+            'total_rodadas'         => (int)($c['total_rodadas'] ?? 0),
+            'rodadas_completas'     => (int)($c['rodadas_completas'] ?? 0),
             'formato'               => $c['formato'],
             'fase_atual'            => $c['fase_atual'],
             'num_times'             => (int)($c['num_times'] ?? 4),
