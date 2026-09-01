@@ -661,24 +661,45 @@ class CartolendaLigaController {
         $precoRodadaId = $ufRow ? (int)$ufRow['id'] : $rodadaId;
 
         if ($campeonatoId > 0) {
-            // Filtra jogadores inscritos no campeonato + TODOS os goleiros
-            $st = $this->pdo->prepare("
-                SELECT j.id, j.nome, j.foto_url, j.avatar_url, j.posicao, j.usuario_id,
-                       COALESCE(p.preco, 10.00)       AS preco,
-                       COALESCE(p.media_pontos, 0)     AS media_pontos,
-                       COALESCE(p.variacao, 0)          AS variacao
-                FROM jogadores j
-                LEFT JOIN cartolendas_precos p ON p.jogador_id = j.id AND p.rodada_id = ?
-                WHERE j.id IN (
-                    SELECT ce.jogador_id FROM campeonato_elencos ce WHERE ce.campeonato_id = ?
-                    UNION
-                    SELECT tj.jogador_id FROM time_jogadores tj JOIN campeonato_times ct ON ct.time_id = tj.time_id WHERE ct.campeonato_id = ?
-                    UNION
-                    SELECT g.id FROM jogadores g WHERE g.posicao = 'goleiro'
-                )
-                ORDER BY j.nome ASC
-            ");
-            $st->execute([$precoRodadaId, $campeonatoId, $campeonatoId]);
+            $stCheck = $this->pdo->prepare("SELECT COUNT(*) as c FROM campeonato_rodada_elencos WHERE rodada_id = ?");
+            $stCheck->execute([$rodadaId]);
+            $hasElencoRodada = $stCheck->fetch()['c'] > 0;
+
+            if ($hasElencoRodada) {
+                $st = $this->pdo->prepare("
+                    SELECT j.id, j.nome, j.foto_url, j.avatar_url, j.posicao, j.usuario_id,
+                           COALESCE(p.preco, 10.00)       AS preco,
+                           COALESCE(p.media_pontos, 0)     AS media_pontos,
+                           COALESCE(p.variacao, 0)          AS variacao
+                    FROM jogadores j
+                    LEFT JOIN cartolendas_precos p ON p.jogador_id = j.id AND p.rodada_id = ?
+                    WHERE j.id IN (
+                        SELECT cre.jogador_id FROM campeonato_rodada_elencos cre WHERE cre.rodada_id = ?
+                        UNION
+                        SELECT g.id FROM jogadores g WHERE g.posicao = 'goleiro'
+                    )
+                    ORDER BY j.nome ASC
+                ");
+                $st->execute([$precoRodadaId, $rodadaId]);
+            } else {
+                $st = $this->pdo->prepare("
+                    SELECT j.id, j.nome, j.foto_url, j.avatar_url, j.posicao, j.usuario_id,
+                           COALESCE(p.preco, 10.00)       AS preco,
+                           COALESCE(p.media_pontos, 0)     AS media_pontos,
+                           COALESCE(p.variacao, 0)          AS variacao
+                    FROM jogadores j
+                    LEFT JOIN cartolendas_precos p ON p.jogador_id = j.id AND p.rodada_id = ?
+                    WHERE j.id IN (
+                        SELECT ce.jogador_id FROM campeonato_elencos ce WHERE ce.campeonato_id = ?
+                        UNION
+                        SELECT tj.jogador_id FROM time_jogadores tj JOIN campeonato_times ct ON ct.time_id = tj.time_id WHERE ct.campeonato_id = ?
+                        UNION
+                        SELECT g.id FROM jogadores g WHERE g.posicao = 'goleiro'
+                    )
+                    ORDER BY j.nome ASC
+                ");
+                $st->execute([$precoRodadaId, $campeonatoId, $campeonatoId]);
+            }
         } else {
             // Fallback: todos os jogadores
             $st = $this->pdo->prepare("
