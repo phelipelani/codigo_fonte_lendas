@@ -210,6 +210,8 @@ class AnalyticsController
                 'titulos'      => (int)($row['qtd_titulos'] ?? 0),
                 'mvps'         => 0,
                 'pontos'       => (float)($row['score_lendario'] ?? 0),
+                'pts_performance' => (float)($row['pts_performance'] ?? 0),
+                'total_como_goleiro' => (int)($row['total_como_goleiro'] ?? 0),
             ];
         }, $scoreLendarioRaw);
 
