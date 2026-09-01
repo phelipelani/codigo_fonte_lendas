@@ -218,6 +218,46 @@ class AnalyticsController
         $destaqueRodada = null;
         $peDeRatoRodada = null;
 
+        // cartoes globais
+        $cartoes = $this->db->fetchAll("
+            SELECT
+                j.id,
+                j.nome,
+                j.foto_url,
+                SUM(COALESCE(ep.cartoes_amarelos, 0)) AS amarelos,
+                SUM(COALESCE(ep.cartoes_vermelhos, 0)) AS vermelhos,
+                SUM(COALESCE(ep.cartoes_amarelos, 0) + COALESCE(ep.cartoes_vermelhos, 0)) AS total
+            FROM campeonato_estatisticas_partida ep
+            JOIN jogadores j ON j.id = ep.jogador_id
+            JOIN campeonato_partidas cp ON cp.id = ep.partida_id AND cp.status = 'finalizada'
+            GROUP BY j.id, j.nome, j.foto_url
+            HAVING total > 0
+            ORDER BY total DESC, vermelhos DESC, amarelos DESC
+            LIMIT 5
+        ");
+
+        // premios globais (mvps e pe de rato)
+        $mvps = $this->db->fetchAll("
+            SELECT id, nome, SUM(c) AS mvps FROM (
+                SELECT j.id, j.nome, COUNT(pr.id) AS c FROM premios_rodada pr JOIN jogadores j ON j.id = pr.jogador_id WHERE pr.tipo_premio = 'mvp_rodada' GROUP BY j.id, j.nome
+                UNION ALL
+                SELECT j.id, j.nome, COUNT(cp.id) AS c FROM campeonato_premios cp JOIN jogadores j ON j.id = cp.jogador_id WHERE cp.tipo_premio = 'mvp' GROUP BY j.id, j.nome
+            ) AS sub GROUP BY id, nome ORDER BY mvps DESC LIMIT 5
+        ");
+
+        $pe_de_rato = $this->db->fetchAll("
+            SELECT id, nome, SUM(c) AS pe_de_rato FROM (
+                SELECT j.id, j.nome, COUNT(pr.id) AS c FROM premios_rodada pr JOIN jogadores j ON j.id = pr.jogador_id WHERE pr.tipo_premio = 'pe_de_rato_rodada' GROUP BY j.id, j.nome
+                UNION ALL
+                SELECT j.id, j.nome, COUNT(cp.id) AS c FROM campeonato_premios cp JOIN jogadores j ON j.id = cp.jogador_id WHERE cp.tipo_premio = 'pe_de_rato_geral' GROUP BY j.id, j.nome
+            ) AS sub GROUP BY id, nome ORDER BY pe_de_rato DESC LIMIT 5
+        ");
+        
+        $premios = [
+            'mvps' => $mvps,
+            'pe_de_rato' => $pe_de_rato
+        ];
+
         // historico de campeonatos e campeoes
         $historico = $this->db->fetchAll("
             SELECT
@@ -228,7 +268,7 @@ class AnalyticsController
                 t.nome AS campeao_nome
             FROM campeonatos c
             LEFT JOIN times t ON t.id = c.time_campeao_id
-            WHERE c.status = 'finalizado'
+            WHERE c.status = 'finalizado' OR c.time_campeao_id IS NOT NULL
             ORDER BY c.data DESC
         ");
 
@@ -241,7 +281,7 @@ class AnalyticsController
                 COUNT(c.id) AS titulos
             FROM campeonatos c
             JOIN times t ON t.id = c.time_campeao_id
-            WHERE c.status = 'finalizado' AND c.time_campeao_id IS NOT NULL
+            WHERE c.status = 'finalizado' OR c.time_campeao_id IS NOT NULL
             GROUP BY t.id, formato
         ");
         $campeoes = [];
@@ -339,6 +379,8 @@ class AnalyticsController
             'peDeRatoRodada'   => $peDeRatoRodada,
             'historico'        => $historico,
             'campeoes'         => $campeoes,
+            'cartoes'          => $cartoes,
+            'premios'          => $premios,
         ], JSON_UNESCAPED_UNICODE);
         } catch (\Throwable $e) {
             error_log('[analytics/geral] ERROR: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
