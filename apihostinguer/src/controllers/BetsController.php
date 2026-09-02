@@ -284,6 +284,22 @@ class BetsController {
             }
         }
 
+        // Verifica se a rodada ja tem partidas finalizadas (rodada em andamento)
+        $stmtRodadaEmAndamento = $this->pdo->prepare("
+            SELECT COUNT(*) as total FROM campeonato_partidas
+            WHERE rodada_id = ? AND status = 'finalizada'
+        ");
+        $stmtRodadaEmAndamento->execute([$rodadaId]);
+        $rodadaEmAndamento = (int)$stmtRodadaEmAndamento->fetch(PDO::FETCH_ASSOC)['total'] > 0;
+
+        if ($rodadaEmAndamento) {
+            // Fecha automaticamente todos os mercados abertos desta rodada
+            $this->pdo->prepare("UPDATE bets_mercados SET status = 'fechado' WHERE rodada_id = ? AND status = 'aberto'")->execute([$rodadaId]);
+            // Retorna vazio — nenhum mercado disponivel
+            echo json_encode(['mercados' => [], 'encerrado' => true, 'mensagem' => 'As apostas para esta rodada foram encerradas pois os jogos já começaram.']);
+            return;
+        }
+
         $stmt = $this->pdo->prepare("
             SELECT bm.*, 
                    t.logo_url as escudo, 
@@ -407,7 +423,12 @@ class BetsController {
             $stmtDesc->execute([$valorApostado, $user['userId']]);
 
             $inQuery = implode(',', array_fill(0, count($opcoes), '?'));
-            $stmtOps = $this->pdo->prepare("SELECT id, odd, mercado_id FROM bets_opcoes WHERE id IN ($inQuery)");
+            $stmtOps = $this->pdo->prepare("
+                SELECT bo.id, bo.odd, bo.mercado_id, bm.regra_categoria, bm.regra_alvo_id, bm.rodada_id, bm.status as mercado_status
+                FROM bets_opcoes bo
+                JOIN bets_mercados bm ON bo.mercado_id = bm.id
+                WHERE bo.id IN ($inQuery)
+            ");
             $stmtOps->execute($opcoes);
             $opcoesDB = $stmtOps->fetchAll(PDO::FETCH_ASSOC);
 
@@ -418,6 +439,64 @@ class BetsController {
                 return;
             }
 
+            // -------------------------------------------------------
+            // VALIDACAO 1: Mercado fechado ou rodada em andamento
+            // -------------------------------------------------------
+            $rodadasDaAposta = array_unique(array_column($opcoesDB, 'rodada_id'));
+            foreach ($rodadasDaAposta as $ridAposta) {
+                $stmtAndamento = $this->pdo->prepare("
+                    SELECT COUNT(*) as total FROM campeonato_partidas
+                    WHERE rodada_id = ? AND status = 'finalizada'
+                ");
+                $stmtAndamento->execute([$ridAposta]);
+                $qtdFinalizadas = (int)$stmtAndamento->fetch(PDO::FETCH_ASSOC)['total'];
+                if ($qtdFinalizadas > 0) {
+                    // Fecha os mercados abertos desta rodada automaticamente
+                    $this->pdo->prepare("UPDATE bets_mercados SET status = 'fechado' WHERE rodada_id = ? AND status = 'aberto'")->execute([$ridAposta]);
+                    $this->pdo->rollBack();
+                    http_response_code(400);
+                    echo json_encode(["error" => "As apostas para esta rodada foram encerradas pois os jogos já começaram."]);
+                    return;
+                }
+            }
+
+            // Verificar se algum mercado selecionado já está fechado/apurado
+            foreach ($opcoesDB as $op) {
+                if ($op['mercado_status'] !== 'aberto') {
+                    $this->pdo->rollBack();
+                    http_response_code(400);
+                    echo json_encode(["error" => "Um ou mais mercados selecionados já estão encerrados."]);
+                    return;
+                }
+            }
+
+            // -------------------------------------------------------
+            // VALIDACAO 2: Mercados correlatos (vitorias <-> pontos mesmo time)
+            // -------------------------------------------------------
+            $GRUPO_CORRELATO = ['vitorias', 'pontos'];
+            $alvosPorGrupoCorrelato = []; // [alvo_id => [categoria1, categoria2, ...]]
+            foreach ($opcoesDB as $op) {
+                $cat = $op['regra_categoria'];
+                $alvo = $op['regra_alvo_id'];
+                if (in_array($cat, $GRUPO_CORRELATO)) {
+                    if (!isset($alvosPorGrupoCorrelato[$alvo])) {
+                        $alvosPorGrupoCorrelato[$alvo] = [];
+                    }
+                    $alvosPorGrupoCorrelato[$alvo][] = $cat;
+                }
+            }
+            foreach ($alvosPorGrupoCorrelato as $alvoId => $cats) {
+                if (count(array_unique($cats)) > 1) {
+                    $this->pdo->rollBack();
+                    http_response_code(400);
+                    echo json_encode(["error" => "Você não pode combinar apostas de Vitórias e Pontos do mesmo time no mesmo bilhete, pois são mercados correlacionados (pontos = vitórias × 3)."]);
+                    return;
+                }
+            }
+
+            // -------------------------------------------------------
+            // VALIDACAO 3: Duas opcoes do mesmo mercado
+            // -------------------------------------------------------
             $mercadosVistos = [];
             $oddTotal = 1.0;
             foreach ($opcoesDB as $op) {
@@ -430,6 +509,7 @@ class BetsController {
                 $mercadosVistos[] = $op['mercado_id'];
                 $oddTotal *= (float) $op['odd'];
             }
+
 
             $retornoPotencial = $valorApostado * $oddTotal;
 
