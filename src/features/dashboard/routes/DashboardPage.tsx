@@ -146,12 +146,12 @@ export function DashboardPage() {
 
       {/* ── DESKTOP LAYOUT (Centro de Comando Amplo) ─────────────────────────── */}
       <div className="hidden lg:flex flex-col gap-6">
-        {/* Linha 3: Última Rodada (Esquerda 58%) + Destaques da Semana (Direita 42%) */}
+        {/* Linha 3: Última Rodada (Esquerda 42%) + Destaques da Semana (Direita 58%) */}
         <div className="grid grid-cols-12 gap-6 items-stretch">
-          <div className="col-span-7">
+          <div className="col-span-5">
             <LatestRoundMatches ultimaRodada={data.ultima_rodada} />
           </div>
-          <div className="col-span-5">
+          <div className="col-span-7">
             <RoundHighlightsSection destaques={data.destaques} />
           </div>
         </div>

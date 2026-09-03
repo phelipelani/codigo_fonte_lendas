@@ -42,6 +42,25 @@ export interface DashboardOverviewData {
       foto_url: string | null;
       total: string | number;
     } | null;
+    mvps?: Array<{
+      id: number;
+      nome: string;
+      foto_url: string | null;
+      total: string | number;
+    }>;
+    pes_de_rato?: Array<{
+      id: number;
+      nome: string;
+      foto_url: string | null;
+      total: string | number;
+    }>;
+    outros_destaques?: Array<{
+      id: number;
+      nome: string;
+      foto_url: string | null;
+      total: string | number;
+      label?: string;
+    }>;
   };
   ultima_rodada: {
     rodada_id: number | null;

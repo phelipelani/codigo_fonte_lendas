@@ -238,12 +238,59 @@ class DashboardController
                 }
             }
 
-            // 4. Destaques da Rodada (MVP, Pé de Rato, Destaque da Semana)
-            $destaquesRaw = $this->stats->getDestaquesUltimaRodada();
+            // 4. Destaques da Rodada (Todos os MVPs, todos os Pés de Rato e outros prêmios da rodada)
+            $ridPremios = $ultimaRodadaInfo ? (int)$ultimaRodadaInfo['id'] : 0;
+            if (!$ridPremios) {
+                $rowR = $this->db->fetchOne("SELECT rodada_id FROM premios_rodada ORDER BY rodada_id DESC LIMIT 1");
+                $ridPremios = (int)($rowR['rodada_id'] ?? 0);
+            }
+
+            $mvpsList = [];
+            $pesDeRatoList = [];
+            $outrosDestaques = [];
+
+            if ($ridPremios > 0) {
+                $premiosRows = $this->db->fetchAll("
+                    SELECT pr.tipo_premio, pr.pontuacao AS total, j.id, j.nome, j.foto_url
+                    FROM premios_rodada pr
+                    JOIN jogadores j ON j.id = pr.jogador_id
+                    WHERE pr.rodada_id = ?
+                    ORDER BY pr.tipo_premio, pr.pontuacao DESC
+                ", [$ridPremios]);
+
+                foreach ($premiosRows as $pr) {
+                    $item = [
+                        'id'       => (int)$pr['id'],
+                        'nome'     => $pr['nome'],
+                        'foto_url' => $pr['foto_url'],
+                        'total'    => $pr['total'],
+                    ];
+                    if ($pr['tipo_premio'] === 'mvp_rodada') {
+                        $mvpsList[] = $item;
+                    } elseif ($pr['tipo_premio'] === 'pe_de_rato_rodada') {
+                        $pesDeRatoList[] = $item;
+                    } else {
+                        $label = 'Destaque';
+                        if ($pr['tipo_premio'] === 'artilheiro_rodada') $label = 'Artilheiro';
+                        elseif ($pr['tipo_premio'] === 'garcom_rodada') $label = 'Garçom';
+                        elseif ($pr['tipo_premio'] === 'melhor_goleiro_rodada') $label = 'Melhor Goleiro';
+                        elseif ($pr['tipo_premio'] === 'melhor_zagueiro_rodada') $label = 'Melhor Zagueiro';
+
+                        $item['tipo'] = $pr['tipo_premio'];
+                        $item['label'] = $label;
+                        $outrosDestaques[] = $item;
+                    }
+                }
+            }
+
             $destaquesData = [
-                'mvp'             => $destaquesRaw['mvp'] ?? null,
-                'pe_de_rato'      => $destaquesRaw['pe_de_rato'] ?? null,
-                'jogador_rodada'  => $destaquesRaw['artilheiro'] ?? $destaquesRaw['goleiro'] ?? null,
+                'mvps'             => $mvpsList,
+                'pes_de_rato'      => $pesDeRatoList,
+                'outros_destaques' => $outrosDestaques,
+                // Fallbacks para compatibilidade
+                'mvp'              => $mvpsList[0] ?? null,
+                'pe_de_rato'       => $pesDeRatoList[0] ?? null,
+                'jogador_rodada'   => $outrosDestaques[0] ?? null,
             ];
 
             // 5. Top 5 Jogadores (Score Lendário com link para Analytics)
