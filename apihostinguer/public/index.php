@@ -67,6 +67,7 @@ require_once __DIR__ . '/../src/controllers/StatsController.php';
 require_once __DIR__ . '/../src/controllers/LigaController.php';
 require_once __DIR__ . '/../src/controllers/AlbumController.php';
 require_once __DIR__ . '/../src/controllers/BetsController.php';
+require_once __DIR__ . '/../src/controllers/DashboardController.php';
 
 // Tratamento de erros
 function sendApiError(Throwable $e): void
@@ -977,6 +978,15 @@ try {
         } catch (Exception $ex) {
             throw new HttpError('Erro ao fazer upload: ' . $ex->getMessage(), 500);
         }
+    }
+
+    // =========================================================
+    // DASHBOARD OVERVIEW — Centro de Comando Completo
+    // =========================================================
+    if ($path === '/dashboard/overview' && $method === 'GET') {
+        AuthMiddleware::handle();
+        (new DashboardController())->overview();
+        exit;
     }
 
     // =========================================================
