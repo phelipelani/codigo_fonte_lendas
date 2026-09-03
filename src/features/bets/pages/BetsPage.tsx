@@ -245,15 +245,32 @@ export function BetsPage() {
                     </div>
                     <div className="space-y-2 mb-4 bg-zinc-800/50 p-3 rounded-lg">
                       {bilhete.opcoes?.map((op: any, i: number) => (
-                        <div key={i} className="flex justify-between items-center text-sm">
-                          <div>
-                            <span className="text-zinc-300 font-medium">{op.titulo}</span>
-                            <span className="text-zinc-500 ml-2">({op.descricao})</span>
+                        <div key={i} className="flex justify-between items-center text-sm py-1 border-b border-zinc-800/50 last:border-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {/* Status GREEN / LOSS / PENDENTE */}
+                            {op.status_resultado === 'ganhou' ? (
+                              <span className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[11px] font-black px-2 py-0.5 rounded uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                                <span>✓</span> GREEN
+                              </span>
+                            ) : op.status_resultado === 'perdeu' ? (
+                              <span className="bg-red-500/15 text-red-400 border border-red-500/30 text-[11px] font-black px-2 py-0.5 rounded uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                                <span>✕</span> LOSS
+                              </span>
+                            ) : (
+                              <span className="bg-zinc-700/30 text-zinc-400 border border-zinc-700 text-[10px] font-semibold px-1.5 py-0.5 rounded uppercase">
+                                ABERTO
+                              </span>
+                            )}
+
+                            <span className="text-zinc-200 font-medium">{op.titulo}</span>
+                            <span className="text-zinc-400 text-xs">({op.descricao})</span>
                             {op.resultado_real !== undefined && op.resultado_real !== null && (
-                              <span className="text-zinc-400 ml-2 text-xs border border-zinc-700 px-1 rounded bg-zinc-800">Resultado: {op.resultado_real}</span>
+                              <span className="text-zinc-300 text-xs border border-zinc-700/80 px-1.5 py-0.5 rounded bg-zinc-800 font-mono">
+                                Placar real: <strong className="text-fut-primary">{op.resultado_real}</strong>
+                              </span>
                             )}
                           </div>
-                          <span className="text-fut-primary font-bold">{Number(op.odd_momento).toFixed(2)}</span>
+                          <span className="text-fut-primary font-bold ml-2 shrink-0">{Number(op.odd_momento).toFixed(2)}</span>
                         </div>
                       ))}
                     </div>

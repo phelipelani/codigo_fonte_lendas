@@ -74,7 +74,7 @@ class BetsController {
         $nomeTime = $input['nome_time'] ?? 'Time';
 
         if (!$campeonatoId || !$rodadaId) {
-            $stmtAtiva = $this->pdo->prepare("SELECT id, campeonato_id FROM rodadas WHERE status = 'aberta' ORDER BY id DESC LIMIT 1");
+            $stmtAtiva = $this->pdo->prepare("SELECT id, campeonato_id FROM rodadas WHERE status = 'aberta' ORDER BY data ASC, id ASC LIMIT 1");
             $stmtAtiva->execute();
             $rodadaAberta = $stmtAtiva->fetch(PDO::FETCH_ASSOC);
             if ($rodadaAberta) {
@@ -176,7 +176,7 @@ class BetsController {
         $nomeGoleiro = $input['nome_goleiro'] ?? 'Goleiro';
 
         if (!$campeonatoId || !$rodadaId) {
-            $stmtAtiva = $this->pdo->prepare("SELECT id, campeonato_id FROM rodadas WHERE status = 'aberta' ORDER BY id DESC LIMIT 1");
+            $stmtAtiva = $this->pdo->prepare("SELECT id, campeonato_id FROM rodadas WHERE status = 'aberta' ORDER BY data ASC, id ASC LIMIT 1");
             $stmtAtiva->execute();
             $rodadaAberta = $stmtAtiva->fetch(PDO::FETCH_ASSOC);
             if ($rodadaAberta) {
@@ -272,7 +272,7 @@ class BetsController {
         $rodadaId = $_GET['rodada_id'] ?? null;
 
         if (!$campeonatoId || !$rodadaId) {
-            $stmtAtiva = $this->pdo->prepare("SELECT id, campeonato_id FROM rodadas WHERE status = 'aberta' ORDER BY id DESC LIMIT 1");
+            $stmtAtiva = $this->pdo->prepare("SELECT id, campeonato_id FROM rodadas WHERE status = 'aberta' ORDER BY data ASC, id ASC LIMIT 1");
             $stmtAtiva->execute();
             $rodadaAberta = $stmtAtiva->fetch(PDO::FETCH_ASSOC);
             if ($rodadaAberta) {
@@ -339,7 +339,7 @@ class BetsController {
         $rodadaId = $_GET['rodada_id'] ?? null;
 
         if (!$campeonatoId || !$rodadaId) {
-            $stmtAtiva = $this->pdo->prepare("SELECT id, campeonato_id FROM rodadas WHERE status = 'aberta' ORDER BY id DESC LIMIT 1");
+            $stmtAtiva = $this->pdo->prepare("SELECT id, campeonato_id FROM rodadas WHERE status = 'aberta' ORDER BY data ASC, id ASC LIMIT 1");
             $stmtAtiva->execute();
             $rodadaAberta = $stmtAtiva->fetch(PDO::FETCH_ASSOC);
             if ($rodadaAberta) {
@@ -539,7 +539,10 @@ class BetsController {
         
         foreach ($bilhetes as &$b) {
             $stmtOps = $this->pdo->prepare("
-                SELECT bbo.*, bo.descricao, bm.titulo, bm.rodada_id as opcao_rodada_id, bm.status as mercado_status, bm.rodada_id as opcao_rodada_id, bm.resultado_real 
+                SELECT bbo.id, bbo.bilhete_id, bbo.opcao_id, bbo.odd_momento,
+                       COALESCE(bo.status_resultado, bbo.status_resultado, 'aguardando') as status_resultado,
+                       bo.descricao, bo.regra_condicao, bo.regra_valor,
+                       bm.titulo, bm.rodada_id as opcao_rodada_id, bm.status as mercado_status, bm.resultado_real 
                 FROM bets_bilhete_opcoes bbo 
                 JOIN bets_opcoes bo ON bbo.opcao_id = bo.id 
                 JOIN bets_mercados bm ON bo.mercado_id = bm.id
@@ -547,6 +550,7 @@ class BetsController {
             ");
             $stmtOps->execute([$b['id']]);
             $b['opcoes'] = $stmtOps->fetchAll(PDO::FETCH_ASSOC);
+            $b['rodada_id'] = $b['opcoes'][0]['opcao_rodada_id'] ?? null;
         }
         
         echo json_encode($bilhetes);
@@ -582,7 +586,7 @@ class BetsController {
 
         $campeonatoId = $_GET['campeonato_id'] ?? null;
         if (!$campeonatoId) {
-            $stmtAtiva = $this->pdo->prepare("SELECT campeonato_id FROM rodadas WHERE status = 'aberta' ORDER BY id DESC LIMIT 1");
+            $stmtAtiva = $this->pdo->prepare("SELECT campeonato_id FROM rodadas WHERE status = 'aberta' ORDER BY data ASC, id ASC LIMIT 1");
             $stmtAtiva->execute();
             $rodadaAberta = $stmtAtiva->fetch(PDO::FETCH_ASSOC);
             if ($rodadaAberta) {
@@ -792,7 +796,7 @@ class BetsController {
         $nomeAlvo = $input['nome_alvo'] ?? 'Alvo';
 
         if (!$campeonatoId || !$rodadaId) {
-            $stmtAtiva = $this->pdo->prepare("SELECT id, campeonato_id FROM rodadas WHERE status = 'aberta' ORDER BY id DESC LIMIT 1");
+            $stmtAtiva = $this->pdo->prepare("SELECT id, campeonato_id FROM rodadas WHERE status = 'aberta' ORDER BY data ASC, id ASC LIMIT 1");
             $stmtAtiva->execute();
             $rodadaAberta = $stmtAtiva->fetch(PDO::FETCH_ASSOC);
             if ($rodadaAberta) {
@@ -999,6 +1003,7 @@ class BetsController {
                     $opStatus = $opGanhou ? 'ganhou' : 'perdeu';
                     try {
                         $this->pdo->exec("UPDATE bets_opcoes SET status_resultado = '$opStatus' WHERE id = " . $op['id']);
+                        $this->pdo->exec("UPDATE bets_bilhete_opcoes SET status_resultado = '$opStatus' WHERE opcao_id = " . $op['id']);
                     } catch (Exception $e) {}
                 }
 
@@ -1079,12 +1084,10 @@ class BetsController {
 
                     if (!$opGanhou) {
                         $bilheteVenceu = false;
-                        break;
                     }
                 }
 
-                file_put_contents('/tmp/debug_bets.log', "Bilhete {$bilhete['id']}: realResult={$realResult}, linha={$linha}, cond={$cond}, opGanhou=" . ($opGanhou ? '1' : '0') . "
-", FILE_APPEND); $novoStatus = $bilheteVenceu ? 'ganhou' : 'perdeu';
+                $novoStatus = $bilheteVenceu ? 'ganhou' : 'perdeu';
                 $premio = (float)$bilhete['valor_apostado'] * (float)$bilhete['odd_total'];
 
                 if ($statusAntigo !== $novoStatus) {
