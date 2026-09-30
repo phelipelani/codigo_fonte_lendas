@@ -259,7 +259,14 @@ export function BetsPage() {
                       )}
                       <div>
                         <h3 className="text-lg font-bold text-white">{mercado.titulo}</h3>
-                        <p className="text-sm text-zinc-400 uppercase tracking-widest mt-0.5">{getCategoriaLabel(mercado.regra_categoria)}</p>
+                        <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                          <p className="text-sm text-zinc-400 uppercase tracking-widest">{getCategoriaLabel(mercado.regra_categoria)}</p>
+                          {Number(mercado.pote_total || 0) > 0 && (
+                            <span className="text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold">
+                              💰 Pote Acumulado: {Number(mercado.pote_total).toFixed(2)} fichas
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -358,7 +365,14 @@ export function BetsPage() {
                   <div key={bilhete.id} className="bg-zinc-900 rounded-xl border border-zinc-800 p-5">
                     <div className="flex justify-between items-start mb-4">
                       <div>
-                        <span className="text-zinc-500 text-sm">Bilhete #{bilhete.id}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-zinc-500 text-sm">Bilhete #{bilhete.id}</span>
+                          {bilhete.is_pote && (
+                            <span className="text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/40 px-1.5 py-0.5 rounded font-black uppercase">
+                              🏆 Bolão de Pote
+                            </span>
+                          )}
+                        </div>
                         <h4 className="text-white font-bold">Rodada {bilhete.rodada_id}</h4>
                         <span className="text-zinc-400 text-xs">{(() => {
                           const d = parseApiDate(bilhete.created_at);
@@ -400,7 +414,9 @@ export function BetsPage() {
                               </span>
                             )}
                           </div>
-                          <span className="text-fut-primary font-bold ml-2 shrink-0">{Number(op.odd_momento).toFixed(2)}</span>
+                          <span className="text-fut-primary font-bold ml-2 shrink-0">
+                            {Number(op.odd_momento).toFixed(2)}{op.is_pote && <span className="text-[10px] text-amber-400 ml-1 font-normal">(est.)</span>}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -410,10 +426,19 @@ export function BetsPage() {
                         <p className="text-white font-bold">💰 {Number(bilhete.valor_apostado).toFixed(2)}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-zinc-400 text-xs uppercase">Retorno {bilhete.status === 'pendente' ? 'Potencial' : ''}</p>
+                        <p className="text-zinc-400 text-xs uppercase">
+                          {bilhete.is_pote && bilhete.status === 'pendente' 
+                            ? 'Retorno Estimado (Pote)' 
+                            : `Retorno ${bilhete.status === 'pendente' ? 'Potencial' : ''}`}
+                        </p>
                         <p className={`font-bold text-lg ${bilhete.status === 'perdeu' ? 'text-red-500' : 'text-green-500'}`}>
                           {bilhete.status === 'perdeu' ? '0.00' : `💰 ${Number(bilhete.retorno_potencial || (bilhete.valor_apostado * bilhete.odd_total)).toFixed(2)}`}
                         </p>
+                        {bilhete.is_pote && bilhete.status === 'pendente' && (
+                          <span className="text-[10px] text-amber-400/90 block">
+                            *Pote atual: 💰 {Number(bilhete.pote_total || 0).toFixed(2)} (Muda conforme novas apostas entram!)
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
