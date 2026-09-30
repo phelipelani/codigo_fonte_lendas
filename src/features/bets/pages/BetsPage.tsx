@@ -119,6 +119,17 @@ export function BetsPage() {
                                 <span className="text-xs text-zinc-500 font-semibold">
                                   {mercado.total_apostas || 0} aposta{(mercado.total_apostas || 0) === 1 ? '' : 's'}
                                 </span>
+                                {mercado.fecha_em && (
+                                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded border ${
+                                    (mercado as any).apostas_encerradas 
+                                      ? 'bg-red-500/20 text-red-400 border-red-500/30' 
+                                      : 'bg-zinc-800 text-amber-300 border-amber-500/30'
+                                  }`}>
+                                    {(mercado as any).apostas_encerradas 
+                                      ? '🔒 Apostas Encerradas' 
+                                      : '⏰ Encerra em 06/10 às 19:00'}
+                                  </span>
+                                )}
                               </div>
                               <h3 className="text-xl font-black text-white mt-1 tracking-tight">
                                 {mercado.titulo}
@@ -175,11 +186,13 @@ export function BetsPage() {
                             return (
                               <div 
                                 key={opcao.id}
-                                onClick={() => handleToggleSelecao(opcao)}
-                                className={`cursor-pointer rounded-xl p-4 border transition-all duration-200 relative group ${
-                                  isSelected
-                                    ? 'bg-fut-primary/15 border-fut-primary shadow-lg shadow-fut-primary/10 ring-1 ring-fut-primary'
-                                    : 'bg-zinc-800/80 hover:bg-zinc-800 border-zinc-700 hover:border-zinc-500'
+                                onClick={() => !(mercado as any).apostas_encerradas && handleToggleSelecao(opcao)}
+                                className={`rounded-xl p-4 border transition-all duration-200 relative group ${
+                                  (mercado as any).apostas_encerradas
+                                    ? 'cursor-not-allowed opacity-80 bg-zinc-900 border-zinc-800'
+                                    : isSelected
+                                      ? 'cursor-pointer bg-fut-primary/15 border-fut-primary shadow-lg shadow-fut-primary/10 ring-1 ring-fut-primary'
+                                      : 'cursor-pointer bg-zinc-800/80 hover:bg-zinc-800 border-zinc-700 hover:border-zinc-500'
                                 }`}
                               >
                                 <div className="flex justify-between items-start mb-2">
@@ -205,13 +218,20 @@ export function BetsPage() {
 
                                 <button
                                   type="button"
+                                  disabled={Boolean((mercado as any).apostas_encerradas)}
                                   className={`w-full mt-3 py-2 px-3 rounded-lg font-bold text-xs uppercase tracking-wider transition-colors ${
-                                    isSelected
-                                      ? 'bg-fut-primary text-black'
-                                      : 'bg-zinc-700/60 hover:bg-zinc-700 text-zinc-200'
+                                    (mercado as any).apostas_encerradas
+                                      ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700/50'
+                                      : isSelected
+                                        ? 'bg-fut-primary text-black'
+                                        : 'bg-zinc-700/60 hover:bg-zinc-700 text-zinc-200'
                                   }`}
                                 >
-                                  {isSelected ? '✓ Selecionado no Bilhete' : 'Apostar nesta Opção'}
+                                  {(mercado as any).apostas_encerradas
+                                    ? '🔒 Apostas Encerradas'
+                                    : isSelected 
+                                      ? '✓ Selecionado no Bilhete' 
+                                      : 'Apostar nesta Opção'}
                                 </button>
                               </div>
                             );
