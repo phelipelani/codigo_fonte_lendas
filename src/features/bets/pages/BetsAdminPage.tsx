@@ -31,6 +31,11 @@ export function BetsAdminPage() {
   const [droppedItem, setDroppedItem] = useState<DraggableItem | null>(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
 
+  // Bolão de Pote (Pari-Mutuel) State
+  const [poteTitulo, setPoteTitulo] = useState('');
+  const [poteOpcoes, setPoteOpcoes] = useState<string[]>(['', '']);
+  const [apurandoPote, setApurandoPote] = useState<MercadoBet | null>(null);
+
   const { data: rankingUsuarios, isLoading: isLoadingUsuarios } = useQuery({
     queryKey: ['admin_usuarios_ranking'],
     queryFn: async () => await betsApi.getRanking()
@@ -113,6 +118,38 @@ export function BetsAdminPage() {
       queryClient.invalidateQueries({ queryKey: ['admin_mercados'] });
     },
     onError: (err: any) => toast.error(err.response?.data?.error || 'Erro ao atualizar odd')
+  });
+
+  const criarMercadoPoteMutation = useMutation({
+    mutationFn: async (data: { titulo: string; opcoes: string[]; rodada_id?: number }) => {
+      return betsApi.adminCriarMercadoPote(data);
+    },
+    onSuccess: () => {
+      toast.success('Mercado de Pote criado com sucesso!');
+      setPoteTitulo('');
+      setPoteOpcoes(['', '']);
+      queryClient.invalidateQueries({ queryKey: ['bets_mercados'] });
+      queryClient.invalidateQueries({ queryKey: ['admin_mercados'] });
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.error || 'Erro ao criar mercado de pote');
+    }
+  });
+
+  const apurarPoteMutation = useMutation({
+    mutationFn: async ({ mercadoId, data }: { mercadoId: number; data: { opcao_vencedora_id?: number | 'cancelar'; cancelar?: boolean } }) => {
+      return betsApi.adminApurarPote(mercadoId, data);
+    },
+    onSuccess: (data: any) => {
+      toast.success(data.message || 'Pote apurado com sucesso!');
+      setApurandoPote(null);
+      queryClient.invalidateQueries({ queryKey: ['bets_mercados'] });
+      queryClient.invalidateQueries({ queryKey: ['admin_mercados'] });
+      queryClient.invalidateQueries({ queryKey: ['admin_usuarios_ranking'] });
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.error || 'Erro ao apurar pote');
+    }
   });
 
   // Drag Handlers
@@ -274,6 +311,107 @@ export function BetsAdminPage() {
         </select>
       </div>
 
+      {/* CRIAR DESAFIO / BOLÃO DE POTE (PARI-MUTUEL) */}
+      <div className="bg-gradient-to-r from-zinc-900 via-zinc-900 to-amber-950/40 rounded-xl border-2 border-amber-500/40 p-6 mb-8 shadow-xl">
+        <div className="flex items-center gap-3 mb-4">
+          <span className="text-3xl">🏆</span>
+          <div>
+            <h2 className="text-white font-bold text-xl flex items-center gap-2">
+              Bolão de Pote X1 / Desafios Personalizados
+              <span className="text-xs bg-amber-500/20 text-amber-400 border border-amber-500/40 px-2 py-0.5 rounded font-black uppercase">
+                Pari-Mutuel
+              </span>
+            </h2>
+            <p className="text-sm text-zinc-400">
+              Crie uma aposta entre jogadores ou opções personalizadas onde o prêmio é a soma de todo o valor arrecadado (o pote) distribuído entre os vencedores.
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-4 max-w-3xl">
+          <div>
+            <label className="block text-xs uppercase font-bold text-zinc-400 mb-1.5">
+              Título da Disputa / Pergunta
+            </label>
+            <input
+              type="text"
+              placeholder="Ex: Gabriel Santista X Gustavo Palmeirense quem ganha?"
+              className="w-full bg-zinc-800 border border-zinc-700 text-white px-4 py-2.5 rounded-lg focus:border-amber-400 focus:outline-none text-sm"
+              value={poteTitulo}
+              onChange={(e) => setPoteTitulo(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs uppercase font-bold text-zinc-400 mb-1.5">
+              Opções de Aposta (mínimo 2)
+            </label>
+            <div className="space-y-2">
+              {poteOpcoes.map((op, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-amber-400 w-6 text-center">#{idx + 1}</span>
+                  <input
+                    type="text"
+                    placeholder={`Opção ${idx + 1} (Ex: ${idx === 0 ? 'Vitória Gabriel Santista' : 'Vitória Gustavo Palmeirense'})`}
+                    className="flex-1 bg-zinc-800 border border-zinc-700 text-white px-3 py-2 rounded-lg focus:border-amber-400 focus:outline-none text-sm"
+                    value={op}
+                    onChange={(e) => {
+                      const newOps = [...poteOpcoes];
+                      newOps[idx] = e.target.value;
+                      setPoteOpcoes(newOps);
+                    }}
+                  />
+                  {poteOpcoes.length > 2 && (
+                    <button
+                      type="button"
+                      onClick={() => setPoteOpcoes(poteOpcoes.filter((_, i) => i !== idx))}
+                      className="text-red-400 hover:text-red-300 p-2"
+                      title="Remover opção"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-3 mt-3">
+              <button
+                type="button"
+                onClick={() => setPoteOpcoes([...poteOpcoes, ''])}
+                className="text-xs text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1 bg-amber-500/10 px-3 py-1.5 rounded border border-amber-500/20"
+              >
+                + Adicionar Outra Opção
+              </button>
+
+              <div className="flex-1"></div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const validOps = poteOpcoes.map(o => o.trim()).filter(Boolean);
+                  if (!poteTitulo.trim()) {
+                    return toast.error('Informe o título do Bolão de Pote.');
+                  }
+                  if (validOps.length < 2) {
+                    return toast.error('Preencha ao menos 2 opções.');
+                  }
+                  criarMercadoPoteMutation.mutate({
+                    titulo: poteTitulo.trim(),
+                    opcoes: validOps,
+                    rodada_id: selectedRodadaId ? Number(selectedRodadaId) : undefined
+                  });
+                }}
+                disabled={criarMercadoPoteMutation.isPending}
+                className="bg-amber-500 hover:bg-amber-400 text-black font-black px-6 py-2.5 rounded-lg transition disabled:opacity-50 text-sm shadow-lg shadow-amber-500/20 flex items-center gap-2"
+              >
+                {criarMercadoPoteMutation.isPending ? 'Criando...' : '🚀 Criar Desafio de Pote'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
         
         {/* SIDEBAR: Draggable Items */}
@@ -429,7 +567,88 @@ export function BetsAdminPage() {
                  </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {mercadosAtivos?.map((mercado: MercadoBet) => (
+                  {mercadosAtivos?.map((mercado: MercadoBet) => {
+                    const isPote = mercado.regra_categoria === 'pote' || mercado.is_pote;
+
+                    if (isPote) {
+                      return (
+                        <div key={mercado.id} className={`bg-gradient-to-b from-zinc-900 to-zinc-950 border-2 ${mercado.status === 'pausado' ? 'border-amber-600/40 opacity-70' : 'border-amber-500/50'} rounded-xl p-5 shadow-lg transition`}>
+                          <div className="flex justify-between items-start mb-4 pb-3 border-b border-zinc-800">
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/40">
+                                  🏆 BOLÃO DE POTE
+                                </span>
+                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${mercado.status === 'pausado' ? 'bg-amber-500/20 text-amber-400' : mercado.status === 'resolvido' ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'}`}>
+                                  {mercado.status.toUpperCase()}
+                                </span>
+                              </div>
+                              <h3 className="text-white font-black text-base leading-tight">{mercado.titulo}</h3>
+                              <p className="text-xs text-amber-400 font-bold mt-1">
+                                💰 Pote: R$ {Number(mercado.pote_total || 0).toFixed(2)} <span className="text-zinc-400 font-normal">({mercado.total_apostas || 0} aposta{(mercado.total_apostas || 0) === 1 ? '' : 's'})</span>
+                              </p>
+                            </div>
+
+                            <div className="flex items-center gap-1.5">
+                              {mercado.status === 'aberto' && (
+                                <button 
+                                  onClick={() => setApurandoPote(mercado)}
+                                  className="bg-amber-500 hover:bg-amber-400 text-black text-xs font-black px-3 py-1.5 rounded shadow transition flex items-center gap-1"
+                                  title="Apurar resultado do pote"
+                                >
+                                  🏆 Apurar
+                                </button>
+                              )}
+                              {mercado.status === 'aberto' ? (
+                                <button onClick={() => atualizarStatusMutation.mutate({ id: mercado.id, status: 'pausado' })} title="Pausar" className="p-1.5 bg-amber-500/10 text-amber-500 rounded hover:bg-amber-500/20 transition">
+                                  ⏸️
+                                </button>
+                              ) : mercado.status === 'pausado' ? (
+                                <button onClick={() => atualizarStatusMutation.mutate({ id: mercado.id, status: 'aberto' })} title="Retomar" className="p-1.5 bg-green-500/10 text-green-500 rounded hover:bg-green-500/20 transition">
+                                  ▶️
+                                </button>
+                              ) : null}
+                              <button onClick={() => window.confirm("Excluir e reembolsar todas as apostas deste pote?") && excluirMercadoMutation.mutate(mercado.id)} title="Excluir e reembolsar" className="p-1.5 bg-red-500/10 text-red-500 rounded hover:bg-red-500/20 transition">
+                                🗑️
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Opções com apostadores e porcentagens */}
+                          <div className="space-y-2">
+                            {mercado.opcoes?.map((op) => (
+                              <div key={op.id} className="bg-zinc-800/80 rounded-lg p-3 text-xs border border-zinc-700/60">
+                                <div className="flex justify-between items-center mb-1">
+                                  <span className="text-white font-bold text-sm">{op.descricao}</span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-zinc-400 font-semibold">{Number(op.porcentagem || 0).toFixed(1)}% do pote</span>
+                                    <span className="text-fut-primary font-black text-sm bg-zinc-900 px-2 py-0.5 rounded border border-zinc-700">
+                                      {Number(op.odd_atual || op.odd).toFixed(2)}x
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="text-[11px] text-zinc-400 flex justify-between items-center pt-1 border-t border-zinc-700/40">
+                                  <span>Total: <strong className="text-zinc-200">💰 R$ {Number(op.total_apostado || 0).toFixed(2)}</strong> ({op.qtd_apostadores || 0} apostador{(op.qtd_apostadores || 0) === 1 ? '' : 'es'})</span>
+                                </div>
+
+                                {op.apostadores && op.apostadores.length > 0 && (
+                                  <div className="mt-2 pt-1.5 border-t border-zinc-700/40 flex flex-wrap gap-1">
+                                    {op.apostadores.map((ap, i) => (
+                                      <span key={i} className="bg-zinc-900/90 text-zinc-300 text-[10px] px-2 py-0.5 rounded border border-zinc-700">
+                                        {ap.username}: <strong className="text-amber-400">💰{Number(ap.valor_apostado).toFixed(2)}</strong>
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
                     <div key={mercado.id} className={`bg-zinc-800/40 border ${mercado.status === 'pausado' ? 'border-amber-500/50 opacity-70' : 'border-zinc-700'} rounded-lg p-4 transition hover:bg-zinc-800/60`}>
                       <div className="flex justify-between items-start mb-4">
                         <div className="flex items-center gap-3">
@@ -490,7 +709,8 @@ export function BetsAdminPage() {
                         ))}
                       </div>
                     </div>
-                  ))}
+                  );
+                })}
                 </div>
               )}
             </div>
@@ -498,6 +718,93 @@ export function BetsAdminPage() {
 
         </div>
       </div>
+
+      {/* MODAL DE APURAÇÃO DO BOLÃO DE POTE */}
+      {apurandoPote && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-zinc-900 border-2 border-amber-500/50 rounded-2xl max-w-lg w-full p-6 shadow-2xl animate-fade-in text-white">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <span className="text-xs bg-amber-500/20 text-amber-400 border border-amber-500/40 px-2 py-0.5 rounded font-black uppercase">
+                  Apuração de Bolão de Pote
+                </span>
+                <h3 className="text-xl font-bold mt-1 text-white">{apurandoPote.titulo}</h3>
+              </div>
+              <button 
+                onClick={() => setApurandoPote(null)}
+                className="text-zinc-400 hover:text-white text-lg p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="bg-zinc-800/80 p-4 rounded-xl border border-zinc-700 mb-5 flex justify-between items-center">
+              <span className="text-sm text-zinc-300">Pote Total Arrecadado:</span>
+              <span className="text-xl font-black text-amber-400">
+                💰 R$ {Number(apurandoPote.pote_total || 0).toFixed(2)}
+              </span>
+            </div>
+
+            <p className="text-sm text-zinc-300 font-medium mb-3">
+              Quem venceu este desafio? Escolha a opção vencedora para distribuir o pote proporcionalmente aos acertadores:
+            </p>
+
+            <div className="space-y-2.5 mb-6">
+              {apurandoPote.opcoes?.map((opcao) => (
+                <button
+                  key={opcao.id}
+                  disabled={apurarPoteMutation.isPending}
+                  onClick={() => {
+                    if (window.confirm(`Confirmar vitória de "${opcao.descricao}"? Isso distribuirá R$ ${Number(apurandoPote.pote_total || 0).toFixed(2)} aos apostadores desta opção.`)) {
+                      apurarPoteMutation.mutate({
+                        mercadoId: apurandoPote.id,
+                        data: { opcao_vencedora_id: opcao.id }
+                      });
+                    }
+                  }}
+                  className="w-full text-left bg-zinc-800 hover:bg-emerald-600/20 border border-zinc-700 hover:border-emerald-500 p-3.5 rounded-xl transition flex justify-between items-center group"
+                >
+                  <div>
+                    <span className="font-bold text-white group-hover:text-emerald-400 text-sm block">
+                      ✓ {opcao.descricao}
+                    </span>
+                    <span className="text-xs text-zinc-400">
+                      💰 R$ {Number(opcao.total_apostado || 0).toFixed(2)} apostados ({opcao.qtd_apostadores || 0} apostador{(opcao.qtd_apostadores || 0) === 1 ? '' : 'es'})
+                    </span>
+                  </div>
+                  <span className="text-xs font-bold bg-zinc-700 group-hover:bg-emerald-500 group-hover:text-black px-3 py-1.5 rounded transition">
+                    Declarar Vencedor
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <div className="pt-4 border-t border-zinc-800 flex justify-between items-center">
+              <button
+                disabled={apurarPoteMutation.isPending}
+                onClick={() => {
+                  if (window.confirm("Deseja CANCELAR este bolão e reembolsar 100% de todas as apostas?")) {
+                    apurarPoteMutation.mutate({
+                      mercadoId: apurandoPote.id,
+                      data: { cancelar: true }
+                    });
+                  }
+                }}
+                className="text-xs text-red-400 hover:text-red-300 font-semibold p-2"
+              >
+                Cancelar e Devolver Apostas
+              </button>
+
+              <button
+                onClick={() => setApurandoPote(null)}
+                className="bg-zinc-800 hover:bg-zinc-700 text-white font-bold px-4 py-2 rounded-lg text-sm transition"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

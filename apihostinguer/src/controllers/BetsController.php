@@ -267,6 +267,60 @@ class BetsController {
     }
 
 
+    private function enrichPoteMercado(&$mercado, $isAdmin = false) {
+        $mercado['is_pote'] = true;
+        
+        $stmtPote = $this->pdo->prepare("
+            SELECT COALESCE(SUM(b.valor_apostado), 0) as pote_total, COUNT(DISTINCT b.id) as total_apostas
+            FROM bets_bilhetes b
+            JOIN bets_bilhete_opcoes bbo ON b.id = bbo.bilhete_id
+            JOIN bets_opcoes bo ON bbo.opcao_id = bo.id
+            WHERE bo.mercado_id = ? AND b.status != 'cancelado_reembolsado'
+        ");
+        $stmtPote->execute([$mercado['id']]);
+        $poteData = $stmtPote->fetch(PDO::FETCH_ASSOC);
+        $poteTotal = (float)($poteData['pote_total'] ?? 0);
+        $mercado['pote_total'] = $poteTotal;
+        $mercado['total_apostas'] = (int)($poteData['total_apostas'] ?? 0);
+
+        $numOpcoes = count($mercado['opcoes']);
+        foreach ($mercado['opcoes'] as &$opcao) {
+            $stmtOpStat = $this->pdo->prepare("
+                SELECT COALESCE(SUM(b.valor_apostado), 0) as total_opcao, COUNT(DISTINCT b.usuario_id) as qtd_apostadores
+                FROM bets_bilhetes b
+                JOIN bets_bilhete_opcoes bbo ON b.id = bbo.bilhete_id
+                WHERE bbo.opcao_id = ? AND b.status != 'cancelado_reembolsado'
+            ");
+            $stmtOpStat->execute([$opcao['id']]);
+            $opStat = $stmtOpStat->fetch(PDO::FETCH_ASSOC);
+            $totalOpcao = (float)($opStat['total_opcao'] ?? 0);
+            $qtdApostadores = (int)($opStat['qtd_apostadores'] ?? 0);
+
+            $porcentagem = $poteTotal > 0 ? round(($totalOpcao / $poteTotal) * 100, 1) : ($numOpcoes > 0 ? round(100 / $numOpcoes, 1) : 0);
+            $oddDinamica = ($totalOpcao > 0) ? round($poteTotal / $totalOpcao, 2) : 2.00;
+            if ($oddDinamica < 1.05) $oddDinamica = 1.05;
+
+            $opcao['total_apostado'] = $totalOpcao;
+            $opcao['qtd_apostadores'] = $qtdApostadores;
+            $opcao['porcentagem'] = $porcentagem;
+            $opcao['odd_atual'] = $oddDinamica;
+            $opcao['odd'] = (string)$oddDinamica;
+
+            if ($isAdmin) {
+                $stmtApostadores = $this->pdo->prepare("
+                    SELECT u.id as usuario_id, u.username, b.valor_apostado, b.created_at
+                    FROM bets_bilhetes b
+                    JOIN bets_bilhete_opcoes bbo ON b.id = bbo.bilhete_id
+                    JOIN usuarios u ON b.usuario_id = u.id
+                    WHERE bbo.opcao_id = ? AND b.status != 'cancelado_reembolsado'
+                    ORDER BY b.created_at DESC
+                ");
+                $stmtApostadores->execute([$opcao['id']]);
+                $opcao['apostadores'] = $stmtApostadores->fetchAll(PDO::FETCH_ASSOC);
+            }
+        }
+    }
+
     public function getMercados() {
         $campeonatoId = $_GET['campeonato_id'] ?? null;
         $rodadaId = $_GET['rodada_id'] ?? null;
@@ -276,28 +330,24 @@ class BetsController {
             $stmtAtiva->execute();
             $rodadaAberta = $stmtAtiva->fetch(PDO::FETCH_ASSOC);
             if ($rodadaAberta) {
-                $campeonatoId = $rodadaAberta['campeonato_id'];
-                $rodadaId = $rodadaAberta['id'];
-            } else {
-                echo json_encode([]);
-                return;
+                if (!$campeonatoId) $campeonatoId = $rodadaAberta['campeonato_id'];
+                if (!$rodadaId) $rodadaId = $rodadaAberta['id'];
             }
         }
 
         // Verifica se a rodada ja tem partidas finalizadas (rodada em andamento)
-        $stmtRodadaEmAndamento = $this->pdo->prepare("
-            SELECT COUNT(*) as total FROM campeonato_partidas
-            WHERE rodada_id = ? AND status = 'finalizada'
-        ");
-        $stmtRodadaEmAndamento->execute([$rodadaId]);
-        $rodadaEmAndamento = (int)$stmtRodadaEmAndamento->fetch(PDO::FETCH_ASSOC)['total'] > 0;
+        if ($rodadaId) {
+            $stmtRodadaEmAndamento = $this->pdo->prepare("
+                SELECT COUNT(*) as total FROM campeonato_partidas
+                WHERE rodada_id = ? AND status = 'finalizada'
+            ");
+            $stmtRodadaEmAndamento->execute([$rodadaId]);
+            $rodadaEmAndamento = (int)$stmtRodadaEmAndamento->fetch(PDO::FETCH_ASSOC)['total'] > 0;
 
-        if ($rodadaEmAndamento) {
-            // Fecha automaticamente todos os mercados abertos desta rodada
-            $this->pdo->prepare("UPDATE bets_mercados SET status = 'fechado' WHERE rodada_id = ? AND status = 'aberto'")->execute([$rodadaId]);
-            // Retorna vazio — nenhum mercado disponivel
-            echo json_encode(['mercados' => [], 'encerrado' => true, 'mensagem' => 'As apostas para esta rodada foram encerradas pois os jogos já começaram.']);
-            return;
+            if ($rodadaEmAndamento) {
+                // Fecha automaticamente mercados normais desta rodada (exceto 'pote')
+                $this->pdo->prepare("UPDATE bets_mercados SET status = 'fechado' WHERE rodada_id = ? AND status = 'aberto' AND regra_categoria != 'pote'")->execute([$rodadaId]);
+            }
         }
 
         $stmt = $this->pdo->prepare("
@@ -307,9 +357,12 @@ class BetsController {
             FROM bets_mercados bm
             LEFT JOIN times t ON bm.regra_alvo_id = t.id AND bm.regra_categoria IN ('gols_pro', 'vencedor')
             LEFT JOIN jogadores j ON bm.regra_alvo_id = j.id AND bm.regra_categoria = 'gols_sofridos'
-            WHERE bm.campeonato_id = ? AND bm.rodada_id = ? AND bm.status = 'aberto'
+            WHERE (bm.rodada_id = ? OR bm.rodada_id IS NULL OR ? IS NULL)
+              AND (bm.campeonato_id = ? OR ? IS NULL OR bm.campeonato_id IS NULL)
+              AND bm.status = 'aberto'
+            ORDER BY (bm.regra_categoria = 'pote') DESC, bm.created_at DESC
         ");
-        $stmt->execute([$campeonatoId, $rodadaId]);
+        $stmt->execute([$rodadaId, $rodadaId, $campeonatoId, $campeonatoId]);
         $mercados = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         foreach ($mercados as &$mercado) {
@@ -322,6 +375,10 @@ class BetsController {
             $stmtOp = $this->pdo->prepare("SELECT * FROM bets_opcoes WHERE mercado_id = ?");
             $stmtOp->execute([$mercado['id']]);
             $mercado['opcoes'] = $stmtOp->fetchAll(PDO::FETCH_ASSOC);
+
+            if ($mercado['regra_categoria'] === 'pote') {
+                $this->enrichPoteMercado($mercado, false);
+            }
         }
 
         echo json_encode($mercados);
@@ -343,11 +400,8 @@ class BetsController {
             $stmtAtiva->execute();
             $rodadaAberta = $stmtAtiva->fetch(PDO::FETCH_ASSOC);
             if ($rodadaAberta) {
-                $campeonatoId = $rodadaAberta['campeonato_id'];
-                $rodadaId = $rodadaAberta['id'];
-            } else {
-                echo json_encode([]);
-                return;
+                if (!$campeonatoId) $campeonatoId = $rodadaAberta['campeonato_id'];
+                if (!$rodadaId) $rodadaId = $rodadaAberta['id'];
             }
         }
 
@@ -358,10 +412,11 @@ class BetsController {
             FROM bets_mercados bm
             LEFT JOIN times t ON bm.regra_alvo_id = t.id AND bm.regra_categoria IN ('gols_pro', 'vencedor')
             LEFT JOIN jogadores j ON bm.regra_alvo_id = j.id AND bm.regra_categoria = 'gols_sofridos'
-            WHERE bm.campeonato_id = ? AND bm.rodada_id = ?
-            ORDER BY bm.created_at DESC
+            WHERE (bm.rodada_id = ? OR bm.rodada_id IS NULL OR ? IS NULL)
+              AND (bm.campeonato_id = ? OR ? IS NULL OR bm.campeonato_id IS NULL)
+            ORDER BY (bm.regra_categoria = 'pote') DESC, bm.created_at DESC
         ");
-        $stmt->execute([$campeonatoId, $rodadaId]);
+        $stmt->execute([$rodadaId, $rodadaId, $campeonatoId, $campeonatoId]);
         $mercados = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         foreach ($mercados as &$mercado) {
@@ -374,6 +429,10 @@ class BetsController {
             $stmtOp = $this->pdo->prepare("SELECT * FROM bets_opcoes WHERE mercado_id = ?");
             $stmtOp->execute([$mercado['id']]);
             $mercado['opcoes'] = $stmtOp->fetchAll(PDO::FETCH_ASSOC);
+
+            if ($mercado['regra_categoria'] === 'pote') {
+                $this->enrichPoteMercado($mercado, true);
+            }
         }
 
         echo json_encode($mercados);
@@ -440,23 +499,43 @@ class BetsController {
             }
 
             // -------------------------------------------------------
+            // VALIDACAO POTE: Pote não pode ser combinado com múltiplos
+            // -------------------------------------------------------
+            $temPote = false;
+            foreach ($opcoesDB as $op) {
+                if ($op['regra_categoria'] === 'pote') {
+                    $temPote = true;
+                    break;
+                }
+            }
+
+            if ($temPote && count($opcoesDB) > 1) {
+                $this->pdo->rollBack();
+                http_response_code(400);
+                echo json_encode(["error" => "Apostas em Bolão de Pote devem ser feitas em bilhetes individuais (não combinadas com outros mercados)."]);
+                return;
+            }
+
+            // -------------------------------------------------------
             // VALIDACAO 1: Mercado fechado ou rodada em andamento
             // -------------------------------------------------------
-            $rodadasDaAposta = array_unique(array_column($opcoesDB, 'rodada_id'));
-            foreach ($rodadasDaAposta as $ridAposta) {
-                $stmtAndamento = $this->pdo->prepare("
-                    SELECT COUNT(*) as total FROM campeonato_partidas
-                    WHERE rodada_id = ? AND status = 'finalizada'
-                ");
-                $stmtAndamento->execute([$ridAposta]);
-                $qtdFinalizadas = (int)$stmtAndamento->fetch(PDO::FETCH_ASSOC)['total'];
-                if ($qtdFinalizadas > 0) {
-                    // Fecha os mercados abertos desta rodada automaticamente
-                    $this->pdo->prepare("UPDATE bets_mercados SET status = 'fechado' WHERE rodada_id = ? AND status = 'aberto'")->execute([$ridAposta]);
-                    $this->pdo->rollBack();
-                    http_response_code(400);
-                    echo json_encode(["error" => "As apostas para esta rodada foram encerradas pois os jogos já começaram."]);
-                    return;
+            if (!$temPote) {
+                $rodadasDaAposta = array_unique(array_filter(array_column($opcoesDB, 'rodada_id')));
+                foreach ($rodadasDaAposta as $ridAposta) {
+                    $stmtAndamento = $this->pdo->prepare("
+                        SELECT COUNT(*) as total FROM campeonato_partidas
+                        WHERE rodada_id = ? AND status = 'finalizada'
+                    ");
+                    $stmtAndamento->execute([$ridAposta]);
+                    $qtdFinalizadas = (int)$stmtAndamento->fetch(PDO::FETCH_ASSOC)['total'];
+                    if ($qtdFinalizadas > 0) {
+                        // Fecha os mercados abertos normais desta rodada automaticamente (exceto pote)
+                        $this->pdo->prepare("UPDATE bets_mercados SET status = 'fechado' WHERE rodada_id = ? AND status = 'aberto' AND regra_categoria != 'pote'")->execute([$ridAposta]);
+                        $this->pdo->rollBack();
+                        http_response_code(400);
+                        echo json_encode(["error" => "As apostas para esta rodada foram encerradas pois os jogos já começaram."]);
+                        return;
+                    }
                 }
             }
 
@@ -499,6 +578,8 @@ class BetsController {
             // -------------------------------------------------------
             $mercadosVistos = [];
             $oddTotal = 1.0;
+            $oddsPorOpcao = [];
+
             foreach ($opcoesDB as $op) {
                 if (in_array($op['mercado_id'], $mercadosVistos)) {
                     $this->pdo->rollBack();
@@ -507,9 +588,36 @@ class BetsController {
                     return;
                 }
                 $mercadosVistos[] = $op['mercado_id'];
-                $oddTotal *= (float) $op['odd'];
-            }
 
+                $oddDaOpcao = (float) $op['odd'];
+                if ($op['regra_categoria'] === 'pote') {
+                    // Buscar odd dinâmica estimada no momento da aposta
+                    $stmtPoteCalc = $this->pdo->prepare("
+                        SELECT COALESCE(SUM(b.valor_apostado), 0) as pote_total
+                        FROM bets_bilhetes b
+                        JOIN bets_bilhete_opcoes bbo ON b.id = bbo.bilhete_id
+                        JOIN bets_opcoes bo ON bbo.opcao_id = bo.id
+                        WHERE bo.mercado_id = ? AND b.status != 'cancelado_reembolsado'
+                    ");
+                    $stmtPoteCalc->execute([$op['mercado_id']]);
+                    $pTotal = (float)($stmtPoteCalc->fetch(PDO::FETCH_ASSOC)['pote_total'] ?? 0) + $valorApostado;
+
+                    $stmtOpCalc = $this->pdo->prepare("
+                        SELECT COALESCE(SUM(b.valor_apostado), 0) as op_total
+                        FROM bets_bilhetes b
+                        JOIN bets_bilhete_opcoes bbo ON b.id = bbo.bilhete_id
+                        WHERE bbo.opcao_id = ? AND b.status != 'cancelado_reembolsado'
+                    ");
+                    $stmtOpCalc->execute([$op['id']]);
+                    $oTotal = (float)($stmtOpCalc->fetch(PDO::FETCH_ASSOC)['op_total'] ?? 0) + $valorApostado;
+
+                    $oddDaOpcao = $oTotal > 0 ? round($pTotal / $oTotal, 2) : 2.00;
+                    if ($oddDaOpcao < 1.05) $oddDaOpcao = 1.05;
+                }
+
+                $oddsPorOpcao[$op['id']] = $oddDaOpcao;
+                $oddTotal *= $oddDaOpcao;
+            }
 
             $retornoPotencial = $valorApostado * $oddTotal;
 
@@ -518,8 +626,9 @@ class BetsController {
             $bilheteId = $this->pdo->lastInsertId();
 
             foreach ($opcoesDB as $op) {
+                $oddMomento = $oddsPorOpcao[$op['id']] ?? $op['odd'];
                 $stmtPerna = $this->pdo->prepare("INSERT INTO bets_bilhete_opcoes (bilhete_id, opcao_id, odd_momento) VALUES (?, ?, ?)");
-                $stmtPerna->execute([$bilheteId, $op['id'], $op['odd']]);
+                $stmtPerna->execute([$bilheteId, $op['id'], $oddMomento]);
             }
 
             $this->pdo->commit();
@@ -942,6 +1051,11 @@ class BetsController {
             $mercados = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             foreach ($mercados as $mercado) {
+                // Mercados de Pote são apurados individualmente e manualmente pelo admin
+                if ($mercado['regra_categoria'] === 'pote') {
+                    continue;
+                }
+
                 $alvoId = $mercado['regra_alvo_id'];
                 $categoria = $mercado['regra_categoria'];
                 $realResult = 0;
@@ -1010,7 +1124,14 @@ class BetsController {
                 $this->pdo->prepare("UPDATE bets_mercados SET status = 'resolvido', resultado_real = ? WHERE id = ?")->execute([$realResult, $mercado['id']]);
             }
 
-            $stmtBilhetes = $this->pdo->prepare("SELECT DISTINCT bb.* FROM bets_bilhetes bb JOIN bets_bilhete_opcoes bbo ON bb.id = bbo.bilhete_id JOIN bets_opcoes bo ON bbo.opcao_id = bo.id JOIN bets_mercados bm ON bo.mercado_id = bm.id WHERE bm.rodada_id = ?");
+            $stmtBilhetes = $this->pdo->prepare("
+                SELECT DISTINCT bb.* 
+                FROM bets_bilhetes bb 
+                JOIN bets_bilhete_opcoes bbo ON bb.id = bbo.bilhete_id 
+                JOIN bets_opcoes bo ON bbo.opcao_id = bo.id 
+                JOIN bets_mercados bm ON bo.mercado_id = bm.id 
+                WHERE bm.rodada_id = ? AND bm.regra_categoria != 'pote'
+            ");
             $stmtBilhetes->execute([$rodadaId]);
             $bilhetes = $stmtBilhetes->fetchAll(PDO::FETCH_ASSOC);
 
@@ -1030,6 +1151,10 @@ class BetsController {
                 $bilheteVenceu = true;
 
                 foreach ($opcoesBilhete as $opb) {
+                    if ($opb['regra_categoria'] === 'pote') {
+                        continue;
+                    }
+
                     $alvoId = $opb['regra_alvo_id'];
                     $categoria = $opb['regra_categoria'];
                     
@@ -1115,6 +1240,264 @@ class BetsController {
             $this->pdo->rollBack();
             http_response_code(500);
             echo json_encode(["error" => "Falha ao apurar rodada", "details" => $e->getMessage()]);
+        }
+    }
+
+    public function adminCriarMercadoPote() {
+        $user = $_REQUEST['authUser'] ?? null;
+        if (!$user || ($user['role'] !== 'admin' && $user['role'] !== 'dono')) {
+            http_response_code(403);
+            echo json_encode(["error" => "Acesso negado."]);
+            return;
+        }
+
+        $input = json_decode(file_get_contents('php://input'), true);
+        $titulo = trim($input['titulo'] ?? '');
+        $opcoes = $input['opcoes'] ?? [];
+        $rodadaId = $input['rodada_id'] ?? null;
+        $campeonatoId = $input['campeonato_id'] ?? null;
+
+        if (empty($titulo)) {
+            http_response_code(400);
+            echo json_encode(["error" => "O título do mercado é obrigatório."]);
+            return;
+        }
+
+        $opcoesLimpass = array_values(array_filter(array_map('trim', (array)$opcoes), fn($op) => !empty($op)));
+        if (count($opcoesLimpass) < 2) {
+            http_response_code(400);
+            echo json_encode(["error" => "Informe ao menos 2 opções para o Bolão de Pote."]);
+            return;
+        }
+
+        if (!$rodadaId) {
+            $stmtAtiva = $this->pdo->prepare("SELECT id, campeonato_id FROM rodadas WHERE status = 'aberta' ORDER BY data ASC, id ASC LIMIT 1");
+            $stmtAtiva->execute();
+            $rodadaAberta = $stmtAtiva->fetch(PDO::FETCH_ASSOC);
+            if ($rodadaAberta) {
+                $rodadaId = $rodadaAberta['id'];
+                if (!$campeonatoId) $campeonatoId = $rodadaAberta['campeonato_id'];
+            }
+        }
+
+        try {
+            $this->pdo->beginTransaction();
+
+            $stmt = $this->pdo->prepare("
+                INSERT INTO bets_mercados (campeonato_id, rodada_id, titulo, regra_categoria, status, created_at)
+                VALUES (?, ?, ?, 'pote', 'aberto', NOW())
+            ");
+            $stmt->execute([$campeonatoId, $rodadaId, $titulo]);
+            $mercadoId = $this->pdo->lastInsertId();
+
+            $stmtOp = $this->pdo->prepare("
+                INSERT INTO bets_opcoes (mercado_id, descricao, regra_condicao, regra_valor, odd)
+                VALUES (?, ?, 'pote', 0, 2.00)
+            ");
+
+            foreach ($opcoesLimpass as $opTexto) {
+                $stmtOp->execute([$mercadoId, $opTexto]);
+            }
+
+            $this->pdo->commit();
+            echo json_encode([
+                "success" => true,
+                "mercado_id" => $mercadoId,
+                "message" => "Mercado de Pote criado com sucesso!"
+            ]);
+        } catch (Exception $e) {
+            $this->pdo->rollBack();
+            http_response_code(500);
+            echo json_encode(["error" => "Falha ao criar mercado de pote", "details" => $e->getMessage()]);
+        }
+    }
+
+    public function adminApurarPote($mercadoId) {
+        $user = $_REQUEST['authUser'] ?? null;
+        if (!$user || ($user['role'] !== 'admin' && $user['role'] !== 'dono')) {
+            http_response_code(403);
+            echo json_encode(["error" => "Acesso negado."]);
+            return;
+        }
+
+        $input = json_decode(file_get_contents('php://input'), true);
+        $opcaoVencedoraId = $input['opcao_vencedora_id'] ?? null;
+        $cancelar = ($input['cancelar'] ?? false) || $opcaoVencedoraId === 'cancelar';
+
+        try {
+            $this->pdo->beginTransaction();
+
+            $stmtM = $this->pdo->prepare("SELECT * FROM bets_mercados WHERE id = ? FOR UPDATE");
+            $stmtM->execute([$mercadoId]);
+            $mercado = $stmtM->fetch(PDO::FETCH_ASSOC);
+
+            if (!$mercado) {
+                $this->pdo->rollBack();
+                http_response_code(404);
+                echo json_encode(["error" => "Mercado não encontrado."]);
+                return;
+            }
+
+            if ($mercado['regra_categoria'] !== 'pote') {
+                $this->pdo->rollBack();
+                http_response_code(400);
+                echo json_encode(["error" => "Este mercado não é do tipo Pote."]);
+                return;
+            }
+
+            // Buscar todos os bilhetes pendentes associados a este mercado
+            $stmtBilhetes = $this->pdo->prepare("
+                SELECT b.id as bilhete_id, b.usuario_id, b.valor_apostado, bbo.opcao_id, bo.descricao as opcao_nome
+                FROM bets_bilhetes b
+                JOIN bets_bilhete_opcoes bbo ON b.id = bbo.bilhete_id
+                JOIN bets_opcoes bo ON bbo.opcao_id = bo.id
+                WHERE bo.mercado_id = ? AND b.status = 'pendente'
+                FOR UPDATE
+            ");
+            $stmtBilhetes->execute([$mercadoId]);
+            $bilhetes = $stmtBilhetes->fetchAll(PDO::FETCH_ASSOC);
+
+            // CASO 1: Cancelamento com Reembolso Total
+            if ($cancelar || empty($opcaoVencedoraId)) {
+                foreach ($bilhetes as $b) {
+                    $this->pdo->prepare("UPDATE bets_carteira SET saldo = saldo + ? WHERE usuario_id = ?")
+                        ->execute([$b['valor_apostado'], $b['usuario_id']]);
+                    $this->pdo->prepare("UPDATE bets_bilhetes SET status = 'cancelado_reembolsado' WHERE id = ?")
+                        ->execute([$b['bilhete_id']]);
+                    $this->pdo->prepare("UPDATE bets_bilhete_opcoes SET status_resultado = 'reembolsado' WHERE bilhete_id = ?")
+                        ->execute([$b['bilhete_id']]);
+                }
+
+                $this->pdo->prepare("UPDATE bets_mercados SET status = 'cancelado' WHERE id = ?")->execute([$mercadoId]);
+                $this->pdo->commit();
+
+                echo json_encode([
+                    "success" => true,
+                    "message" => "Mercado de Pote cancelado! Todos os " . count($bilhetes) . " bilhetes foram reembolsados integralmente."
+                ]);
+                return;
+            }
+
+            // CASO 2: Apuração com Vencedor
+            $opcaoVencedoraId = (int)$opcaoVencedoraId;
+
+            // Verificar se a opção pertence ao mercado
+            $stmtCheckOp = $this->pdo->prepare("SELECT id, descricao FROM bets_opcoes WHERE id = ? AND mercado_id = ?");
+            $stmtCheckOp->execute([$opcaoVencedoraId, $mercadoId]);
+            $opcaoVencRow = $stmtCheckOp->fetch(PDO::FETCH_ASSOC);
+
+            if (!$opcaoVencRow) {
+                $this->pdo->rollBack();
+                http_response_code(400);
+                echo json_encode(["error" => "Opção vencedora inválida para este mercado."]);
+                return;
+            }
+
+            // Calcular Pote Total e Total Apostado nos Vencedores
+            $poteTotal = 0.0;
+            $totalVencedores = 0.0;
+            $vencedores = [];
+            $perdedores = [];
+
+            foreach ($bilhetes as $b) {
+                $val = (float)$b['valor_apostado'];
+                $poteTotal += $val;
+                if ((int)$b['opcao_id'] === $opcaoVencedoraId) {
+                    $totalVencedores += $val;
+                    $vencedores[] = $b;
+                } else {
+                    $perdedores[] = $b;
+                }
+            }
+
+            // Se ninguém apostou na opção vencedora: REEMBOLSAR TODOS!
+            if ($totalVencedores <= 0) {
+                foreach ($bilhetes as $b) {
+                    $this->pdo->prepare("UPDATE bets_carteira SET saldo = saldo + ? WHERE usuario_id = ?")
+                        ->execute([$b['valor_apostado'], $b['usuario_id']]);
+                    $this->pdo->prepare("UPDATE bets_bilhetes SET status = 'cancelado_reembolsado' WHERE id = ?")
+                        ->execute([$b['bilhete_id']]);
+                    $this->pdo->prepare("UPDATE bets_bilhete_opcoes SET status_resultado = 'reembolsado' WHERE bilhete_id = ?")
+                        ->execute([$b['bilhete_id']]);
+                }
+
+                $this->pdo->prepare("UPDATE bets_mercados SET status = 'resolvido', resultado_real = ? WHERE id = ?")
+                    ->execute([$opcaoVencedoraId, $mercadoId]);
+                $this->pdo->commit();
+
+                echo json_encode([
+                    "success" => true,
+                    "message" => "Nenhum apostador acertou a opção '{$opcaoVencRow['descricao']}'. Todos os " . count($bilhetes) . " apostadores tiveram seus valores reembolsados!"
+                ]);
+                return;
+            }
+
+            // Distribuir Pote proporcionalmente aos vencedores
+            foreach ($vencedores as $v) {
+                $aposta = (float)$v['valor_apostado'];
+                $fatia = $aposta / $totalVencedores;
+                $premio = round($fatia * $poteTotal, 2);
+                $lucro = $premio - $aposta;
+
+                $this->pdo->prepare("
+                    UPDATE bets_carteira 
+                    SET saldo = saldo + ?, lucro_prejuizo_total = lucro_prejuizo_total + ? 
+                    WHERE usuario_id = ?
+                ")->execute([$premio, $lucro, $v['usuario_id']]);
+
+                $this->pdo->prepare("
+                    UPDATE bets_bilhetes 
+                    SET status = 'ganhou', retorno_potencial = ? 
+                    WHERE id = ?
+                ")->execute([$premio, $v['bilhete_id']]);
+
+                $this->pdo->prepare("
+                    UPDATE bets_bilhete_opcoes 
+                    SET status_resultado = 'ganhou' 
+                    WHERE bilhete_id = ? AND opcao_id = ?
+                ")->execute([$v['bilhete_id'], $opcaoVencedoraId]);
+            }
+
+            // Processar perdedores
+            foreach ($perdedores as $p) {
+                $aposta = (float)$p['valor_apostado'];
+
+                $this->pdo->prepare("
+                    UPDATE bets_carteira 
+                    SET lucro_prejuizo_total = lucro_prejuizo_total - ? 
+                    WHERE usuario_id = ?
+                ")->execute([$aposta, $p['usuario_id']]);
+
+                $this->pdo->prepare("
+                    UPDATE bets_bilhetes 
+                    SET status = 'perdeu', retorno_potencial = 0 
+                    WHERE id = ?
+                ")->execute([$p['bilhete_id']]);
+
+                $this->pdo->prepare("
+                    UPDATE bets_bilhete_opcoes 
+                    SET status_resultado = 'perdeu' 
+                    WHERE bilhete_id = ?
+                ")->execute([$p['bilhete_id']]);
+            }
+
+            // Atualizar status das opções
+            $this->pdo->prepare("UPDATE bets_opcoes SET status_resultado = 'ganhou' WHERE id = ?")->execute([$opcaoVencedoraId]);
+            $this->pdo->prepare("UPDATE bets_opcoes SET status_resultado = 'perdeu' WHERE mercado_id = ? AND id != ?")->execute([$mercadoId, $opcaoVencedoraId]);
+
+            // Finalizar mercado
+            $this->pdo->prepare("UPDATE bets_mercados SET status = 'resolvido', resultado_real = ? WHERE id = ?")->execute([$opcaoVencedoraId, $mercadoId]);
+
+            $this->pdo->commit();
+
+            echo json_encode([
+                "success" => true,
+                "message" => "Pote apurado com sucesso! Vencedor: '{$opcaoVencRow['descricao']}'. Pote total de R$ {$poteTotal} distribuído entre " . count($vencedores) . " ganhador(es)."
+            ]);
+        } catch (Exception $e) {
+            $this->pdo->rollBack();
+            http_response_code(500);
+            echo json_encode(["error" => "Falha ao apurar mercado de pote", "details" => $e->getMessage()]);
         }
     }
 }

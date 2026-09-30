@@ -7,6 +7,16 @@ export interface OpcaoBet {
   regra_condicao: string;
   regra_valor: string;
   odd: string;
+  total_apostado?: number;
+  qtd_apostadores?: number;
+  porcentagem?: number;
+  odd_atual?: number;
+  apostadores?: Array<{
+    usuario_id: number;
+    username: string;
+    valor_apostado: string | number;
+    created_at: string;
+  }>;
 }
 
 export interface MercadoBet {
@@ -20,6 +30,10 @@ export interface MercadoBet {
   imagem?: string;
   alvo_nome?: string;
   opcoes: OpcaoBet[];
+  is_pote?: boolean;
+  pote_total?: number;
+  total_apostas?: number;
+  resultado_real?: string | number;
 }
 
 export interface CarteiraBet {
@@ -119,6 +133,16 @@ export const betsApi = {
 
   adminAtualizarOpcao: async (id: number, odd: string) => {
     const response = await api.put(`/bets/admin/opcoes/${id}`, { odd });
+    return response.data;
+  },
+
+  adminCriarMercadoPote: async (data: { titulo: string; opcoes: string[]; rodada_id?: number; campeonato_id?: number }) => {
+    const response = await api.post('/bets/admin/mercados/pote', data);
+    return response.data;
+  },
+
+  adminApurarPote: async (mercadoId: number, data: { opcao_vencedora_id?: number | 'cancelar'; cancelar?: boolean }) => {
+    const response = await api.post(`/bets/admin/mercados/${mercadoId}/apurar-pote`, data);
     return response.data;
   }
 };

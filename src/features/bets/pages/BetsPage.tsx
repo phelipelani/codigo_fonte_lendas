@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { betsApi, MercadoBet, OpcaoBet } from '../api/bets';
 import { OddButton } from '../components/OddButton';
 import { BoletimAposta } from '../components/BoletimAposta';
+import { parseApiDate } from '@/lib/utils';
 
 export function BetsPage() {
   const [activeTab, setActiveTab] = useState<'mercados' | 'historico' | 'ranking'>('mercados');
@@ -93,6 +94,132 @@ export function BetsPage() {
                 </div>
               ) : (
                 mercados.map((mercado) => {
+                  // Se for mercado de Pote / Bolão X1
+                  if (mercado.regra_categoria === 'pote' || mercado.is_pote) {
+                    return (
+                      <div 
+                        key={mercado.id} 
+                        className="relative overflow-hidden rounded-2xl border-2 border-amber-500/40 bg-gradient-to-b from-zinc-900 via-zinc-900 to-zinc-950 p-6 shadow-2xl"
+                      >
+                        {/* Decoração de brilho de fundo */}
+                        <div className="absolute -top-12 -right-12 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+                        <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-fut-primary/10 rounded-full blur-3xl pointer-events-none" />
+
+                        {/* Cabeçalho do Pote */}
+                        <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-zinc-800 relative z-10">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-2xl shadow-lg shadow-amber-500/20">
+                              🏆
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                                  BOLÃO DE POTE (PARI-MUTUEL)
+                                </span>
+                                <span className="text-xs text-zinc-500 font-semibold">
+                                  {mercado.total_apostas || 0} aposta{(mercado.total_apostas || 0) === 1 ? '' : 's'}
+                                </span>
+                              </div>
+                              <h3 className="text-xl font-black text-white mt-1 tracking-tight">
+                                {mercado.titulo}
+                              </h3>
+                            </div>
+                          </div>
+
+                          <div className="bg-zinc-800/90 border border-amber-500/30 rounded-xl px-4 py-2.5 text-right shadow-inner">
+                            <p className="text-[10px] uppercase font-bold text-amber-400 tracking-wider">Pote Acumulado</p>
+                            <div className="text-2xl font-black text-white flex items-center justify-end gap-1.5">
+                              <span className="text-amber-400">💰</span>
+                              <span>{Number(mercado.pote_total || 0).toFixed(2)}</span>
+                              <span className="text-xs font-semibold text-zinc-400">fichas</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Mensagem explicativa rápida */}
+                        <div className="my-4 bg-amber-500/5 border border-amber-500/20 rounded-xl p-3 flex items-start gap-2.5 text-xs text-zinc-300 relative z-10">
+                          <span className="text-amber-400 text-base leading-none">💡</span>
+                          <p>
+                            <strong className="text-amber-300">Como funciona o Pote:</strong> Todo o valor apostado vai para o pote único. Quem acertar a opção vencedora leva 100% do pote arrecadado, dividido proporcionalmente ao valor apostado!
+                          </p>
+                        </div>
+
+                        {/* Disputa visual se houver 2 opções */}
+                        {mercado.opcoes.length === 2 && (
+                          <div className="mb-5 relative z-10">
+                            <div className="flex justify-between text-xs font-bold mb-1.5">
+                              <span className="text-emerald-400 truncate max-w-[45%]">
+                                {mercado.opcoes[0].descricao} ({Number(mercado.opcoes[0].porcentagem || 50).toFixed(1)}%)
+                              </span>
+                              <span className="text-cyan-400 truncate max-w-[45%] text-right">
+                                {mercado.opcoes[1].descricao} ({Number(mercado.opcoes[1].porcentagem || 50).toFixed(1)}%)
+                              </span>
+                            </div>
+                            <div className="h-3 w-full bg-zinc-800 rounded-full overflow-hidden flex border border-zinc-700/60 p-0.5">
+                              <div 
+                                className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-l-full transition-all duration-500" 
+                                style={{ width: `${Math.max(5, Math.min(95, Number(mercado.opcoes[0].porcentagem || 50)))}%` }} 
+                              />
+                              <div 
+                                className="h-full bg-gradient-to-r from-cyan-400 to-cyan-500 rounded-r-full transition-all duration-500" 
+                                style={{ width: `${Math.max(5, Math.min(95, Number(mercado.opcoes[1].porcentagem || 50)))}%` }} 
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Cards das Opções */}
+                        <div className={`grid gap-3 relative z-10 ${mercado.opcoes.length === 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3'}`}>
+                          {mercado.opcoes.map((opcao) => {
+                            const isSelected = selecoes.some((s) => s.id === opcao.id);
+                            return (
+                              <div 
+                                key={opcao.id}
+                                onClick={() => handleToggleSelecao(opcao)}
+                                className={`cursor-pointer rounded-xl p-4 border transition-all duration-200 relative group ${
+                                  isSelected
+                                    ? 'bg-fut-primary/15 border-fut-primary shadow-lg shadow-fut-primary/10 ring-1 ring-fut-primary'
+                                    : 'bg-zinc-800/80 hover:bg-zinc-800 border-zinc-700 hover:border-zinc-500'
+                                }`}
+                              >
+                                <div className="flex justify-between items-start mb-2">
+                                  <span className="font-bold text-white text-base group-hover:text-fut-primary transition-colors">
+                                    {opcao.descricao}
+                                  </span>
+                                  <div className="text-right">
+                                    <span className="text-[10px] uppercase font-bold text-zinc-400 block">Odd Est.</span>
+                                    <span className="text-lg font-black text-fut-primary">
+                                      {Number(opcao.odd_atual || opcao.odd).toFixed(2)}x
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="flex justify-between items-center text-xs text-zinc-400 pt-2 border-t border-zinc-700/50">
+                                  <span className="flex items-center gap-1">
+                                    <span>👥</span> {opcao.qtd_apostadores || 0} apostador{(opcao.qtd_apostadores || 0) === 1 ? '' : 'es'}
+                                  </span>
+                                  <span className="font-semibold text-zinc-300">
+                                    💰 {Number(opcao.total_apostado || 0).toFixed(2)} ({Number(opcao.porcentagem || 0).toFixed(1)}%)
+                                  </span>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  className={`w-full mt-3 py-2 px-3 rounded-lg font-bold text-xs uppercase tracking-wider transition-colors ${
+                                    isSelected
+                                      ? 'bg-fut-primary text-black'
+                                      : 'bg-zinc-700/60 hover:bg-zinc-700 text-zinc-200'
+                                  }`}
+                                >
+                                  {isSelected ? '✓ Selecionado no Bilhete' : 'Apostar nesta Opção'}
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  }
                   
                   const getCategoriaLabel = (categoria: string) => {
                     switch (categoria) {
@@ -233,7 +360,10 @@ export function BetsPage() {
                       <div>
                         <span className="text-zinc-500 text-sm">Bilhete #{bilhete.id}</span>
                         <h4 className="text-white font-bold">Rodada {bilhete.rodada_id}</h4>
-                        <span className="text-zinc-400 text-xs">{new Date(bilhete.created_at).toLocaleString('pt-BR')}</span>
+                        <span className="text-zinc-400 text-xs">{(() => {
+                          const d = parseApiDate(bilhete.created_at);
+                          return d ? d.toLocaleString('pt-BR') : '-';
+                        })()}</span>
                       </div>
                       <div className={`px-3 py-1 rounded font-bold text-sm uppercase 
                         ${bilhete.status === 'pendente' ? 'bg-yellow-500/20 text-yellow-500' : ''}

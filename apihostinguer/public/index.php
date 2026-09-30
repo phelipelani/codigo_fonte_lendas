@@ -1903,6 +1903,17 @@ try {
         exit;
     }
 
+    if ($path === '/bets/admin/mercados/pote' && $method === 'POST') {
+        AuthMiddleware::isAdmin();
+        (new BetsController())->adminCriarMercadoPote();
+        exit;
+    }
+    if (preg_match('#^/bets/admin/mercados/(\d+)/apurar-pote$#', $path, $matches) && $method === 'POST') {
+        AuthMiddleware::isAdmin();
+        (new BetsController())->adminApurarPote($matches[1]);
+        exit;
+    }
+
     if (preg_match('#^/bets/admin/apurar/(\d+)$#', $path, $matches) && $method === 'POST') {
         AuthMiddleware::isAdmin();
         (new BetsController())->adminApurarRodada($matches[1]);

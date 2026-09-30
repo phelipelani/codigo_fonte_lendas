@@ -14,6 +14,7 @@ export function BoletimAposta({ selecoes, saldo, onClear, onRemoveSelecao }: Bol
   const [valor, setValor] = useState<number | ''>('');
   const queryClient = useQueryClient();
 
+  const temPote = selecoes.some(s => s.regra_condicao === 'pote');
   const oddTotal = selecoes.reduce((acc, curr) => acc * Number(curr.odd), 1);
   const retornoPotencial = (Number(valor) || 0) * oddTotal;
 
@@ -25,6 +26,7 @@ export function BoletimAposta({ selecoes, saldo, onClear, onRemoveSelecao }: Bol
       setValor('');
       queryClient.invalidateQueries({ queryKey: ['bets_carteira'] });
       queryClient.invalidateQueries({ queryKey: ['bets_historico'] });
+      queryClient.invalidateQueries({ queryKey: ['bets_mercados'] });
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.error || 'Erro ao fazer aposta');
@@ -51,6 +53,18 @@ export function BoletimAposta({ selecoes, saldo, onClear, onRemoveSelecao }: Bol
         <button onClick={onClear} className="text-red-400 text-sm hover:text-red-300">Limpar</button>
       </div>
 
+      {temPote && (
+        <div className="m-3 mb-0 bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 text-xs text-amber-300">
+          🏆 <strong>Bolão de Pote:</strong> A odd é estimada dinamicamente. O prêmio final é a divisão do pote total arrecadado entre quem acertar o vencedor!
+        </div>
+      )}
+
+      {temPote && selecoes.length > 1 && (
+        <div className="m-3 mb-0 bg-red-500/10 border border-red-500/30 rounded-lg p-2.5 text-xs text-red-300">
+          ⚠️ O Bolão de Pote não pode ser combinado com outras apostas no mesmo bilhete. Deixe apenas 1 seleção.
+        </div>
+      )}
+
       <div className="p-4 flex-1 overflow-y-auto space-y-3">
         {selecoes.map((s) => (
           <div key={s.id} className="bg-zinc-800 p-3 rounded-lg relative">
@@ -61,7 +75,9 @@ export function BoletimAposta({ selecoes, saldo, onClear, onRemoveSelecao }: Bol
               &times;
             </button>
             <p className="text-sm font-semibold text-zinc-300 pr-4">{s.descricao}</p>
-            <p className="text-fut-primary font-bold mt-1">{Number(s.odd).toFixed(2)}</p>
+            <p className="text-fut-primary font-bold mt-1">
+              {Number(s.odd).toFixed(2)} {s.regra_condicao === 'pote' && <span className="text-[10px] text-amber-400 uppercase font-normal">(pote)</span>}
+            </p>
           </div>
         ))}
       </div>
@@ -69,7 +85,9 @@ export function BoletimAposta({ selecoes, saldo, onClear, onRemoveSelecao }: Bol
       <div className="p-4 border-t border-zinc-800 bg-black/20">
         <div className="flex justify-between items-center mb-4 text-sm text-zinc-400">
           <span>Odd Total:</span>
-          <span className="font-bold text-white text-lg">{oddTotal.toFixed(2)}</span>
+          <span className="font-bold text-white text-lg">
+            {oddTotal.toFixed(2)} {temPote && <span className="text-xs text-amber-400 font-normal">(est.)</span>}
+          </span>
         </div>
 
         <div className="mb-4">
@@ -93,13 +111,13 @@ export function BoletimAposta({ selecoes, saldo, onClear, onRemoveSelecao }: Bol
         </div>
 
         <div className="flex justify-between items-center mb-6">
-          <span className="text-sm text-zinc-400">Retorno Potencial:</span>
+          <span className="text-sm text-zinc-400">Retorno {temPote ? 'Estimado' : 'Potencial'}:</span>
           <span className="text-fut-primary font-bold text-xl">{retornoPotencial.toFixed(2)}</span>
         </div>
 
         <button
           onClick={() => apostaMutation.mutate()}
-          disabled={!valor || Number(valor) <= 0 || apostaMutation.isPending || saldo < Number(valor)}
+          disabled={!valor || Number(valor) <= 0 || apostaMutation.isPending || saldo < Number(valor) || (temPote && selecoes.length > 1)}
           className="w-full bg-fut-primary hover:bg-green-400 text-black font-bold py-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider"
         >
           {apostaMutation.isPending ? 'Processando...' : 'Fazer Aposta'}
