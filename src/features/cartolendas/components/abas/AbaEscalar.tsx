@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/api';
 import { useAuthStore } from '@/store/useAuthStore';
-import { cn } from '@/lib/utils';
+import { cn, formatDateShortMonth } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
   Shield, Coins, Search, ArrowUpDown, Check, RefreshCw, Lock,
@@ -220,7 +220,10 @@ export function AbaEscalar({ campeonatoId }: { campeonatoId: number }) {
               <p className="text-white font-bold text-sm">{nomeCampeonato}</p>
               <p className="text-white/40 text-xs">
                 Rodada {rodadaAtual?.numero}/{totalRodadas}
-                {rodadaAtual?.data && <> · {new Date(rodadaAtual.data).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</>}
+                {rodadaAtual?.data && (() => {
+                  const { dia, mes } = formatDateShortMonth(rodadaAtual.data);
+                  return <> · {dia} {mes}</>;
+                })()}
               </p>
             </div>
           </div>

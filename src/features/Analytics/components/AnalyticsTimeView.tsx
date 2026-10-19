@@ -8,7 +8,7 @@ import {
   Trophy, Goal, Target, Shield, Activity, Shirt, Users,
   Search, Loader2, TrendingUp, TrendingDown, Calendar, Minus
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatDateDayMonth } from '@/lib/utils';
 import { useAllTimes } from '@/api/timeApi';
 
 // Card de estatística
@@ -121,7 +121,7 @@ const PartidaCard = ({ partida, timeId }: any) => {
       </div>
       {partida.data && (
         <span className="text-[10px] text-textMuted">
-          {new Date(partida.data).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+          {formatDateDayMonth(partida.data)}
         </span>
       )}
     </div>

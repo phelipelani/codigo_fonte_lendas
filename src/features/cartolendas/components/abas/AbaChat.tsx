@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/api';
 import { useAuthStore } from '@/store/useAuthStore';
-import { cn } from '@/lib/utils';
+import { cn, formatTime } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Send } from 'lucide-react';
 import { Avatar } from '../shared';
@@ -29,7 +29,7 @@ export function AbaChat({ ligaId }: { ligaId: number }) {
               <div className={cn('max-w-[75%]', isMe && 'items-end flex flex-col')}>
                 <p className={cn('text-[10px] text-white/30 mb-0.5 px-1', isMe && 'text-right')}>{m.jogador_nome ?? m.username}</p>
                 <div className={cn('px-3 py-2 rounded-2xl text-sm', isMe ? 'bg-purple-600 text-white rounded-br-sm' : 'bg-white/8 text-white/90 rounded-bl-sm')}>{m.mensagem}</div>
-                <p className="text-[9px] text-white/20 mt-0.5 px-1">{new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
+                <p className="text-[9px] text-white/20 mt-0.5 px-1">{formatTime(m.created_at)}</p>
               </div>
             </div>
           );

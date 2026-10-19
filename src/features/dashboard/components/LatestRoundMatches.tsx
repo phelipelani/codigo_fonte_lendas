@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Calendar, ArrowRight, Trophy } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import MatchDetailModal from '@/components/shared/MatchDetailModal';
+import { formatDate } from '@/lib/utils';
 
 interface MatchItem {
   id: number;
@@ -59,7 +60,7 @@ export const LatestRoundMatches: React.FC<Props> = ({ ultimaRodada }) => {
             </h3>
             {ultimaRodada?.data && (
               <span className="text-[10px] text-zinc-500 font-bold bg-zinc-800 px-2 py-0.5 rounded-full">
-                {new Date(ultimaRodada.data).toLocaleDateString('pt-BR')}
+                {formatDate(ultimaRodada.data)}
               </span>
             )}
           </div>

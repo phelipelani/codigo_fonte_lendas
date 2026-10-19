@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import api from '@/api';
 import { getApiErrorMessage } from '@/utils/errorHandling';
 import { Rodada } from '@/@types';
+import { formatDate } from '@/lib/utils';
 import { RodadaFormSchema } from '../components/RodadaForm';
 
 type CreateRodadaPayload = z.infer<typeof RodadaFormSchema>;
@@ -33,7 +34,7 @@ export const useCreateRodada = () => {
       queryClient.invalidateQueries({ queryKey: ['rodadas'] });
       // --- FIM DA CORREÇÃO ---
 
-      toast.success(`Rodada de ${new Date(novaRodada.data).toLocaleDateString('pt-BR', { timeZone: 'UTC' })} criada com sucesso!`);
+      toast.success(`Rodada de ${formatDate(novaRodada.data)} criada com sucesso!`);
     },
     onError: (error) => {
       toast.error(getApiErrorMessage(error, 'Erro ao criar rodada.'));

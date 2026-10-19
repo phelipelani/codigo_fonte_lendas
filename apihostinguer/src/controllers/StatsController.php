@@ -54,11 +54,15 @@ class StatsController
         // -- 3. RANKINGS HISTORICOS --
         try {
             $maioresCampeoes = $this->db->fetchAll("
-                SELECT j.id, j.nome, j.foto_url, COUNT(*) AS total
+                SELECT j.id, j.nome, j.foto_url,
+                       COUNT(cv.campeonato_id) AS total,
+                       SUM(CASE WHEN c.formato = 'copa' THEN 1 ELSE 0 END) AS copas,
+                       SUM(CASE WHEN c.formato != 'copa' OR c.formato IS NULL THEN 1 ELSE 0 END) AS ligas
                 FROM campeonato_vencedores cv
                 JOIN jogadores j ON j.id = cv.jogador_id
+                JOIN campeonatos c ON c.id = cv.campeonato_id
                 GROUP BY j.id, j.nome, j.foto_url
-                ORDER BY total DESC LIMIT 10
+                ORDER BY total DESC, copas DESC LIMIT 10
             ");
         } catch (Throwable $e) {
             $errors[] = 'maioresCampeoes: ' . $e->getMessage();

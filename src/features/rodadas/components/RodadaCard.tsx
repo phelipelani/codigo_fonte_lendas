@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Calendar, Edit, Trash2, CheckCircle, Clock, ChevronRight, Play, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Rodada } from '@/@types';
-import { cn } from '@/lib/utils';
+import { cn, formatDateLong, formatDateShortMonth } from '@/lib/utils';
 
 type RodadaCardProps = {
   rodada: Rodada;
@@ -25,19 +25,11 @@ export const RodadaCard: React.FC<RodadaCardProps> = ({
   const isFinalizada = rodada.status === 'finalizada';
 
   const formatarData = (dataString: string) => {
-    return new Date(dataString).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-      timeZone: 'UTC',
-    });
+    return formatDateLong(dataString);
   };
 
   const formatarDataCurta = (dataString: string) => {
-    const data = new Date(dataString);
-    const dia = data.toLocaleDateString('pt-BR', { day: '2-digit', timeZone: 'UTC' });
-    const mes = data.toLocaleDateString('pt-BR', { month: 'short', timeZone: 'UTC' }).replace('.', '');
-    return { dia, mes };
+    return formatDateShortMonth(dataString);
   };
 
   const handleDeleteClick = () => {

@@ -9,7 +9,7 @@ import {
   ChevronDown, ArrowUpDown, ArrowDown, Star, Zap, Crown,
   Swords, TrendingDown, Target, ShieldCheck, ChevronRight,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, getApiDateTimestamp, formatDateDayMonth } from '@/lib/utils';
 
 interface Props { campeonatoId: number; }
 type OrdenacaoCampo = 'pontos' | 'gols' | 'assistencias' | 'vitorias' | 'jogos' | 'empates' | 'derrotas' | 'cartoes_amarelos' | 'cartoes_azuis' | 'cartoes_vermelhos';
@@ -566,19 +566,12 @@ export function StatsTab({ campeonatoId }: Props) {
   const rodadasFinalizadas = useMemo(
     () => (rodadas ?? [])
       .filter((r: any) => r.status === 'finalizada')
-      .sort((a: any, b: any) => new Date(a.data.replace(/-/g, '/')).getTime() - new Date(b.data.replace(/-/g, '/')).getTime()),
+      .sort((a: any, b: any) => getApiDateTimestamp(a.data) - getApiDateTimestamp(b.data)),
     [rodadas],
   );
 
-  // Usa string padrao e replace para formatar no Safari
   const fmtDate = useCallback((s: string) => {
-    if (!s) return '';
-    try {
-      const parts = s.split(' ')[0].split('-');
-      if (parts.length === 3) return `${parts[2]}/${parts[1]}`;
-      const d = new Date(s.replace(/-/g, '/'));
-      return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-    } catch(e) { return s; }
+    return formatDateDayMonth(s);
   }, []);
   const rodadaAtual = rodadas?.find((r: any) => r.id === rodadaSelecionada);
   const rodadaLabel = rodadaSelecionada ? `Rodada ${fmtDate(rodadaAtual?.data ?? '')}` : 'Todas as Rodadas';

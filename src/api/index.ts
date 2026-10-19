@@ -20,8 +20,25 @@ api.interceptors.request.use(
 );
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (import.meta.env.DEV) {
+      console.warn('[API RESPONSE]', {
+        url: response.config?.url,
+        status: response.status,
+      });
+    }
+    return response;
+  },
   (error) => {
+    if (import.meta.env.DEV) {
+      console.warn('[API ERROR]', {
+        url: error.config?.url,
+        method: error.config?.method,
+        status: error.response?.status,
+        response: error.response?.data,
+        hasToken: !!useAuthStore.getState().token,
+      });
+    }
     if (error.response?.status === 401) {
       useAuthStore.getState().logout();
       // Não redireciona se já estiver tentando logar

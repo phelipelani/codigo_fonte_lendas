@@ -9,7 +9,7 @@ import { useFinalizarLiga } from '../api/useFinalizarLiga';
 import { LigaCreateModal } from '../components/LigaCreateModal';
 import { LigaEditModal } from '../components/LigaEditModal';
 import { LigaCard } from '../components/LigaCard';
-import { cn } from '@/lib/utils';
+import { cn, parseApiDate } from '@/lib/utils';
 import icLigas from '@/assets/icones/ligas.webp';
 import PageTitle from '@/components/shared/PageTitle';
 
@@ -30,10 +30,10 @@ export const LigasPage = () => {
     hoje.setHours(0, 0, 0, 0);
 
     return ligas.reduce((acc, liga) => {
-      const dataInicio = new Date(liga.data_inicio);
-      const dataFim = new Date(liga.data_fim);
+      const dataInicio = parseApiDate(liga.data_inicio) || new Date(0);
+      const dataFim = parseApiDate(liga.data_fim) || new Date(0);
       dataInicio.setHours(0, 0, 0, 0);
-      dataFim.setHours(0, 0, 0, 0);
+      dataFim.setHours(23, 59, 59, 999);
 
       const foiFinalizada = !!liga.finalizada_em;
       const isAtiva = !foiFinalizada && hoje >= dataInicio && hoje <= dataFim;
@@ -56,10 +56,10 @@ export const LigasPage = () => {
     hoje.setHours(0, 0, 0, 0);
 
     return ligas.filter(liga => {
-      const dataInicio = new Date(liga.data_inicio);
-      const dataFim = new Date(liga.data_fim);
+      const dataInicio = parseApiDate(liga.data_inicio) || new Date(0);
+      const dataFim = parseApiDate(liga.data_fim) || new Date(0);
       dataInicio.setHours(0, 0, 0, 0);
-      dataFim.setHours(0, 0, 0, 0);
+      dataFim.setHours(23, 59, 59, 999);
 
       const foiFinalizada = !!liga.finalizada_em;
       const isAtiva = !foiFinalizada && hoje >= dataInicio && hoje <= dataFim;

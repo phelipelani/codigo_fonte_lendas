@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/Input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/DropdownMenu';
 import { ArrowLeft, Trophy, Calendar, BarChart3, Users, Plus, AlertTriangle, Play, History as HistoryIcon, Trash2, Flag, MoreVertical, Edit2, Camera, Filter, Swords, Shuffle, Crown, UserPlus, ChevronDown, ChevronUp, Search, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { cn, formatDate } from '@/lib/utils';
+import { cn, formatDate, getApiDateTimestamp } from '@/lib/utils';
 import { useState, useMemo, useCallback, memo } from 'react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -64,7 +64,7 @@ const TabelaClassificacao = memo(({ campeonatoId, showFilter = true }: { campeon
   });
 
   const rodadasOrdenadas = useMemo(
-    () => rodadas ? [...rodadas].sort((a, b) => new Date(a.data.replace(/-/g, '/')).getTime() - new Date(b.data.replace(/-/g, '/')).getTime()) : [],
+    () => rodadas ? [...rodadas].sort((a, b) => getApiDateTimestamp(a.data) - getApiDateTimestamp(b.data)) : [],
     [rodadas]
   );
 
@@ -143,7 +143,7 @@ const RodadasList = memo(({ campeonatoId, isFinalizado }: { campeonatoId: number
 
   // useMemo DEVE ficar antes de qualquer return condicional (Rules of Hooks)
   const rodadasOrdenadas = useMemo(
-    () => rodadas ? [...rodadas].sort((a, b) => new Date(a.data.replace(/-/g, '/')).getTime() - new Date(b.data.replace(/-/g, '/')).getTime()) : [],
+    () => rodadas ? [...rodadas].sort((a, b) => getApiDateTimestamp(a.data) - getApiDateTimestamp(b.data)) : [],
     [rodadas]
   );
 

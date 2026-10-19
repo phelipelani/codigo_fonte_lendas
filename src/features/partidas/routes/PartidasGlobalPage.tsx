@@ -10,7 +10,7 @@ import { ptBR } from 'date-fns/locale';
 import { PartidaEditModal } from '../components/PartidaEditModal';
 import MatchDetailModal from '@/components/shared/MatchDetailModal';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { cn, parseApiDate } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import icPartidas from '@/assets/icones/partidas.webp';
 import PageTitle from '@/components/shared/PageTitle';
@@ -33,7 +33,10 @@ const MatchCard = memo(function MatchCard({ p, isAdmin, onEdit, onDelete, onClic
         </span>
         <div className="flex items-center gap-1.5 text-white/25 text-[10px]">
           <Calendar size={10} />
-          <span>{p.data ? format(new Date(p.data), "dd MMM, HH:mm", { locale: ptBR }) : 'N/D'}</span>
+          <span>{(() => {
+            const dt = parseApiDate(p.data);
+            return dt ? format(dt, "dd MMM, HH:mm", { locale: ptBR }) : 'N/D';
+          })()}</span>
         </div>
       </div>
 

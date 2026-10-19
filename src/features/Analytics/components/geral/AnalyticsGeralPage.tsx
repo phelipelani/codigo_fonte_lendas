@@ -15,7 +15,9 @@ import { DefendersCleanSheetsCard } from './DefendersCleanSheetsCard';
 import { GoalkeepersCleanSheetsCard } from './GoalkeepersCleanSheetsCard';
 import { CardsRankingCard } from './CardsRankingCard';
 import { IndividualAwardsCard } from './IndividualAwardsCard';
-import { ChampionsRanking } from './ChampionsRanking';
+import { LeaguesRanking } from './LeaguesRanking';
+import { CupsHistory } from './CupsHistory';
+import { ChampionDuosTable } from './ChampionDuosTable';
 import { CompetitionHistory } from './CompetitionHistory';
 import { useState } from 'react';
 
@@ -94,9 +96,15 @@ export function AnalyticsGeralPage() {
         <IndividualAwardsCard premios={data.premios || { mvps: [], pe_de_rato: [] }} />
       </div>
 
-      {/* 6. Histórico e Times */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 items-start">
-        <ChampionsRanking campeoes={data.campeoes || []} />
+      {/* 6. Campeões, Copas, Duplas e Histórico */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6 items-start">
+        <div className="flex flex-col gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+            <LeaguesRanking campeoes={data.campeoes || []} />
+            <CupsHistory copas={data.copas || []} />
+          </div>
+          <ChampionDuosTable duplas={data.championDuos || []} />
+        </div>
         <CompetitionHistory historico={data.historico || []} />
       </div>
 

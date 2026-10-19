@@ -28,7 +28,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/AlertDialog';
 import { useRodadasDaLiga } from '../api/useRodadasDaLiga';
-import { cn } from '@/lib/utils';
+import { cn, parseApiDate, formatDateShortMonth } from '@/lib/utils';
 
 type LigaCardProps = {
   liga: Liga;
@@ -44,20 +44,17 @@ export const LigaCard = ({ liga, onEdit, onDelete, onFinalizar, index }: LigaCar
   const { data: rodadas } = useRodadasDaLiga(liga.id);
 
   const formatarData = (dataString: string) => {
-    return new Date(dataString).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: 'short',
-      timeZone: 'UTC',
-    });
+    const { dia, mes } = formatDateShortMonth(dataString);
+    return `${dia} ${mes}`;
   };
 
   // Status da liga
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
-  const dataInicio = new Date(liga.data_inicio);
+  const dataInicio = parseApiDate(liga.data_inicio) || new Date(0);
   dataInicio.setHours(0, 0, 0, 0);
-  const dataFim = new Date(liga.data_fim);
-  dataFim.setHours(0, 0, 0, 0);
+  const dataFim = parseApiDate(liga.data_fim) || new Date(0);
+  dataFim.setHours(23, 59, 59, 999);
 
   const foiFinalizadaManualmente = !!liga.finalizada_em;
   const isAtiva = !foiFinalizadaManualmente && hoje >= dataInicio && hoje <= dataFim;

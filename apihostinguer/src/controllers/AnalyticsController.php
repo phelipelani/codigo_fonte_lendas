@@ -267,10 +267,11 @@ class AnalyticsController
                 c.nome,
                 CASE WHEN c.formato = 'liga' THEN 'pontos_corridos' WHEN c.formato = 'copa' THEN 'mata_mata' ELSE c.formato END AS formato,
                 c.data,
+                c.status,
                 t.nome AS campeao_nome
             FROM campeonatos c
             LEFT JOIN times t ON t.id = c.time_campeao_id
-            WHERE c.status = 'finalizado' OR c.time_campeao_id IS NOT NULL
+            WHERE c.status != 'cancelado'
             ORDER BY c.data DESC
         ");
 
@@ -279,6 +280,7 @@ class AnalyticsController
                 t.id,
                 t.nome,
                 t.logo_url AS escudo_url,
+                t.cor,
                 CASE WHEN c.formato = 'liga' THEN 'pontos_corridos' WHEN c.formato = 'copa' THEN 'mata_mata' ELSE c.formato END AS formato,
                 COUNT(c.id) AS titulos,
                 GROUP_CONCAT(c.nome SEPARATOR '||') AS nomes_campeonatos,
@@ -286,7 +288,7 @@ class AnalyticsController
             FROM campeonatos c
             JOIN times t ON t.id = c.time_campeao_id
             WHERE c.status = 'finalizado' OR c.time_campeao_id IS NOT NULL
-            GROUP BY t.id, formato
+            GROUP BY t.id, t.nome, t.logo_url, t.cor, formato
         ");
         $campeoes = [];
         foreach ($campeoesRaw as $row) {
@@ -309,9 +311,161 @@ class AnalyticsController
                 'id' => (int)$row['id'],
                 'nome' => $row['nome'],
                 'escudo_url' => $row['escudo_url'],
+                'cor' => $row['cor'] ?? null,
                 'formato' => $row['formato'],
                 'titulos' => (int)$row['titulos'],
                 'conquistas' => $conquistas
+            ];
+        }
+
+        // Copas com equipes campeãs e seus elencos vencedores
+        $copasRaw = $this->db->fetchAll("
+            SELECT
+                c.id,
+                c.nome,
+                c.data,
+                c.status,
+                t.id AS time_id,
+                t.nome AS time_nome,
+                t.cor AS time_cor,
+                t.logo_url AS time_logo
+            FROM campeonatos c
+            LEFT JOIN times t ON t.id = c.time_campeao_id
+            WHERE c.formato = 'copa'
+              AND (c.status = 'finalizado' OR c.time_campeao_id IS NOT NULL)
+            ORDER BY c.data ASC, c.id ASC
+        ");
+
+        $copasJogadoresRaw = $this->db->fetchAll("
+            SELECT
+                cv.campeonato_id,
+                j.id AS jogador_id,
+                j.nome AS jogador_nome,
+                j.foto_url AS jogador_foto
+            FROM campeonato_vencedores cv
+            JOIN campeonatos c ON c.id = cv.campeonato_id
+            JOIN jogadores j ON j.id = cv.jogador_id
+            WHERE c.formato = 'copa' AND cv.posicao = 1
+            ORDER BY cv.campeonato_id ASC, j.nome ASC
+        ");
+
+        $jogadoresPorCopa = [];
+        foreach ($copasJogadoresRaw as $cj) {
+            $cid = (int)$cj['campeonato_id'];
+            if (!isset($jogadoresPorCopa[$cid])) {
+                $jogadoresPorCopa[$cid] = [];
+            }
+            $jogadoresPorCopa[$cid][] = [
+                'id'       => (int)$cj['jogador_id'],
+                'nome'     => $cj['jogador_nome'],
+                'foto_url' => $cj['jogador_foto'] ?? null,
+            ];
+        }
+
+        $copas = [];
+        foreach ($copasRaw as $cRow) {
+            $cid = (int)$cRow['id'];
+            $copas[] = [
+                'id'           => $cid,
+                'nome'         => $cRow['nome'],
+                'data'         => $cRow['data'],
+                'status'       => $cRow['status'],
+                'time_campeao' => [
+                    'id'       => (int)($cRow['time_id'] ?? 0),
+                    'nome'     => $cRow['time_nome'] ?? 'Time Campeão',
+                    'cor'      => $cRow['time_cor'] ?? '#38BDF8',
+                    'logo_url' => $cRow['time_logo'] ?? null,
+                ],
+                'campeoes'     => $jogadoresPorCopa[$cid] ?? [],
+            ];
+        }
+
+        // Duplas que mais venceram juntas (jogando no mesmo time campeão)
+        $duplasRaw = $this->db->fetchAll("
+            SELECT
+                a.jogador_id AS j1_id, j1.nome AS j1_nome, j1.foto_url AS j1_foto,
+                b.jogador_id AS j2_id, j2.nome AS j2_nome, j2.foto_url AS j2_foto,
+                COUNT(DISTINCT a.campeonato_id) AS total_titulos,
+                COUNT(DISTINCT CASE WHEN c.formato = 'copa' THEN a.campeonato_id END) AS copas,
+                COUNT(DISTINCT CASE WHEN c.formato != 'copa' OR c.formato IS NULL THEN a.campeonato_id END) AS ligas,
+                GROUP_CONCAT(DISTINCT CONCAT(c.id, ':', COALESCE(c.formato, 'liga'), ':', c.nome) ORDER BY c.data ASC SEPARATOR '||') AS competicoes_raw
+            FROM campeonato_vencedores a
+            JOIN campeonato_vencedores b
+                ON a.campeonato_id = b.campeonato_id
+                AND (a.time_id = b.time_id OR a.time_id IS NULL OR b.time_id IS NULL)
+                AND a.jogador_id < b.jogador_id
+                AND a.posicao = 1 AND b.posicao = 1
+            JOIN campeonatos c ON c.id = a.campeonato_id
+            JOIN jogadores j1 ON j1.id = a.jogador_id
+            JOIN jogadores j2 ON j2.id = b.jogador_id
+            GROUP BY a.jogador_id, b.jogador_id, j1.nome, j1.foto_url, j2.nome, j2.foto_url
+            ORDER BY total_titulos DESC, copas DESC, ligas DESC, j1.nome ASC, j2.nome ASC
+        ");
+
+        // Mapa de edições sequenciais por formato (1C, 2C, 3C... e 1L, 2L, 3L...)
+        $allCampeonatosSeq = $this->db->fetchAll("
+            SELECT id, formato, data, nome
+            FROM campeonatos
+            WHERE status != 'cancelado'
+            ORDER BY data ASC, id ASC
+        ");
+        $campEditionMap = [];
+        $copaIndex = 0;
+        $ligaIndex = 0;
+        foreach ($allCampeonatosSeq as $cSeq) {
+            $f = strtolower($cSeq['formato'] ?? 'liga');
+            if ($f === 'copa') {
+                $copaIndex++;
+                $tag = $copaIndex . 'C';
+            } else {
+                $ligaIndex++;
+                $tag = $ligaIndex . 'L';
+            }
+            $campEditionMap[(int)$cSeq['id']] = [
+                'tag'     => $tag,
+                'formato' => $f,
+                'nome'    => $cSeq['nome']
+            ];
+        }
+
+        $championDuos = [];
+        foreach ($duplasRaw as $dRow) {
+            $compsList = [];
+            if (!empty($dRow['competicoes_raw'])) {
+                $items = explode('||', $dRow['competicoes_raw']);
+                foreach ($items as $item) {
+                    $parts = explode(':', $item, 3);
+                    if (count($parts) >= 3) {
+                        $cid = (int)$parts[0];
+                        $compFormato = strtolower($parts[1]);
+                        $compNome = $parts[2];
+                        $tag = $campEditionMap[$cid]['tag'] ?? ($compFormato === 'copa' ? 'C' : 'L');
+
+                        $compsList[] = [
+                            'id'      => $cid,
+                            'formato' => $compFormato,
+                            'nome'    => $compNome,
+                            'tag'     => $tag,
+                        ];
+                    }
+                }
+            }
+
+            $championDuos[] = [
+                'j1' => [
+                    'id'       => (int)$dRow['j1_id'],
+                    'nome'     => $dRow['j1_nome'],
+                    'foto_url' => $dRow['j1_foto'] ?? null,
+                ],
+                'j2' => [
+                    'id'       => (int)$dRow['j2_id'],
+                    'nome'     => $dRow['j2_nome'],
+                    'foto_url' => $dRow['j2_foto'] ?? null,
+                ],
+                'total_titulos' => (int)$dRow['total_titulos'],
+                'copas'         => (int)$dRow['copas'],
+                'ligas'         => (int)$dRow['ligas'],
+                'competicoes'   => $compsList,
             ];
         }
 
@@ -399,6 +553,8 @@ class AnalyticsController
             'peDeRatoRodada'   => $peDeRatoRodada,
             'historico'        => $historico,
             'campeoes'         => $campeoes,
+            'copas'            => $copas,
+            'championDuos'     => $championDuos,
             'cartoes'          => $cartoes,
             'premios'          => $premios,
         ], JSON_UNESCAPED_UNICODE);

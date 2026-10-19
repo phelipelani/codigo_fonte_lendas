@@ -1,7 +1,7 @@
 import { memo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatDateYear } from '@/lib/utils';
 
 interface Conquista {
   nome: string;
@@ -122,7 +122,7 @@ const PodiumCard = ({ team, pos, isMobile }: { team: Campeao, pos: 1 | 2 | 3, is
             </span>
             {c.data && (
               <span className="text-[8px] text-white/50 mt-0.5">
-                {new Date(c.data).getFullYear()}
+                {formatDateYear(c.data)}
               </span>
             )}
           </div>

@@ -221,7 +221,7 @@ function gerarTextoRelatorio(int $listaId, string $dataRacha): string {
     return $r;
 }
 
-// ── Enviar relatório para grupo e admin ──────────────
+// ── Enviar relatório para o grupo ────────────────────
 function enviarRelatorio(int $listaId): void {
     $lista = db()->prepare('SELECT * FROM lista_presenca WHERE id = ?');
     $lista->execute([$listaId]);
@@ -229,11 +229,7 @@ function enviarRelatorio(int $listaId): void {
     if (!$lista) return;
 
     $texto = gerarTextoRelatorio($listaId, $lista['data_racha']);
-    log_bot("Enviando relatorio atualizado...");
+    log_bot("Enviando relatorio atualizado para o grupo...");
 
     enviarGrupo($texto);
-
-    if (MEU_NUMERO && MEU_NUMERO !== '5512999999999') {
-        enviarMensagem(MEU_NUMERO, $texto);
-    }
 }

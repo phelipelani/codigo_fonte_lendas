@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCampeonatos } from '@/api/campeonatoApi';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { getApiDateTimestamp } from '@/lib/utils';
 
 import {
   ChampionshipsHeader,
@@ -37,8 +38,8 @@ export function CampeonatosPage() {
       return true;
     }).sort((a, b) => {
       if (ordem === 'nome') return a.nome.localeCompare(b.nome);
-      const valA = new Date(a.data || 0).getTime();
-      const valB = new Date(b.data || 0).getTime();
+      const valA = getApiDateTimestamp(a.data);
+      const valB = getApiDateTimestamp(b.data);
       if (ordem === 'antigos') return valA - valB;
       return valB - valA; // recentes
     });

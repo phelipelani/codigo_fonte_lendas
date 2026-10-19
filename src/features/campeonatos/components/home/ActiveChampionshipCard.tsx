@@ -2,17 +2,12 @@ import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Calendar, Target, ArrowRight, Shield } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatDate } from '@/lib/utils';
 
 export const ActiveChampionshipCard = memo(({ campeonato, index }: any) => {
   const pct = campeonato.total_rodadas ? Math.round(((campeonato.rodadas_completas || 0) / campeonato.total_rodadas) * 100) : 0;
-  let formattedDate = 'A definir';
-  if (campeonato.data) {
-    try {
-      const parts = campeonato.data.split(' ')[0].split('-');
-      formattedDate = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : format(new Date(campeonato.data.replace(/-/g, '/')), 'dd/MM/yyyy');
-    } catch(e) {}
-  }
+  const dateFormatted = campeonato.data ? formatDate(campeonato.data) : '-';
+  const formattedDate = dateFormatted !== '-' ? dateFormatted : 'A definir';
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}
       className="group relative flex flex-col rounded-xl border border-cyan-500/30 bg-[#0a1628]/80 backdrop-blur-md overflow-hidden hover:border-cyan-400/50 hover:shadow-lg hover:shadow-cyan-500/10 transition-all cursor-pointer h-full"

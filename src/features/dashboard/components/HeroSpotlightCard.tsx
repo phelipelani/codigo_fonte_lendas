@@ -1,7 +1,7 @@
 // Arquivo: src/features/dashboard/components/HeroSpotlightCard.tsx
 import React from "react";
 import { motion } from "framer-motion";
-import { cn } from "@/lib/utils";
+import { cn, formatDateDayMonth } from "@/lib/utils";
 import { fadeUp, ACCENT, type AccentKey } from "./dashboardConstants";
 
 // SVGs de fallback engraçados (pé de rato sem foto)
@@ -128,7 +128,7 @@ const HeroSpotlightCard = React.memo(function HeroSpotlightCard({
           {/* rodada/competição se disponível */}
           {(player.nome_competicao || player.rodada_data) && (
             <p className="text-[10px] text-white/30 truncate">
-              {player.nome_competicao || (player.rodada_data ? `Rodada ${new Date(player.rodada_data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}` : '')}
+              {player.nome_competicao || (player.rodada_data ? `Rodada ${formatDateDayMonth(player.rodada_data)}` : '')}
             </p>
           )}
 

@@ -2,21 +2,13 @@ import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Trophy, Clock, ArrowRight, Crown, CheckCircle } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatDate } from '@/lib/utils';
 
 export const FinishedChampionshipCard = memo(({ campeonato, index }: any) => {
-  let formattedInicio = '---';
-  let formattedFim = '---';
-  try {
-      if (campeonato.data) {
-          const parts = campeonato.data.split(' ')[0].split('-');
-          formattedInicio = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : format(new Date(campeonato.data.replace(/-/g, '/')), 'dd/MM/yyyy');
-      }
-      if (campeonato.data_fim) {
-          const parts = campeonato.data_fim.split(' ')[0].split('-');
-          formattedFim = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : format(new Date(campeonato.data_fim.replace(/-/g, '/')), 'dd/MM/yyyy');
-      }
-  } catch(e) {}
+  const dateInicio = campeonato.data ? formatDate(campeonato.data) : '-';
+  const formattedInicio = dateInicio !== '-' ? dateInicio : '---';
+  const dateFim = campeonato.data_fim ? formatDate(campeonato.data_fim) : '-';
+  const formattedFim = dateFim !== '-' ? dateFim : '---';
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}
       className="group relative flex flex-col rounded-xl border border-amber-500/20 bg-[#0a1628]/80 backdrop-blur-md overflow-hidden hover:border-amber-500/40 hover:shadow-lg hover:shadow-amber-500/5 transition-all cursor-pointer h-full"

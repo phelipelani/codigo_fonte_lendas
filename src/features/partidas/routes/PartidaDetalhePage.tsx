@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { PartidaEditModal } from '../components/PartidaEditModal';
 import { useAuth } from '@/hooks/useAuth';
 import api from '@/api';
+import { formatDateLong } from '@/lib/utils';
 
 // ── Paleta Riot ────────────────────────────────────────────────────────────────
 const GOLD   = '#C89B3C';
@@ -278,7 +279,7 @@ export default function PartidaDetalhePage() {
               style={{ background: `${GOLD}12`, border: `1px solid ${GOLD}25` }}>
               <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#4ade80' }} />
               <span className="text-[9px] font-black uppercase tracking-[0.25em]" style={{ color: GOLD }}>
-                {partida.campeonato_nome || 'Partida'} · {partida.rodada_data ? new Date(partida.rodada_data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
+                {partida.campeonato_nome || 'Partida'} · {partida.rodada_data ? formatDateLong(partida.rodada_data) : ''}
               </span>
             </div>
           </div>

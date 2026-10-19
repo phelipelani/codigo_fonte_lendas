@@ -11,7 +11,7 @@ import { useDeleteRodada } from '../api/useDeleteRodada';
 import { RodadaCreateModal } from '../components/RodadaCreateModal';
 import { RodadaEditModal } from '../components/RodadaEditModal';
 import { RodadaCard } from '../components/RodadaCard';
-import { cn } from '@/lib/utils';
+import { cn, getApiDateTimestamp } from '@/lib/utils';
 
 export const RodadasPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -164,8 +164,8 @@ export const RodadasPage = () => {
       {rodadas && rodadas.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <AnimatePresence mode="popLayout">
-            {rodadas
-              .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
+            {[...rodadas]
+              .sort((a, b) => getApiDateTimestamp(b.data) - getApiDateTimestamp(a.data))
               .map((rodada, index) => (
                 <RodadaCard
                   key={rodada.id}

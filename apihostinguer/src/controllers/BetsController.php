@@ -650,8 +650,8 @@ class BetsController {
             $stmtOps = $this->pdo->prepare("
                 SELECT bbo.id, bbo.bilhete_id, bbo.opcao_id, bbo.odd_momento,
                        COALESCE(bo.status_resultado, bbo.status_resultado, 'aguardando') as status_resultado,
-                       bo.descricao, bo.regra_condicao, bo.regra_valor,
-                       bm.titulo, bm.rodada_id as opcao_rodada_id, bm.status as mercado_status, bm.resultado_real 
+                       bo.descricao, bo.regra_condicao, bo.regra_valor, bo.mercado_id,
+                       bm.titulo, bm.rodada_id as opcao_rodada_id, bm.status as mercado_status, bm.resultado_real, bm.regra_categoria 
                 FROM bets_bilhete_opcoes bbo 
                 JOIN bets_opcoes bo ON bbo.opcao_id = bo.id 
                 JOIN bets_mercados bm ON bo.mercado_id = bm.id
@@ -660,6 +660,49 @@ class BetsController {
             $stmtOps->execute([$b['id']]);
             $b['opcoes'] = $stmtOps->fetchAll(PDO::FETCH_ASSOC);
             $b['rodada_id'] = $b['opcoes'][0]['opcao_rodada_id'] ?? null;
+
+            $temPote = false;
+            foreach ($b['opcoes'] as &$opHist) {
+                if ($opHist['regra_categoria'] === 'pote') {
+                    $temPote = true;
+                    // Buscar pote total vivo e total apostado nessa opcao
+                    $stmtPote = $this->pdo->prepare("
+                        SELECT COALESCE(SUM(bb.valor_apostado), 0) as pote_total
+                        FROM bets_bilhetes bb
+                        JOIN bets_bilhete_opcoes bbo ON bb.id = bbo.bilhete_id
+                        JOIN bets_opcoes bo ON bbo.opcao_id = bo.id
+                        WHERE bo.mercado_id = ? AND bb.status != 'cancelado_reembolsado'
+                    ");
+                    $stmtPote->execute([$opHist['mercado_id']]);
+                    $poteTotalVivo = (float)($stmtPote->fetch(PDO::FETCH_ASSOC)['pote_total'] ?? 0);
+
+                    $stmtOpTotal = $this->pdo->prepare("
+                        SELECT COALESCE(SUM(bb.valor_apostado), 0) as op_total
+                        FROM bets_bilhetes bb
+                        JOIN bets_bilhete_opcoes bbo ON bb.id = bbo.bilhete_id
+                        WHERE bbo.opcao_id = ? AND bb.status != 'cancelado_reembolsado'
+                    ");
+                    $stmtOpTotal->execute([$opHist['opcao_id']]);
+                    $opTotalVivo = (float)($stmtOpTotal->fetch(PDO::FETCH_ASSOC)['op_total'] ?? 0);
+
+                    $oddAtualPote = $opTotalVivo > 0 ? round($poteTotalVivo / $opTotalVivo, 2) : 2.00;
+                    if ($oddAtualPote < 1.05) $oddAtualPote = 1.05;
+
+                    $opHist['odd_momento'] = (string)$oddAtualPote;
+                    $opHist['pote_total'] = $poteTotalVivo;
+                    $opHist['total_na_opcao'] = $opTotalVivo;
+                    $opHist['is_pote'] = true;
+
+                    if ($b['status'] === 'pendente') {
+                        $b['is_pote'] = true;
+                        $b['pote_total'] = $poteTotalVivo;
+                        $b['odd_total'] = (string)$oddAtualPote;
+                        $fatia = $opTotalVivo > 0 ? ((float)$b['valor_apostado'] / $opTotalVivo) : 1.0;
+                        $b['retorno_potencial'] = round($fatia * $poteTotalVivo, 2);
+                    }
+                }
+            }
+            $b['is_pote'] = $temPote;
         }
         
         echo json_encode($bilhetes);

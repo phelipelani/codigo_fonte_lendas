@@ -616,7 +616,11 @@ class StatsService
                 {$sqlBonusRod}  AS pts_premios_rodada,
                 {$sqlBonusCamp} AS pts_premios_camp,
                 (SELECT COUNT(*) FROM campeonato_vencedores cv
-                 WHERE cv.jogador_id = ep.jogador_id) AS qtd_titulos
+                 JOIN campeonatos c ON c.id = cv.campeonato_id
+                 WHERE cv.jogador_id = ep.jogador_id AND (c.formato = 'liga' OR c.formato IS NULL OR c.formato = 'pontos_corridos')) AS qtd_titulos_liga,
+                (SELECT COUNT(*) FROM campeonato_vencedores cv
+                 JOIN campeonatos c ON c.id = cv.campeonato_id
+                 WHERE cv.jogador_id = ep.jogador_id AND c.formato = 'copa') AS qtd_titulos_copa
             FROM campeonato_estatisticas_partida ep
             JOIN campeonato_partidas part ON part.id = ep.partida_id AND part.status = 'finalizada'
             JOIN jogadores j ON j.id = ep.jogador_id
@@ -646,20 +650,27 @@ class StatsService
                              + ($caz * Pontos::PUNICAO_CARTAO_AZUL_OVERALL)
                              + ($cv * Pontos::PUNICAO_CARTAO_VERMELHO_OVERALL);
 
-            $ptsTitulos = (int)$row['qtd_titulos'] * Pontos::TITULO_PONTOS_CORRIDOS;
+            $qtdTitulosLiga = (int)($row['qtd_titulos_liga'] ?? 0);
+            $qtdTitulosCopa = (int)($row['qtd_titulos_copa'] ?? 0);
+            $qtdTitulos     = $qtdTitulosLiga + $qtdTitulosCopa;
+
+            $ptsTitulos = ($qtdTitulosLiga * Pontos::TITULO_PONTOS_CORRIDOS)
+                        + ($qtdTitulosCopa * Pontos::TITULO_MATA_MATA);
 
             $score = $ptsPerformance
                    + $ptsTitulos
                    + (float)($row['pts_premios_rodada'] ?? 0)
                    + (float)($row['pts_premios_camp'] ?? 0);
 
-            $row['score_lendario']  = round($score, 1);
-            $row['pts_performance'] = round($ptsPerformance, 1);
-            $row['pts_titulos']     = $ptsTitulos;
-            $row['total_jogos']     = (int)$row['total_jogos'];
-            $row['total_gols']      = $gols;
-            $row['total_assists']   = $assists;
-            $row['qtd_titulos']     = (int)$row['qtd_titulos'];
+            $row['score_lendario']   = round($score, 1);
+            $row['pts_performance']  = round($ptsPerformance, 1);
+            $row['pts_titulos']      = $ptsTitulos;
+            $row['total_jogos']      = (int)$row['total_jogos'];
+            $row['total_gols']       = $gols;
+            $row['total_assists']    = $assists;
+            $row['qtd_titulos']      = $qtdTitulos;
+            $row['qtd_titulos_liga'] = $qtdTitulosLiga;
+            $row['qtd_titulos_copa'] = $qtdTitulosCopa;
         }
         unset($row);
 
