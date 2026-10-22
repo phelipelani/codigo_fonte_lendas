@@ -50,7 +50,7 @@ const navLinks = [
   { to: '/hall-da-fama', icon: <NavIcon src={icHallDaFama} alt="Hall da Fama" />, label: 'Hall da Fama' },
   { to: '/times', icon: <NavIcon src={icTimes} alt="Times" />, label: 'Times', adminOnly: true },
   { to: '/jogadores', icon: <NavIcon src={icJogadores} alt="Jogadores" />, label: 'Jogadores', adminOnly: true },
-  { to: '/analytics', icon: <NavIcon src={icEstatisticas} alt="Analytics" />, label: 'Analytics' },
+  { to: '/analytics', icon: <NavIcon src={icEstatisticas} alt="desempenho" />, label: 'desempenho' },
   { to: '/racha', icon: <ClipboardList size={22} />, label: 'Racha' },
   { to: '/album', icon: <Images size={22} />, label: 'Álbum', highlight: 'pink' as const },
   { to: '/financeiro', icon: <Wallet size={22} />, label: 'Financeiro', adminOnly: true, highlight: 'green' as const },

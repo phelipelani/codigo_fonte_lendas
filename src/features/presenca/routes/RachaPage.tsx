@@ -1,11 +1,12 @@
 // Arquivo: src/features/presenca/routes/RachaPage.tsx
 //
-// Tela principal de gestao de presenca/racha. Tabs:
-//   1. Lista atual    — confirmados / pendentes / ausentes da semana
-//   2. Jogadores      — CRUD do bot (adicionar/editar/desativar)
-//   3. Comunicado     — mensagem em massa
-//   4. Configurações  — dia, horário, local, intervalos
-//   5. Logs           — ultimas linhas do bot.log
+// Tela principal de gestão de racha multi-tenant, conexão WhatsApp e presenças.
+// Tabs:
+//   1. Fila & Presença — Titulares, Fila FIFO, Homologação, Reabertura, Pós-jogo e Auditoria
+//   2. Participantes   — Mensalistas, Avulsos Recorrentes e Convidados (com seleção)
+//   3. Mensagens       — 3 Opções: Confirmação Semanal, Renovação Mensal e Comunicado Livre
+//   4. Configurações   — Dados do local, horários e intervalos
+//   5. Logs            — Histórico técnico de eventos do bot
 
 import * as React from 'react';
 import { motion } from 'framer-motion';
@@ -15,33 +16,26 @@ import {
   Megaphone,
   Settings,
   ScrollText,
-  RefreshCw,
-  Send,
-  Lock,
-  Unlock,
-  MessageCircle,
-  Zap,
+  ChevronDown,
+  Shield,
+  Layers,
 } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
-
+import { cn } from '@/lib/utils';
 import {
-  usePresencaDados,
-  useDispararLista,
-  useFecharLista,
-  useRecarregarLista,
-  useReenviarConvocacao,
-  useSincronizarRespostas,
+  useMeusRachas,
+  useSessaoAtiva,
+  useRachaParticipantes,
 } from '../api/presencaApi';
 
-import { ListaAtualTab } from '../components/ListaAtualTab';
-import { JogadoresTab } from '../components/JogadoresTab';
-import { ComunicadoTab } from '../components/ComunicadoTab';
+import { WhatsAppConexaoCard } from '../components/WhatsAppConexaoCard';
+import { RachaFilaPresencaTab } from '../components/RachaFilaPresencaTab';
+import { RachaParticipantesTab } from '../components/RachaParticipantesTab';
+import { RachaMensagensTab } from '../components/RachaMensagensTab';
 import { ConfigTab } from '../components/ConfigTab';
 import { LogsTab } from '../components/LogsTab';
 
-type TabId = 'lista' | 'jogadores' | 'comunicado' | 'config' | 'logs';
+type TabId = 'fila' | 'participantes' | 'mensagens' | 'config' | 'logs';
 
 type TabDef = {
   id: TabId;
@@ -51,162 +45,116 @@ type TabDef = {
 };
 
 const TABS: TabDef[] = [
-  { id: 'lista', label: 'Lista atual', icon: Calendar },
-  { id: 'jogadores', label: 'Jogadores', icon: Users, adminOnly: true },
-  { id: 'comunicado', label: 'Comunicado', icon: Megaphone, adminOnly: true },
+  { id: 'fila', label: 'Fila & Presença Real', icon: Calendar },
+  { id: 'participantes', label: 'Participantes', icon: Users, adminOnly: true },
+  { id: 'mensagens', label: 'Convocação & Mensagens', icon: Megaphone, adminOnly: true },
   { id: 'config', label: 'Configurações', icon: Settings, adminOnly: true },
   { id: 'logs', label: 'Logs', icon: ScrollText, adminOnly: true },
 ];
 
 export const RachaPage: React.FC = () => {
   const { isAdmin } = useAuth();
-  const [tab, setTab] = React.useState<TabId>('lista');
-  const { data: dados } = usePresencaDados();
+  const [tab, setTab] = React.useState<TabId>('fila');
 
-  // Não-admin enxerga apenas a aba "Lista atual"
+  // Multi-racha context
+  const { data: meusRachasData, isLoading: isRachasLoading } = useMeusRachas();
+  const rachas = meusRachasData?.rachas ?? [];
+
+  const [selectedRachaId, setSelectedRachaId] = React.useState<number | undefined>(undefined);
+
+  // Set default active racha
+  React.useEffect(() => {
+    if (!selectedRachaId && rachas.length > 0) {
+      setSelectedRachaId(rachas[0].id);
+    }
+  }, [rachas, selectedRachaId]);
+
+  const activeRacha = rachas.find((r) => r.id === selectedRachaId) || rachas[0];
+  const rachaId = activeRacha?.id ?? 1;
+
+  // Carrega sessão ativa e participantes para sincronizar dados nas tabs
+  const { data: sessaoData } = useSessaoAtiva(rachaId);
+  const { data: participantesData } = useRachaParticipantes(rachaId);
+
+  // Seleção de participantes para convocação compartilhada entre as abas
+  const [selecionadosConvocacao, setSelecionadosConvocacao] = React.useState<Set<number>>(new Set());
+
+  const handleToggleSelecionado = (jogadorId: number) => {
+    setSelecionadosConvocacao((prev) => {
+      const next = new Set(prev);
+      if (next.has(jogadorId)) {
+        next.delete(jogadorId);
+      } else {
+        next.add(jogadorId);
+      }
+      return next;
+    });
+  };
+
+  const handleSelecionarTodos = (jogadorIds: number[]) => {
+    setSelecionadosConvocacao(new Set(jogadorIds));
+  };
+
+  const handleLimparSelecao = () => {
+    setSelecionadosConvocacao(new Set());
+  };
+
   const tabsVisiveis = React.useMemo(
     () => TABS.filter((t) => !t.adminOnly || isAdmin),
     [isAdmin]
   );
 
-  const dispararMut = useDispararLista();
-  const fecharMut = useFecharLista();
-  const recarregarMut = useRecarregarLista();
-  const reenviarMut = useReenviarConvocacao();
-  const sincronizarMut = useSincronizarRespostas();
-
-  const lista = dados?.lista ?? null;
+  const participantes = participantesData?.participantes ?? [];
+  const totalMensalistas = participantes.filter((p) => p.tipo_participacao === 'mensalista').length;
+  const titulares = sessaoData?.titulares ?? [];
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
-      {/* ===== Header ===== */}
-      <header className="mb-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+    <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+      {/* ===== Header Principal ===== */}
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
             <h1 className="text-3xl md:text-4xl font-black">
               <span className="bg-gradient-to-r from-cyan-300 via-teal-200 to-cyan-300 bg-clip-text text-transparent">
-                Racha — Gestão de Presença
+                Gestão de Racha & Presença
               </span>
             </h1>
-            <p className="mt-1 text-cyan-100/50 text-sm">
-              Bot de convocação semanal pelo WhatsApp
-            </p>
+            {activeRacha?.papel && (
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                {activeRacha.papel}
+              </span>
+            )}
           </div>
-
-          {/* Botoes de acao globais — somente admin, e se ja existe lista */}
-          {lista && isAdmin && (
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => sincronizarMut.mutate()}
-                disabled={sincronizarMut.isPending}
-                title="Busca mensagens enviadas enquanto o bot estava fora e atualiza a lista"
-                className="border-violet-500/30 text-violet-200 hover:bg-violet-500/10 disabled:opacity-40"
-              >
-                <Zap className={cn('mr-2 h-4 w-4', sincronizarMut.isPending && 'animate-pulse')} />
-                {sincronizarMut.isPending ? 'Sincronizando...' : 'Sincronizar respostas'}
-              </Button>
-
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => reenviarMut.mutate()}
-                disabled={reenviarMut.isPending || !!lista?.fechado}
-                title="Reenvia a mensagem de convocação para quem ainda não respondeu"
-                className="border-emerald-500/30 text-emerald-200 hover:bg-emerald-500/10 disabled:opacity-40"
-              >
-                <MessageCircle className={cn('mr-2 h-4 w-4', reenviarMut.isPending && 'animate-pulse')} />
-                {reenviarMut.isPending ? 'Enviando...' : 'Reenviar convocação'}
-              </Button>
-
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => recarregarMut.mutate()}
-                disabled={recarregarMut.isPending}
-                className="border-cyan-500/30 text-cyan-200 hover:bg-cyan-500/10"
-              >
-                <RefreshCw className={cn('mr-2 h-4 w-4', recarregarMut.isPending && 'animate-spin')} />
-                Reenviar relatório
-              </Button>
-
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => fecharMut.mutate()}
-                disabled={fecharMut.isPending}
-                className={cn(
-                  'border-amber-500/30 text-amber-200 hover:bg-amber-500/10',
-                  lista.fechado && 'border-emerald-500/30 text-emerald-200 hover:bg-emerald-500/10'
-                )}
-              >
-                {lista.fechado ? (
-                  <>
-                    <Unlock className="mr-2 h-4 w-4" /> Reabrir lista
-                  </>
-                ) : (
-                  <>
-                    <Lock className="mr-2 h-4 w-4" /> Fechar lista
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
-
-          {!lista && isAdmin && (
-            <Button
-              onClick={() => dispararMut.mutate()}
-              disabled={dispararMut.isPending}
-              size="sm"
-              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold"
-            >
-              <Send className="mr-2 h-4 w-4" />
-              {dispararMut.isPending ? 'Disparando...' : 'Disparar lista nova'}
-            </Button>
-          )}
+          <p className="mt-1 text-cyan-100/50 text-sm">
+            Controle multi-racha de convocação, fila FIFO, presença real e integração com WhatsApp
+          </p>
         </div>
+
+        {/* Seletor de Racha (quando o organizador gerencia mais de um) */}
+        {rachas.length > 1 && (
+          <div className="flex items-center gap-2 bg-[#0a1628]/80 border border-cyan-500/30 rounded-xl px-3 py-1.5 shadow-md">
+            <Layers className="h-4 w-4 text-cyan-400 shrink-0" />
+            <span className="text-xs text-cyan-100/60 whitespace-nowrap">Racha ativo:</span>
+            <select
+              value={selectedRachaId}
+              onChange={(e) => setSelectedRachaId(Number(e.target.value))}
+              className="bg-transparent text-sm font-bold text-white focus:outline-none cursor-pointer"
+            >
+              {rachas.map((r) => (
+                <option key={r.id} value={r.id} className="bg-[#0a1628] text-white">
+                  {r.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </header>
 
-      {/* ===== Status banner ===== */}
-      {lista && (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={cn(
-            'mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-3 backdrop-blur-md',
-            lista.fechado
-              ? 'bg-amber-500/10 border-amber-500/30'
-              : 'bg-emerald-500/10 border-emerald-500/30'
-          )}
-        >
-          <div className="flex items-center gap-3">
-            <span
-              className={cn(
-                'inline-flex h-2.5 w-2.5 rounded-full',
-                lista.fechado ? 'bg-amber-400' : 'bg-emerald-400 animate-pulse'
-              )}
-            />
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-widest text-cyan-100/60">
-                Lista de {dados?.config?.dia_racha || 'racha'}
-              </div>
-              <div className="text-sm sm:text-base font-bold text-white">
-                {lista.data_racha} • {lista.fechado ? 'Fechada' : 'Aberta'}
-                {lista.disparado && !lista.fechado && ' • Disparada'}
-              </div>
-            </div>
-          </div>
-          {dados?.config && (
-            <div className="text-xs sm:text-sm text-cyan-100/60">
-              {dados.config.local_racha} • {dados.config.horario_racha}
-            </div>
-          )}
-        </motion.div>
-      )}
+      {/* ===== Card de Conexão WhatsApp & QR Code ===== */}
+      <WhatsAppConexaoCard rachaId={rachaId} rachaNome={activeRacha?.nome} />
 
-      {/* ===== Tabs ===== */}
-      <div className="mb-5 overflow-x-auto">
+      {/* ===== Abas de Navegação ===== */}
+      <div className="overflow-x-auto">
         <div className="flex min-w-max items-center gap-1 rounded-xl border border-cyan-500/20 bg-[#0a1628]/50 p-1 backdrop-blur-md">
           {tabsVisiveis.map((t) => {
             const Icon = t.icon;
@@ -217,7 +165,7 @@ export const RachaPage: React.FC = () => {
                 type="button"
                 onClick={() => setTab(t.id)}
                 className={cn(
-                  'flex items-center gap-2 rounded-lg px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold transition-all',
+                  'flex items-center gap-2 rounded-lg px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-semibold transition-all',
                   ativo
                     ? 'bg-gradient-to-r from-cyan-500/30 to-teal-500/30 text-cyan-100 shadow-inner border border-cyan-400/30'
                     : 'text-cyan-100/50 hover:text-cyan-100 hover:bg-cyan-500/10'
@@ -231,16 +179,35 @@ export const RachaPage: React.FC = () => {
         </div>
       </div>
 
-      {/* ===== Conteudo ===== */}
+      {/* ===== Conteúdo Dinâmico por Aba ===== */}
       <motion.div
-        key={tab}
+        key={`${tab}-${rachaId}`}
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.18 }}
       >
-        {tab === 'lista' && <ListaAtualTab />}
-        {tab === 'jogadores' && isAdmin && <JogadoresTab />}
-        {tab === 'comunicado' && isAdmin && <ComunicadoTab />}
+        {tab === 'fila' && <RachaFilaPresencaTab rachaId={rachaId} />}
+
+        {tab === 'participantes' && isAdmin && (
+          <RachaParticipantesTab
+            rachaId={rachaId}
+            selecionadosConvocacao={selecionadosConvocacao}
+            onToggleSelecionado={handleToggleSelecionado}
+            onSelecionarTodos={handleSelecionarTodos}
+            onLimparSelecao={handleLimparSelecao}
+          />
+        )}
+
+        {tab === 'mensagens' && isAdmin && (
+          <RachaMensagensTab
+            rachaId={rachaId}
+            sessaoAtiva={sessaoData?.sessao ?? null}
+            totalConvocados={titulares.length}
+            totalMensalistas={totalMensalistas}
+            selecionadosAvulsos={selecionadosConvocacao}
+          />
+        )}
+
         {tab === 'config' && isAdmin && <ConfigTab />}
         {tab === 'logs' && isAdmin && <LogsTab />}
       </motion.div>

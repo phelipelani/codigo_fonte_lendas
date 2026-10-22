@@ -30,7 +30,7 @@ if (in_array($origin, $allowedOrigins, true)) {
     header('Access-Control-Allow-Origin: ' . ($allowedOrigins[0] ?? '*'));
 }
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-Racha-Id');
 header('Vary: Origin');
 
 // Não força JSON em rotas OAuth (que fazem redirect: Google e Mercado Pago)
@@ -48,6 +48,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 // Imports
 require_once __DIR__ . '/../config/database.php';
+if (file_exists(__DIR__ . '/../config/database_sandbox.php')) {
+    require_once __DIR__ . '/../config/database_sandbox.php';
+}
 require_once __DIR__ . '/../src/utils/HttpError.php';
 require_once __DIR__ . '/../src/utils/RateLimiter.php';
 require_once __DIR__ . '/../src/utils/Cache.php';
@@ -1352,6 +1355,97 @@ try {
     // =========================================================
     // PRESENCA — Bot de convocacao do racha (WhatsApp via Evolution API)
     // =========================================================
+    // =========================================================
+    // RACHA — Gestão Multi-Racha, Presença, Fila e WhatsApp (Fase 4.0 — Etapa 3C.3)
+    // =========================================================
+    if (str_starts_with($path, '/racha')) {
+        require_once __DIR__ . '/../src/controllers/RachaGestaoController.php';
+        $rachaCtrl = new RachaGestaoController();
+
+        // GET /racha/meus-rachas
+        if ($path === '/racha/meus-rachas' && $method === 'GET') {
+            jsonResponse($rachaCtrl->meusRachas());
+        }
+
+        // WhatsApp
+        if ($path === '/racha/whatsapp/status' && $method === 'GET') {
+            jsonResponse($rachaCtrl->getWhatsAppStatus());
+        }
+        if ($path === '/racha/whatsapp/conectar' && $method === 'POST') {
+            jsonResponse($rachaCtrl->conectarWhatsApp());
+        }
+        if ($path === '/racha/whatsapp/simular-conexao' && $method === 'POST') {
+            jsonResponse($rachaCtrl->simularConexaoWhatsApp());
+        }
+        if ($path === '/racha/whatsapp/desconectar' && $method === 'POST') {
+            jsonResponse($rachaCtrl->desconectarWhatsApp());
+        }
+
+        // Participantes
+        if ($path === '/racha/participantes' && $method === 'GET') {
+            jsonResponse($rachaCtrl->listarParticipantes());
+        }
+        if ($path === '/racha/participantes' && $method === 'POST') {
+            jsonResponse($rachaCtrl->cadastrarParticipante());
+        }
+
+        // Sessões e Fila
+        if ($path === '/racha/sessoes/ativa' && $method === 'GET') {
+            jsonResponse($rachaCtrl->getSessaoAtiva());
+        }
+        if ($path === '/racha/sessoes' && $method === 'POST') {
+            jsonResponse($rachaCtrl->criarSessao());
+        }
+
+        if (preg_match('#^/racha/sessoes/(\d+)/fechar-convocacao$#', $path, $m) && $method === 'POST') {
+            jsonResponse($rachaCtrl->fecharConvocacao((int)$m[1]));
+        }
+        if (preg_match('#^/racha/sessoes/(\d+)/reabrir-convocacao$#', $path, $m) && $method === 'POST') {
+            jsonResponse($rachaCtrl->reabrirConvocacao((int)$m[1]));
+        }
+        if ($path === '/racha/renovacoes/disparar' && $method === 'POST') {
+            jsonResponse($rachaCtrl->dispararRenovacaoMensal(null));
+        }
+        if ($path === '/racha/renovacoes' && $method === 'GET') {
+            jsonResponse($rachaCtrl->listarRenovacoes());
+        }
+        if (preg_match('#^/racha/sessoes/(\d+)/convocar$#', $path, $m) && $method === 'POST') {
+            jsonResponse($rachaCtrl->convocarParticipantes((int)$m[1]));
+        }
+        if (preg_match('#^/racha/sessoes/(\d+)/disparar-convocacao$#', $path, $m) && $method === 'POST') {
+            jsonResponse($rachaCtrl->dispararConvocacao((int)$m[1]));
+        }
+        if (preg_match('#^/racha/sessoes/(\d+)/disparar-renovacao$#', $path, $m) && $method === 'POST') {
+            jsonResponse($rachaCtrl->dispararRenovacaoMensal((int)$m[1]));
+        }
+        if (preg_match('#^/racha/sessoes/(\d+)/disparar-comunicado$#', $path, $m) && $method === 'POST') {
+            jsonResponse($rachaCtrl->dispararComunicado((int)$m[1]));
+        }
+        if (preg_match('#^/racha/sessoes/(\d+)/reenviar-promocoes$#', $path, $m) && $method === 'POST') {
+            jsonResponse($rachaCtrl->reenviarNotificacoesPromocao((int)$m[1]));
+        }
+
+        // Presença Real e Homologação
+        if (preg_match('#^/racha/sessoes/(\d+)/homologar-lista$#', $path, $m) && $method === 'POST') {
+            jsonResponse($rachaCtrl->homologarLista((int)$m[1]));
+        }
+        if (preg_match('#^/racha/sessoes/(\d+)/reabrir-lista$#', $path, $m) && $method === 'POST') {
+            jsonResponse($rachaCtrl->reabrirLista((int)$m[1]));
+        }
+        if (preg_match('#^/racha/sessoes/(\d+)/substituir$#', $path, $m) && $method === 'POST') {
+            jsonResponse($rachaCtrl->substituirParticipante((int)$m[1]));
+        }
+        if (preg_match('#^/racha/sessoes/(\d+)/presencas$#', $path, $m) && $method === 'POST') {
+            jsonResponse($rachaCtrl->registrarPresencasReais((int)$m[1]));
+        }
+        if (preg_match('#^/racha/sessoes/(\d+)/concluir$#', $path, $m) && $method === 'POST') {
+            jsonResponse($rachaCtrl->concluirSessao((int)$m[1]));
+        }
+        if (preg_match('#^/racha/sessoes/(\d+)/historico$#', $path, $m) && $method === 'GET') {
+            jsonResponse($rachaCtrl->getHistoricoSessao((int)$m[1]));
+        }
+    }
+
     if (str_starts_with($path, '/presenca')) {
         $presencaRoot = __DIR__ . '/../presenca';
 
@@ -1359,6 +1453,13 @@ try {
         require_once $presencaRoot . '/db.php';
         require_once $presencaRoot . '/whatsapp.php';
         require_once $presencaRoot . '/bot.php';
+
+        // POST /presenca/multiracha/webhook — Webhook autenticado multi-racha
+        if ($path === '/presenca/multiracha/webhook' && $method === 'POST') {
+            require_once $presencaRoot . '/api/webhook_multiracha.php';
+            $res = processMultiRachaWebhookHttpRequest();
+            jsonResponse($res['body'], $res['http_code']);
+        }
 
         // POST /presenca/webhook — recebe mensagens da Evolution API
         // (validacao de token feita dentro do webhook.php)

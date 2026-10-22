@@ -1,0 +1,66 @@
+-- =============================================================================
+-- MIGRATION 005: COBRANÇAS E LANÇAMENTOS (LIVRO-CAIXA)
+-- Arquivo: 005_create_cobrancas_e_lancamentos.sql
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS `financeiro_cobrancas` (
+  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `racha_id` INT UNSIGNED NOT NULL,
+  `jogador_id` INT(11) NOT NULL,
+  `fundo_id` INT UNSIGNED NOT NULL,
+  `sessao_id` INT UNSIGNED NULL,
+  `tipo` ENUM('mensalidade','avulso','rateio_extra','outro') NOT NULL,
+  `competencia_mes` TINYINT UNSIGNED NOT NULL,
+  `competencia_ano` SMALLINT UNSIGNED NOT NULL,
+  `valor_original` DECIMAL(10,2) NOT NULL,
+  `valor_desconto` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  `valor_final` DECIMAL(10,2) NOT NULL,
+  `data_vencimento` DATE NOT NULL,
+  `status` ENUM('pendente','pago','cancelado','isento','estornado_parcial','estornado_total') NOT NULL DEFAULT 'pendente',
+  `pix_txid` VARCHAR(35) NULL,
+  `pix_end_to_end_id` VARCHAR(50) NULL,
+  `pix_copia_cola` TEXT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY `uk_fc_id_racha` (`id`, `racha_id`),
+  UNIQUE KEY `uk_fc_pix_txid` (`pix_txid`),
+  UNIQUE KEY `uk_fc_pix_e2eid` (`pix_end_to_end_id`),
+  INDEX `idx_fc_busca` (`racha_id`, `competencia_ano`, `competencia_mes`, `status`),
+  CONSTRAINT `chk_fc_valores_base` CHECK (`valor_original` >= 0 AND `valor_desconto` >= 0 AND `valor_desconto` <= `valor_original`),
+  CONSTRAINT `chk_fc_consistencia_valor` CHECK (`valor_final` = (`valor_original` - `valor_desconto`)),
+  CONSTRAINT `chk_fc_competencia` CHECK (`competencia_mes` BETWEEN 1 AND 12),
+  CONSTRAINT `fk_fc_racha` FOREIGN KEY (`racha_id`) REFERENCES `rachas` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_fc_participante` FOREIGN KEY (`racha_id`, `jogador_id`) REFERENCES `racha_participantes` (`racha_id`, `jogador_id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_fc_fundo_racha` FOREIGN KEY (`fundo_id`, `racha_id`) REFERENCES `financeiro_fundos` (`id`, `racha_id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_fc_sessao_racha` FOREIGN KEY (`sessao_id`, `racha_id`) REFERENCES `racha_sessoes` (`id`, `racha_id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `financeiro_lancamentos` (
+  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `racha_id` INT UNSIGNED NOT NULL,
+  `fundo_id` INT UNSIGNED NOT NULL,
+  `cobranca_id` INT UNSIGNED NULL,
+  `transferencia_id` INT UNSIGNED NULL,
+  `lancamento_referencia_id` INT UNSIGNED NULL,
+  `tipo` ENUM('receita','despesa','transferencia_entrada','transferencia_saida','estorno') NOT NULL,
+  `categoria` VARCHAR(60) NOT NULL,
+  `valor` DECIMAL(10,2) NOT NULL,
+  `data_movimento` DATE NOT NULL,
+  `descricao` VARCHAR(255) NOT NULL,
+  `forma_pagamento` ENUM('pix_manual','pix_automatico','dinheiro','ted','outro') NOT NULL DEFAULT 'pix_manual',
+  `chave_idempotencia` VARCHAR(64) NOT NULL,
+  `motivo_ajuste` VARCHAR(255) NULL,
+  `criado_por_usuario_id` INT(11) NOT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY `uk_fl_id_racha` (`id`, `racha_id`),
+  UNIQUE KEY `uk_fl_idempotencia` (`chave_idempotencia`),
+  UNIQUE KEY `uk_fl_transf_perna` (`transferencia_id`, `tipo`),
+  INDEX `idx_fl_busca` (`racha_id`, `fundo_id`, `data_movimento`),
+  CONSTRAINT `chk_fl_valor_positivo` CHECK (`valor` > 0.00),
+  CONSTRAINT `fk_fl_racha` FOREIGN KEY (`racha_id`) REFERENCES `rachas` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_fl_fundo_racha` FOREIGN KEY (`fundo_id`, `racha_id`) REFERENCES `financeiro_fundos` (`id`, `racha_id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_fl_cobranca_racha` FOREIGN KEY (`cobranca_id`, `racha_id`) REFERENCES `financeiro_cobrancas` (`id`, `racha_id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_fl_transf_racha` FOREIGN KEY (`transferencia_id`, `racha_id`) REFERENCES `financeiro_transferencias` (`id`, `racha_id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_fl_ref_racha` FOREIGN KEY (`lancamento_referencia_id`, `racha_id`) REFERENCES `financeiro_lancamentos` (`id`, `racha_id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_fl_usuario` FOREIGN KEY (`criado_por_usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
