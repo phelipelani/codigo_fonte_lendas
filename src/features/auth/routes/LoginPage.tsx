@@ -3,26 +3,24 @@ import React from 'react'
 import { motion } from 'framer-motion'
 import { LoginForm } from '../components/LoginForm'
 
-import bgMobile from '@/assets/login_bg_mobile.png'
-import bgDesktop from '@/assets/login_bg_desktop.png'
-import brasaoFutLendas from '@/assets/brasao_futlendas.png'
+import bgImage from '@/assets/futlendas_bg.png'
+import logoOficial from '@/assets/logo_oficial_transparente.png'
 
 export function LoginPage() {
   return (
     <div className="relative min-h-screen w-full overflow-x-hidden flex flex-col justify-between items-center text-white selection:bg-[#FF087F] selection:text-white px-4 py-6 sm:py-8">
-      {/* Background Cinematográfico Responsivo (Mobile: Vertical com placas | Desktop: Widescreen) */}
-      <picture className="pointer-events-none fixed inset-0 -z-20 h-full w-full overflow-hidden select-none">
-        <source media="(min-width: 768px)" srcSet={bgDesktop} />
+      {/* Background Cinematográfico Oficial (futlendas_login_background_mobile_com_placas.png) */}
+      <div className="pointer-events-none fixed inset-0 -z-20 h-full w-full overflow-hidden select-none">
         <img
-          src={bgMobile}
+          src={bgImage}
           alt="FutLendas Background"
-          className="h-full w-full object-cover object-top sm:object-center"
+          className="h-full w-full object-cover object-center"
         />
-      </picture>
+      </div>
 
-      {/* Camada de Contraste e Neons Suaves */}
+      {/* Camada Suave de Contraste para Garantir Legibilidade */}
       <div 
-        className="pointer-events-none fixed inset-0 -z-10 bg-gradient-to-b from-black/60 via-black/40 to-black/85" 
+        className="pointer-events-none fixed inset-0 -z-10 bg-gradient-to-b from-black/60 via-black/35 to-black/85" 
         aria-hidden="true" 
       />
 
@@ -37,13 +35,13 @@ export function LoginPage() {
           transition={{ duration: 0.6, ease: 'easeOut' }}
           className="w-full flex flex-col items-center"
         >
-          {/* Brasão Oficial do FutLendas */}
+          {/* Logo Oficial do App */}
           <div className="relative mb-3 flex justify-center">
             <div className="absolute inset-0 bg-[#FF087F]/20 blur-2xl rounded-full scale-125 pointer-events-none" />
             <img
-              src={brasaoFutLendas}
-              alt="Brasão FutLendas"
-              className="relative h-20 sm:h-24 w-auto object-contain drop-shadow-[0_0_20px_rgba(255,8,127,0.5)]"
+              src={logoOficial}
+              alt="Logo Oficial FutLendas"
+              className="relative h-24 sm:h-28 w-auto object-contain drop-shadow-[0_0_25px_rgba(255,8,127,0.5)]"
             />
           </div>
 
