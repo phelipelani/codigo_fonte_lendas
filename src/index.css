@@ -5,12 +5,14 @@
 
 @layer base {
   :root {
-    --color-background-dark: #030611;
-    --color-text-primary: #f8fafc;
-    --color-text-secondary: #ecf3ff;
+    --color-background-dark: #08080c;
+    --color-text-primary: #ffffff;
+    --color-text-secondary: #e2e8f0;
+    --color-neon-pink: #ff007f;
+    --color-neon-green: #00ff88;
     --color-accent-orange-transparent: rgba(249, 115, 22, 0.18);
     --color-accent-blue-transparent: rgba(59, 130, 246, 0.22);
-    --color-accent-sky-transparent: rgba(56, 189, 248, 0.7);
+    --color-accent-sky-transparent: rgba(255, 0, 127, 0.7);
     --radius: 0.5rem;
   }
 
